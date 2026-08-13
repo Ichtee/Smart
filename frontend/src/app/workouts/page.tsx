@@ -43,7 +43,7 @@ export default function Workouts() {
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0);
   const [routinesMap, setRoutinesMap] = useState<Record<string, any>>(DEFAULT_ROUTINES);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  
+
   const [exercises, setExercises] = useState<any[]>([]);
   const { t, lang } = useLanguage();
 
@@ -88,7 +88,7 @@ export default function Workouts() {
   }, []);
 
   const activeRoutine = routinesMap[activeRoutineId];
-  
+
   const sortedSchedule = (activeRoutine?.schedule || []).slice().sort((a: any, b: any) => {
     const orderA = DAY_ORDER[a.day] || 99;
     const orderB = DAY_ORDER[b.day] || 99;
@@ -100,7 +100,7 @@ export default function Workouts() {
     if (sortedSchedule.length > 0) {
       const todayString = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date().getDay()];
       const matchIndex = sortedSchedule.findIndex((s: any) => s.day === todayString);
-      
+
       if (matchIndex !== -1) {
         setCurrentDayIndex(matchIndex);
       } else if (currentDayIndex >= sortedSchedule.length) {
@@ -110,10 +110,10 @@ export default function Workouts() {
   }, [activeRoutineId, routinesMap]);
 
   // Ensure currentDayIndex is within bounds for the active routine during transitions
-  const safeDayIndex = sortedSchedule.length && currentDayIndex >= sortedSchedule.length 
-    ? 0 
+  const safeDayIndex = sortedSchedule.length && currentDayIndex >= sortedSchedule.length
+    ? 0
     : currentDayIndex;
-    
+
   const todaysWorkout = sortedSchedule.length ? sortedSchedule[safeDayIndex] : null;
 
   const handleClick = (muscle: any) => {
@@ -124,7 +124,7 @@ export default function Workouts() {
   };
 
   let highlighterData: any[] = [];
-  let modelColors = ['#10b981', '#22d3ee']; 
+  let modelColors = ['#10b981', '#22d3ee'];
 
   if (todaysWorkout && todaysWorkout.targets && todaysWorkout.targets.length > 0) {
     const rawMuscles = todaysWorkout.targets.map((t: any) => normalizeMuscleId(t.id));
@@ -136,12 +136,12 @@ export default function Workouts() {
         { name: 'All', muscles: allMuscles },
         { name: 'Selected', muscles: [safeSelected] }
       ];
-      modelColors = ['#10b981', '#22d3ee']; 
+      modelColors = ['#10b981', '#22d3ee'];
     } else {
       highlighterData = [
         { name: todaysWorkout.name, muscles: allMuscles }
       ];
-      modelColors = ['#10b981']; 
+      modelColors = ['#10b981'];
     }
   } else if (selectedMuscle) {
     const safeSelected = normalizeMuscleId(selectedMuscle);
@@ -149,7 +149,7 @@ export default function Workouts() {
       highlighterData = [
         { name: 'Selected', muscles: [safeSelected] }
       ];
-      modelColors = ['#22d3ee']; 
+      modelColors = ['#22d3ee'];
     }
   }
 
@@ -167,11 +167,11 @@ export default function Workouts() {
 
         {/* Top Control Bar: Routine Selection & Clock */}
         <div className="mb-8 p-6 bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-xl shadow-black/50 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-white/10 transition-colors">
-          
+
           <div className="flex flex-col">
             <h2 className="text-xl font-bold mb-3 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">{t('workouts.manageRoutine')}</h2>
             <div className="flex flex-wrap items-center gap-4">
-              <select 
+              <select
                 value={activeRoutineId}
                 onChange={(e) => setActiveRoutineId(e.target.value)}
                 className="bg-zinc-950 border border-zinc-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
@@ -180,7 +180,7 @@ export default function Workouts() {
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
               </select>
-              
+
               {todaysWorkout && activeRoutineId !== 'none' && (
                 <div className="flex items-center gap-2 bg-black/30 px-4 py-2 rounded-lg border border-white/5">
                   <span className="text-zinc-500 text-sm">{t('workouts.today')}:</span>
@@ -191,14 +191,14 @@ export default function Workouts() {
           </div>
 
           <div suppressHydrationWarning className="flex flex-col md:items-end text-left md:text-right border-t border-white/5 md:border-t-0 pt-4 md:pt-0">
-             {currentTime ? (
-               <>
-                 <div className="text-zinc-400 text-sm uppercase tracking-wider mb-1">{formattedDate}</div>
-                 <div className="text-3xl font-mono font-bold text-white tabular-nums drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">{formattedTime}</div>
-               </>
-             ) : (
-               <div className="text-zinc-500 text-sm">{t('workouts.loading')}</div>
-             )}
+            {currentTime ? (
+              <>
+                <div className="text-zinc-400 text-sm uppercase tracking-wider mb-1">{formattedDate}</div>
+                <div className="text-3xl font-mono font-bold text-white tabular-nums drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">{formattedTime}</div>
+              </>
+            ) : (
+              <div className="text-zinc-500 text-sm">{t('workouts.loading')}</div>
+            )}
           </div>
 
         </div>
@@ -213,7 +213,7 @@ export default function Workouts() {
                 <button
                   key={index}
                   onClick={() => setCurrentDayIndex(index)}
-                  className={`relative px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all shadow-md flex flex-col items-start min-w-[110px] ${
+                  className={`relative px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all shadow-md flex flex-col items-start min-w-[120px] ${
                     safeDayIndex === index
                       ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-emerald-500/20 ring-2 ring-emerald-400/30'
                       : 'bg-zinc-900/60 border border-white/5 text-zinc-400 hover:bg-zinc-800 hover:text-white hover:border-white/10'
@@ -222,8 +222,8 @@ export default function Workouts() {
                   <div className="flex items-center justify-between w-full gap-2">
                     <span className="text-[10px] uppercase tracking-wider opacity-80">{dayObj.day}</span>
                     {isRealToday && (
-                      <span className="px-1.5 py-0.5 text-[9px] font-extrabold bg-emerald-400/20 text-emerald-300 border border-emerald-400/40 rounded-full animate-pulse shadow-sm shadow-emerald-500/30">
-                        • Hôm nay
+                      <span className="px-2 py-0.5 text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded-full animate-pulse shadow-sm shadow-rose-500/30 flex items-center gap-1">
+                        📌 Hôm nay
                       </span>
                     )}
                   </div>
@@ -239,14 +239,14 @@ export default function Workouts() {
           <div className="flex-1 bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-8 flex flex-col items-center shadow-xl shadow-black/50 hover:border-white/10 transition-colors">
             <div className="flex justify-between items-center w-full mb-6">
               <h2 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">{t('workouts.bodyMap')}</h2>
-              <button 
+              <button
                 onClick={() => setModelType(prev => prev === 'anterior' ? 'posterior' : 'anterior')}
                 className="px-5 py-2 bg-zinc-800/80 hover:bg-zinc-700 rounded-xl text-sm font-medium transition text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/50 shadow-lg shadow-black/20"
               >
                 {modelType === 'anterior' ? t('workouts.rotateBack') : t('workouts.rotateFront')}
               </button>
             </div>
-            
+
             <div className="w-full max-w-sm mx-auto">
               <Model
                 type={modelType}
@@ -263,7 +263,7 @@ export default function Workouts() {
 
           {/* Right side: Exercises list */}
           <div className="flex-1 flex flex-col gap-6">
-            
+
             {/* Top Bar: Today's Plan */}
             <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-xl shadow-black/50 hover:border-white/10 transition-colors flex flex-col">
               <div className="flex justify-between items-center mb-6">
@@ -271,7 +271,7 @@ export default function Workouts() {
                   {t('workouts.title')}
                 </h1>
               </div>
-              
+
               <div className="mb-6">
                 <p className="text-sm text-zinc-500 mb-3">{t('workouts.muscleFilter')}</p>
                 {todaysWorkout && todaysWorkout.targets && todaysWorkout.targets.length > 0 && activeRoutineId !== 'none' ? (
@@ -280,11 +280,10 @@ export default function Workouts() {
                       <button
                         key={`${target.id}-${index}`}
                         onClick={() => setSelectedMuscle(selectedMuscle === target.id ? null : target.id)}
-                        className={`px-3 py-1.5 text-sm rounded-full transition border capitalize flex items-center gap-2 ${
-                          selectedMuscle === target.id 
-                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20' 
+                        className={`px-3 py-1.5 text-sm rounded-full transition border capitalize flex items-center gap-2 ${selectedMuscle === target.id
+                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20'
                             : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-white'
-                        }`}
+                          }`}
                       >
                         <span>{t(`muscles.${target.id}`)}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${selectedMuscle === target.id ? 'bg-emerald-600/50' : 'bg-zinc-700'}`}>
@@ -315,19 +314,19 @@ export default function Workouts() {
                           <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider">{ex.muscle}</span>
                           <h3 className="font-semibold text-white">{ex.name}</h3>
                         </div>
-                        <button 
+                        <button
                           onClick={() => updateExercise(ex.id, 'selected', false)}
                           className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-medium transition"
                         >
                           {t('workouts.removeBtn')}
                         </button>
                       </div>
-                      
+
                       <div className="flex items-center gap-4 text-sm">
                         <div className="flex items-center gap-2">
                           <span className="text-zinc-500">{t('workouts.sets')}</span>
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             value={ex.sets}
                             onChange={(e) => updateExercise(ex.id, 'sets', Number(e.target.value))}
                             className="w-12 bg-black/50 border border-zinc-700 rounded px-2 py-1 text-white focus:border-emerald-500 focus:outline-none"
@@ -336,8 +335,8 @@ export default function Workouts() {
                         <span className="text-zinc-600">x</span>
                         <div className="flex items-center gap-2">
                           <span className="text-zinc-500">{t('workouts.reps')}</span>
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             value={ex.reps}
                             onChange={(e) => updateExercise(ex.id, 'reps', e.target.value)}
                             className="w-24 bg-black/50 border border-zinc-700 rounded px-2 py-1 text-white focus:border-emerald-500 focus:outline-none"
@@ -358,7 +357,7 @@ export default function Workouts() {
               <h2 className="text-xl font-bold capitalize bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent mb-6">
                 {selectedMuscle ? `${t('workouts.libraryTitle')}: ${t(`muscles.${selectedMuscle}`)}` : t('workouts.libraryPlaceholder')}
               </h2>
-              
+
               {selectedMuscle ? (
                 <div className="space-y-3 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
                   {exercises.filter(ex => ex.muscle.toLowerCase() === selectedMuscle.toLowerCase()).length > 0 ? (
@@ -367,14 +366,13 @@ export default function Workouts() {
                         <div>
                           <h3 className="font-semibold text-zinc-300 group-hover:text-white transition-colors">{ex.name}</h3>
                         </div>
-                        <button 
+                        <button
                           onClick={() => updateExercise(ex.id, 'selected', true)}
                           disabled={ex.selected}
-                          className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                            ex.selected 
-                              ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' 
+                          className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${ex.selected
+                              ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
                               : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white shadow-lg shadow-emerald-500/10'
-                          }`}
+                            }`}
                         >
                           {ex.selected ? 'Đã thêm' : '+ Thêm'}
                         </button>
