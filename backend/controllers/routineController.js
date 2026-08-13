@@ -1,0 +1,85 @@
+const Routine = require('../models/Routine');
+
+// @desc    Get all routines
+// @route   GET /api/routines
+// @access  Public
+const getRoutines = async (req, res) => {
+  try {
+    const routines = await Routine.find({});
+    res.status(200).json(routines);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Create a routine
+// @route   POST /api/routines
+// @access  Public (should be Admin later)
+const createRoutine = async (req, res) => {
+  try {
+    const { id, name, schedule } = req.body;
+    
+    const routineExists = await Routine.findOne({ id });
+    if (routineExists) {
+      return res.status(400).json({ message: 'Routine with this ID already exists' });
+    }
+
+    const routine = await Routine.create({
+      id,
+      name,
+      schedule
+    });
+
+    res.status(201).json(routine);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update a routine
+// @route   PUT /api/routines/:id
+// @access  Public (should be Admin later)
+const updateRoutine = async (req, res) => {
+  try {
+    const routine = await Routine.findOne({ id: req.params.id });
+
+    if (!routine) {
+      return res.status(404).json({ message: 'Routine not found' });
+    }
+
+    const updatedRoutine = await Routine.findOneAndUpdate(
+      { id: req.params.id },
+      req.body,
+      { new: true }
+    );
+
+    res.status(200).json(updatedRoutine);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete a routine
+// @route   DELETE /api/routines/:id
+// @access  Public (should be Admin later)
+const deleteRoutine = async (req, res) => {
+  try {
+    const routine = await Routine.findOne({ id: req.params.id });
+
+    if (!routine) {
+      return res.status(404).json({ message: 'Routine not found' });
+    }
+
+    await routine.deleteOne();
+    res.status(200).json({ id: req.params.id });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  getRoutines,
+  createRoutine,
+  updateRoutine,
+  deleteRoutine
+};
