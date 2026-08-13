@@ -43,7 +43,7 @@ export default function Nutrition() {
 
       const savedMeals = localStorage.getItem(`smart_meals_${todayDateStr}`);
       if (savedMeals) setMeals(JSON.parse(savedMeals));
-    } catch (e) {}
+    } catch (e) { }
 
     const fetchProfile = async () => {
       try {
@@ -61,7 +61,7 @@ export default function Nutrition() {
 
         if (res.ok) {
           const user = await res.json();
-          
+
           if (!user.height || !user.weight) {
             router.push('/onboarding');
             return;
@@ -70,7 +70,7 @@ export default function Nutrition() {
           const w = Number(user.weight);
           const h = Number(user.height);
           const a = Number(user.age);
-          
+
           let bmr = (10 * w) + (6.25 * h) - (5 * a);
           if (user.gender === 'Nam') {
             bmr += 5;
@@ -87,11 +87,11 @@ export default function Nutrition() {
             case 'Vận động cực nhiều': multiplier = 1.9; break;
             default: multiplier = 1.2; break;
           }
-          
+
           const tdeeValue = bmr * multiplier;
           let calories = tdeeValue;
           let deficit = 0;
-          
+
           if (user.goal === 'Giảm mỡ') {
             calories -= 500;
             deficit = -500;
@@ -194,21 +194,21 @@ export default function Nutrition() {
 
         {/* Calorie & Water Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          
+
           {/* Calorie Circle Card */}
           <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-8 shadow-2xl flex flex-col items-center justify-between group hover:border-cyan-500/30 transition-all">
             <h2 className="text-[#00E5FF] font-extrabold uppercase tracking-wider text-xs mb-6">Mục tiêu Calo</h2>
-            
+
             <div className="relative w-52 h-52 flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" className="text-slate-800/80" strokeWidth="7" />
-                <circle 
-                  cx="50" cy="50" r="45" fill="none" stroke="currentColor" 
-                  className="text-[#00E5FF] drop-shadow-[0_0_12px_rgba(0,229,255,0.6)] transition-all duration-1000" 
-                  strokeWidth="7" 
-                  strokeDasharray="283" 
-                  strokeDashoffset={targetCalories > 0 ? 283 - (283 * (Math.min(caloriesConsumed, targetCalories) / targetCalories)) : 283} 
-                  strokeLinecap="round" 
+                <circle
+                  cx="50" cy="50" r="45" fill="none" stroke="currentColor"
+                  className="text-[#00E5FF] drop-shadow-[0_0_12px_rgba(0,229,255,0.6)] transition-all duration-1000"
+                  strokeWidth="7"
+                  strokeDasharray="283"
+                  strokeDashoffset={targetCalories > 0 ? 283 - (283 * (Math.min(caloriesConsumed, targetCalories) / targetCalories)) : 283}
+                  strokeLinecap="round"
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -245,17 +245,17 @@ export default function Nutrition() {
           {/* Water Tracker Card */}
           <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-8 shadow-2xl flex flex-col items-center justify-between group hover:border-cyan-500/30 transition-all">
             <h2 className="text-[#00E5FF] font-extrabold uppercase tracking-wider text-xs mb-6">Lượng nước hôm nay</h2>
-            
+
             <div className="relative w-52 h-52 flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" className="text-slate-800/80" strokeWidth="7" />
-                <circle 
-                  cx="50" cy="50" r="45" fill="none" stroke="currentColor" 
-                  className="text-cyan-400 drop-shadow-[0_0_12px_rgba(34,211,238,0.6)] transition-all duration-1000" 
-                  strokeWidth="7" 
-                  strokeDasharray="283" 
-                  strokeDashoffset={targetWaterGlasses > 0 ? 283 - (283 * (Math.min(waterGlasses, targetWaterGlasses) / targetWaterGlasses)) : 283} 
-                  strokeLinecap="round" 
+                <circle
+                  cx="50" cy="50" r="45" fill="none" stroke="currentColor"
+                  className="text-cyan-400 drop-shadow-[0_0_12px_rgba(34,211,238,0.6)] transition-all duration-1000"
+                  strokeWidth="7"
+                  strokeDasharray="283"
+                  strokeDashoffset={targetWaterGlasses > 0 ? 283 - (283 * (Math.min(waterGlasses, targetWaterGlasses) / targetWaterGlasses)) : 283}
+                  strokeLinecap="round"
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -263,20 +263,20 @@ export default function Nutrition() {
                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider mt-1">ml / 2000 ml</span>
               </div>
             </div>
-            
+
             <div className="flex flex-col items-center w-full mt-6 space-y-4">
               <div className="flex items-center gap-6">
-                <button 
+                <button
                   onClick={() => updateWater(-1)}
                   className="w-12 h-12 rounded-2xl bg-[#0B101D] border border-slate-800 flex items-center justify-center text-2xl font-black hover:bg-[#18233C] transition-colors text-slate-300 active:scale-95"
                 >-</button>
-                
+
                 <div className="flex flex-col items-center">
                   <div className="text-2xl font-black text-white">{waterGlasses} <span className="text-sm font-semibold text-slate-400">cốc</span></div>
                   <div className="flex items-center gap-1 bg-[#0B101D] px-3 py-1 rounded-xl border border-slate-800 mt-1">
-                    <input 
-                      type="number" 
-                      value={mlPerGlass} 
+                    <input
+                      type="number"
+                      value={mlPerGlass}
                       onChange={(e) => setMlPerGlass(Number(e.target.value) || 0)}
                       className="w-14 bg-transparent text-[#00E5FF] font-black text-center text-xs focus:outline-none"
                     />
@@ -284,7 +284,7 @@ export default function Nutrition() {
                   </div>
                 </div>
 
-                <button 
+                <button
                   onClick={() => updateWater(1)}
                   className="w-12 h-12 rounded-2xl bg-[#00E5FF] text-slate-950 font-black flex items-center justify-center text-2xl hover:bg-cyan-300 transition-colors shadow-lg shadow-[#00E5FF]/20 active:scale-95"
                 >+</button>
@@ -302,7 +302,7 @@ export default function Nutrition() {
             </h3>
             <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tổng: <strong className="text-[#00E5FF] font-black">{caloriesConsumed} kcal</strong></span>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
               { name: 'Bữa Sáng', icon: '🍳', defaultFoods: ['Trứng ốp la (150 kcal)', 'Bánh mì (220 kcal)'] },

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_URL } from '@/utils/api';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -18,17 +19,17 @@ export default function AdminDashboard() {
       }
 
       try {
-        const profileRes = await fetch('http://localhost:5000/api/users/profile', {
+        const profileRes = await fetch(`${API_URL}/api/users/profile`, {
           headers: { 'Authorization': `Bearer ${storedToken}` }
         });
         const user = await profileRes.json();
-        
+
         if (profileRes.ok && user.role === 'admin') {
           const [usersRes, exercisesRes] = await Promise.all([
-            fetch('http://localhost:5000/api/users', {
+            fetch(`${API_URL}/api/users`, {
               headers: { 'Authorization': `Bearer ${storedToken}` }
             }),
-            fetch('http://localhost:5000/api/exercises')
+            fetch(`${API_URL}/api/exercises`)
           ]);
 
           let usersCount = 0;

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_URL } from '@/utils/api';
 
 export default function AdminExercises() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function AdminExercises() {
       setToken(storedToken);
 
       try {
-        const res = await fetch('http://localhost:5000/api/users/profile', {
+        const res = await fetch(`${API_URL}/api/users/profile`, {
           headers: { 'Authorization': `Bearer ${storedToken}` }
         });
         const user = await res.json();
@@ -57,7 +58,7 @@ export default function AdminExercises() {
 
   const fetchExercises = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/exercises');
+      const res = await fetch(`${API_URL}/api/exercises`);
       const data = await res.json();
       setExercises(data);
     } catch (err) {
@@ -72,7 +73,7 @@ export default function AdminExercises() {
     if (!token) return;
     try {
       if (editingId) {
-        await fetch(`http://localhost:5000/api/exercises/${editingId}`, {
+        await fetch(`${API_URL}/api/exercises/${editingId}`, {
           method: 'PUT',
           headers: { 
             'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export default function AdminExercises() {
           body: JSON.stringify(formData)
         });
       } else {
-        await fetch('http://localhost:5000/api/exercises', {
+        await fetch(`${API_URL}/api/exercises`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',

@@ -22,7 +22,7 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Login failed');
-      
+
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify({
         id: data._id,
@@ -50,7 +50,7 @@ export default function Login() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none" />
 
       <div className="bg-[#131B2E]/90 backdrop-blur-2xl p-8 md:p-10 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800/80 relative z-10">
-        
+
         <div className="text-center mb-8">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#00E5FF] to-[#00FF87] p-0.5 mx-auto mb-3 shadow-lg shadow-[#00E5FF]/20 flex items-center justify-center">
             <div className="w-full h-full bg-[#0B0F19] rounded-[14px] flex items-center justify-center">
@@ -64,38 +64,38 @@ export default function Login() {
         </div>
 
         {error && <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3.5 rounded-2xl mb-6 text-xs font-bold">{error}</div>}
-        
+
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tên đăng nhập / Email</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-3 bg-[#0B101D] border border-slate-800 rounded-xl focus:outline-none focus:border-[#00E5FF] transition text-sm text-white font-medium placeholder:text-slate-600"
               placeholder="Nhập username hoặc email..."
-              required 
+              required
             />
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mật khẩu</label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 bg-[#0B101D] border border-slate-800 rounded-xl focus:outline-none focus:border-[#00E5FF] transition text-sm text-white font-medium placeholder:text-slate-600"
               placeholder="Nhập mật khẩu..."
-              required 
+              required
             />
           </div>
-          <button 
+          <button
             type="submit"
             className="w-full py-3.5 rounded-xl bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black text-sm transition-all shadow-lg shadow-[#00E5FF]/20 mt-2"
           >
             Đăng nhập
           </button>
         </form>
-        
+
         <p className="mt-8 text-center text-slate-400 text-xs font-medium">
           Chưa có tài khoản? <Link href="/register" className="text-[#00E5FF] font-bold hover:underline">Đăng ký ngay</Link>
         </p>

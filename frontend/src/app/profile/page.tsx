@@ -102,7 +102,7 @@ export default function Profile() {
         if (data.token) {
           localStorage.setItem('token', data.token);
         }
-        
+
         setMessage({ text: 'Cập nhật hồ sơ thành công!', type: 'success' });
       } else {
         setMessage({ text: 'Cập nhật thất bại. Vui lòng thử lại.', type: 'error' });
@@ -118,11 +118,11 @@ export default function Profile() {
   let bmi = 0;
   let bmiCategory = '';
   let bmiColor = '';
-  
+
   if (formData.height && formData.weight) {
     const heightInMeters = Number(formData.height) / 100;
     bmi = Number(formData.weight) / (heightInMeters * heightInMeters);
-    
+
     if (bmi < 18.5) {
       bmiCategory = 'Thiếu cân';
       bmiColor = 'text-blue-400';
@@ -174,7 +174,7 @@ export default function Profile() {
           {/* Left Column - Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
-              
+
               <div>
                 <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <span className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-black">1</span>
@@ -183,8 +183,8 @@ export default function Profile() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Họ và tên</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
@@ -194,8 +194,8 @@ export default function Profile() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tên đăng nhập (Username)</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={formData.username}
                       className="w-full bg-[#0B101D]/50 border border-slate-800/50 rounded-xl px-4 py-3 text-sm text-slate-500 cursor-not-allowed"
                       disabled
@@ -203,8 +203,8 @@ export default function Profile() {
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email</label>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       value={formData.email}
                       className="w-full bg-[#0B101D]/50 border border-slate-800/50 rounded-xl px-4 py-3 text-sm text-slate-500 cursor-not-allowed"
                       disabled
@@ -223,7 +223,7 @@ export default function Profile() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Giới tính</label>
-                    <select 
+                    <select
                       name="gender"
                       value={formData.gender}
                       onChange={handleChange}
@@ -237,8 +237,8 @@ export default function Profile() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tuổi</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       name="age"
                       value={formData.age}
                       onChange={handleChange}
@@ -248,8 +248,8 @@ export default function Profile() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Chiều cao (cm)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       name="height"
                       value={formData.height}
                       onChange={handleChange}
@@ -259,8 +259,8 @@ export default function Profile() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Cân nặng (kg)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       name="weight"
                       value={formData.weight}
                       onChange={handleChange}
@@ -270,7 +270,7 @@ export default function Profile() {
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mục tiêu tập luyện</label>
-                    <select 
+                    <select
                       name="goal"
                       value={formData.goal}
                       onChange={handleChange}
@@ -288,8 +288,8 @@ export default function Profile() {
               </div>
 
               <div className="flex justify-end pt-2">
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={saving}
                   className="px-8 py-3 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-[#00E5FF]/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -310,20 +310,20 @@ export default function Profile() {
           <div className="lg:col-span-1">
             <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden group hover:border-emerald-500/20 transition-colors duration-500 sticky top-6">
               <div className="absolute top-0 right-0 p-32 bg-emerald-500/10 blur-[80px] rounded-full group-hover:bg-emerald-500/20 transition-colors duration-700"></div>
-              
+
               <div className="relative z-10 flex flex-col items-center">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 p-1 mb-6 shadow-xl shadow-emerald-500/20">
                   <div className="w-full h-full bg-[#0B0F19] rounded-full flex items-center justify-center text-4xl font-extrabold text-white uppercase">
                     {formData.name ? formData.name.charAt(0) : '?'}
                   </div>
                 </div>
-                
+
                 <h3 className="text-xl font-bold text-white mb-1">{formData.name || 'Người dùng'}</h3>
                 <p className="text-[#00E5FF]/80 text-xs font-bold mb-8 uppercase tracking-wider">Thành viên Smart</p>
 
                 <div className="w-full bg-[#0B101D] rounded-2xl p-6 border border-slate-800">
                   <h4 className="text-slate-400 text-xs font-bold mb-4 uppercase tracking-wider text-center">Chỉ số BMI</h4>
-                  
+
                   {bmi > 0 ? (
                     <div className="flex flex-col items-center">
                       <div className={`text-5xl font-mono font-black ${bmiColor} mb-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]`}>

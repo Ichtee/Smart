@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_URL } from '@/utils/api';
 
 export default function RoutineManagement() {
   const router = useRouter();
@@ -64,7 +65,7 @@ export default function RoutineManagement() {
       setToken(storedToken);
 
       try {
-        const res = await fetch('http://localhost:5000/api/users/profile', {
+        const res = await fetch(`${API_URL}/api/users/profile`, {
           headers: { 'Authorization': `Bearer ${storedToken}` }
         });
         const user = await res.json();
@@ -87,7 +88,7 @@ export default function RoutineManagement() {
 
   const fetchRoutines = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/routines');
+      const res = await fetch(`${API_URL}/api/routines`);
       if (!res.ok) throw new Error(`Lỗi Server: ${res.status}`);
       const data = await res.json();
       setRoutines(data);
@@ -102,7 +103,7 @@ export default function RoutineManagement() {
 
   const fetchExercises = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/exercises');
+      const res = await fetch(`${API_URL}/api/exercises`);
       if (!res.ok) throw new Error(`Lỗi Server: ${res.status}`);
       const data = await res.json();
       setExercises(data);
@@ -138,12 +139,12 @@ export default function RoutineManagement() {
     if (!confirm('Bạn có chắc chắn muốn xóa lịch tập này?')) return;
     if (!token) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/routines/${id}`, {
+      const res = await fetch(`${API_URL}/api/routines/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        fetchRoutines();
+        setRoutines(routines.filter(r => r.id !== id));
       } else {
         const error = await res.json();
         alert(error.message || 'Lỗi khi xóa lịch tập');
@@ -159,8 +160,8 @@ export default function RoutineManagement() {
     setSaving(true);
     try {
       const url = isEditing 
-        ? `http://localhost:5000/api/routines/${formData.id}`
-        : 'http://localhost:5000/api/routines';
+        ? `${API_URL}/api/routines/${formData.id}`
+        : `${API_URL}/api/routines`;
       
       const method = isEditing ? 'PUT' : 'POST';
 

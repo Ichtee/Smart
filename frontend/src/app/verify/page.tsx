@@ -6,7 +6,7 @@ import Link from 'next/link';
 function VerifyContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-  
+
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const hasFetched = React.useRef(false);
@@ -25,7 +25,7 @@ function VerifyContent() {
       try {
         const res = await fetch(`http://localhost:5000/api/users/verify/${token}`);
         const data = await res.json();
-        
+
         if (res.ok) {
           setStatus('success');
           setMessage('Your email has been verified successfully!');

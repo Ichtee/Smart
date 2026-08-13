@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_URL } from '@/utils/api';
 
 export default function UserManagement() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function UserManagement() {
       setToken(storedToken);
 
       try {
-        const res = await fetch('http://localhost:5000/api/users/profile', {
+        const res = await fetch(`${API_URL}/api/users/profile`, {
           headers: { 'Authorization': `Bearer ${storedToken}` }
         });
         const user = await res.json();
@@ -48,7 +49,7 @@ export default function UserManagement() {
 
   const fetchUsers = async (authToken: string) => {
     try {
-      const res = await fetch('http://localhost:5000/api/users', {
+      const res = await fetch(`${API_URL}/api/users`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
       if (!res.ok) throw new Error(`Lỗi Server: ${res.status}`);
@@ -84,7 +85,7 @@ export default function UserManagement() {
   const handleUpdateField = async (id: string, field: string, value: any) => {
     if (!token) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+      const res = await fetch(`${API_URL}/api/users/${id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

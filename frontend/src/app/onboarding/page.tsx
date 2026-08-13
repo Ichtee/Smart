@@ -29,7 +29,7 @@ export default function Onboarding() {
       const w = Number(formData.weight);
       const h = Number(formData.height);
       const a = Number(formData.age);
-      
+
       // BMI
       const hInM = h / 100;
       const bmi = w / (hInM * hInM);
@@ -113,7 +113,7 @@ export default function Onboarding() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-xl bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-3xl p-8 shadow-2xl relative z-10">
-        
+
         {/* Progress Bar */}
         <div className="flex gap-2 mb-8">
           {[1, 2, 3, 4].map((i) => (
@@ -125,31 +125,30 @@ export default function Onboarding() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Bắt đầu nào!</h2>
             <p className="text-zinc-400 mb-8">Hãy cho Smart biết một vài thông tin cơ bản về bạn nhé.</p>
-            
+
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-2">Giới tính của bạn</label>
                 <div className="grid grid-cols-2 gap-4">
                   {['Nam', 'Nữ'].map(g => (
-                    <button 
+                    <button
                       key={g}
                       onClick={() => setFormData({ ...formData, gender: g })}
-                      className={`py-4 rounded-xl font-medium border transition-all ${
-                        formData.gender === g 
-                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
+                      className={`py-4 rounded-xl font-medium border transition-all ${formData.gender === g
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
                         : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
-                      }`}
+                        }`}
                     >
                       {g}
                     </button>
                   ))}
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-2">Độ tuổi</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   name="age"
                   value={formData.age}
                   onChange={handleChange}
@@ -165,12 +164,12 @@ export default function Onboarding() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Chỉ số hình thể</h2>
             <p className="text-zinc-400 mb-8">Điều này giúp hệ thống tính toán lượng Calo chính xác nhất.</p>
-            
+
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-2">Chiều cao (cm)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   name="height"
                   value={formData.height}
                   onChange={handleChange}
@@ -178,11 +177,11 @@ export default function Onboarding() {
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors text-lg"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-2">Cân nặng (kg)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   name="weight"
                   value={formData.weight}
                   onChange={handleChange}
@@ -198,11 +197,11 @@ export default function Onboarding() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Mục tiêu của bạn</h2>
             <p className="text-zinc-400 mb-8">Bạn đang hướng tới điều gì cùng Smart?</p>
-            
+
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-2">Mục tiêu chính</label>
-                <select 
+                <select
                   name="goal"
                   value={formData.goal}
                   onChange={handleChange}
@@ -213,10 +212,10 @@ export default function Onboarding() {
                   <option value="Giữ dáng">Giữ dáng</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-2">Mức độ hoạt động (Tần suất vận động)</label>
-                <select 
+                <select
                   name="activityLevel"
                   value={formData.activityLevel}
                   onChange={handleChange}
@@ -239,7 +238,7 @@ export default function Onboarding() {
               <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Kế hoạch dành cho bạn</h2>
               <p className="text-zinc-400">Dựa trên các chỉ số của bạn, đây là thông số tối ưu nhất.</p>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-zinc-950/80 border border-white/5 rounded-2xl p-6 text-center shadow-inner">
                 <div className="text-zinc-500 text-sm font-medium mb-1 uppercase tracking-wider">Chỉ số BMI</div>
@@ -272,7 +271,7 @@ export default function Onboarding() {
         {/* Navigation Buttons */}
         <div className="flex gap-4 mt-8 pt-6 border-t border-white/5">
           {step > 1 && (
-            <button 
+            <button
               onClick={handleBack}
               disabled={saving}
               className="flex-1 py-4 rounded-xl bg-zinc-800 text-white font-semibold hover:bg-zinc-700 transition-colors disabled:opacity-50"
@@ -280,9 +279,9 @@ export default function Onboarding() {
               Quay lại
             </button>
           )}
-          
+
           {step < 4 ? (
-            <button 
+            <button
               onClick={handleNext}
               disabled={
                 (step === 1 && (!formData.age || !formData.gender)) ||
@@ -293,7 +292,7 @@ export default function Onboarding() {
               Tiếp tục
             </button>
           ) : (
-            <button 
+            <button
               onClick={handleComplete}
               disabled={saving}
               className="flex-[2] py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold hover:opacity-90 transition-opacity shadow-lg shadow-emerald-500/25 disabled:opacity-50 flex items-center justify-center gap-2"

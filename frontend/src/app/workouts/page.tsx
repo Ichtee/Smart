@@ -53,7 +53,7 @@ export default function Workouts() {
   const [dayCompleted, setDayCompleted] = useState<Record<string, string[]>>({});
   const [daySavedStatus, setDaySavedStatus] = useState<Record<string, boolean>>({});
   const [exerciseDetails, setExerciseDetails] = useState<Record<string, { sets: number; reps: string }>>({});
-  
+
   const [streakDays, setStreakDays] = useState<number>(1);
   const [noticeMessage, setNoticeMessage] = useState<string>('');
   const { t, lang } = useLanguage();
@@ -88,7 +88,7 @@ export default function Workouts() {
     try {
       const history = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
       setStreakDays(Math.max(1, history.length));
-    } catch (e) {}
+    } catch (e) { }
 
     setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -139,12 +139,12 @@ export default function Workouts() {
 
     let selectedIds: string[] = [];
     if (savedSel) {
-      try { selectedIds = JSON.parse(savedSel); } catch (e) {}
+      try { selectedIds = JSON.parse(savedSel); } catch (e) { }
     }
 
     let completedIds: string[] = [];
     if (savedComp) {
-      try { completedIds = JSON.parse(savedComp); } catch (e) {}
+      try { completedIds = JSON.parse(savedComp); } catch (e) { }
     }
 
     setDaySelections(prev => ({ ...prev, [currentDayKey]: selectedIds }));
@@ -230,7 +230,7 @@ export default function Workouts() {
 
     const isAlreadyComp = currentCompletedIds.includes(id);
     const newComp = isAlreadyComp ? currentCompletedIds.filter(i => i !== id) : [...currentCompletedIds, id];
-    
+
     setDayCompleted(prev => ({ ...prev, [currentDayKey]: newComp }));
     localStorage.setItem(`smart_comp_${todayDateStr}_${currentDayKey}`, JSON.stringify(newComp));
 
@@ -286,8 +286,8 @@ export default function Workouts() {
   const formattedDate = currentTime ? currentTime.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Thu, Aug 13, 2026';
 
   const completedCount = activeSelectedExercises.filter(ex => ex.completed).length;
-  const progressPercent = (isWorkoutSaved && activeSelectedExercises.length > 0) 
-    ? Math.round((completedCount / activeSelectedExercises.length) * 100) 
+  const progressPercent = (isWorkoutSaved && activeSelectedExercises.length > 0)
+    ? Math.round((completedCount / activeSelectedExercises.length) * 100)
     : 0;
 
   // Calculate Exceeded Muscle Target Warnings
@@ -315,7 +315,7 @@ export default function Workouts() {
 
         {/* Top Control Bar: Brand / Live Time / Routine Selector */}
         <div className="p-6 bg-[#131B2E]/90 backdrop-blur-2xl border border-slate-800/80 rounded-3xl shadow-2xl shadow-black/80 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          
+
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#00E5FF] to-[#00FF87] p-0.5 shadow-lg shadow-[#00E5FF]/20 flex items-center justify-center">
               <div className="w-full h-full bg-[#0B0F19] rounded-[14px] flex items-center justify-center">
@@ -357,7 +357,7 @@ export default function Workouts() {
 
         {/* Stats Dashboard Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
+
           {/* Stat 1: Progress */}
           <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-5 rounded-3xl flex items-center gap-4 shadow-xl">
             <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-xl font-bold">
@@ -405,7 +405,7 @@ export default function Workouts() {
               <span className="text-[#00E5FF] text-lg">🧬</span>
               <h2 className="text-lg font-bold text-white tracking-wide">Lịch Tập Theo Ngày</h2>
             </div>
-            
+
             {/* Real-time calendar today indicator */}
             <div className="text-xs font-bold text-slate-400 bg-[#0B101D] px-3.5 py-1.5 rounded-xl border border-slate-800/90">
               Hôm nay: <span className="text-[#00E5FF] font-black">
@@ -428,18 +428,16 @@ export default function Workouts() {
                       setCurrentDayIndex(index);
                       setSelectedMuscle(null);
                     }}
-                    className={`relative px-6 py-3.5 rounded-2xl text-xs font-extrabold transition-all duration-300 flex flex-col items-center min-w-[130px] ${
-                      isActive
+                    className={`relative px-6 py-3.5 rounded-2xl text-xs font-extrabold transition-all duration-300 flex flex-col items-center min-w-[130px] ${isActive
                         ? 'bg-[#00E5FF] text-slate-950 shadow-[0_0_20px_rgba(0,229,255,0.4)] scale-105 z-10'
                         : 'bg-[#18233C] border border-slate-800/90 text-slate-400 hover:bg-[#1E2C4F] hover:text-white'
-                    }`}
+                      }`}
                   >
                     {isRealToday && (
-                      <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-2.5 py-0.5 text-[9px] font-black rounded-full shadow-lg uppercase tracking-wider whitespace-nowrap z-20 ${
-                        isActive
+                      <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-2.5 py-0.5 text-[9px] font-black rounded-full shadow-lg uppercase tracking-wider whitespace-nowrap z-20 ${isActive
                           ? 'bg-[#00FF87] text-slate-950 border border-emerald-950 shadow-[#00FF87]/40'
                           : 'bg-[#00FF87] text-slate-950 border border-emerald-400 animate-pulse'
-                      }`}>
+                        }`}>
                         📌 HÔM NAY
                       </span>
                     )}
@@ -454,7 +452,7 @@ export default function Workouts() {
 
         {/* Main Workouts Layout: Body Highlighter (Left) + Detailed List (Right) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Left Panel: Body Map */}
           <div className="lg:col-span-5 bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col items-center justify-between">
             <div className="flex justify-between items-center w-full mb-6 border-b border-slate-800/80 pb-4">
@@ -486,9 +484,9 @@ export default function Workouts() {
 
           {/* Right Panel: Exercise Details & Checklist */}
           <div className="lg:col-span-7 space-y-6">
-            
+
             <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-6">
-              
+
               {/* Header with Save / Locked Action */}
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 flex-wrap gap-3">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -557,27 +555,25 @@ export default function Workouts() {
                         <button
                           key={`${target.id}-${index}`}
                           onClick={() => setSelectedMuscle(selectedMuscle === normTargetId ? null : normTargetId)}
-                          className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all border flex items-center gap-2 ${
-                            selectedMuscle === normTargetId
+                          className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all border flex items-center gap-2 ${selectedMuscle === normTargetId
                               ? 'bg-[#00E5FF] text-slate-950 border-[#00E5FF] shadow-lg shadow-[#00E5FF]/20'
                               : isExceeded
                                 ? 'bg-rose-950/40 text-rose-300 border-rose-500/50 hover:bg-rose-900/50'
                                 : isMatched
                                   ? 'bg-emerald-950/40 text-[#00FF87] border-emerald-500/40 hover:bg-emerald-900/50'
                                   : 'bg-[#18233C] text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
-                          }`}
+                            }`}
                         >
                           <span>{t(`muscles.${target.id}`) || target.id}</span>
-                          
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
-                            selectedMuscle === normTargetId
+
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${selectedMuscle === normTargetId
                               ? 'bg-slate-950 text-[#00E5FF]'
                               : isExceeded
                                 ? 'bg-rose-500/30 text-rose-300 border border-rose-500/50'
                                 : isMatched
                                   ? 'bg-emerald-500/30 text-[#00FF87] border border-emerald-500/40'
                                   : 'bg-[#0B101D] text-slate-400'
-                          }`}>
+                            }`}>
                             {currentCount}/{targetCount} Bài {isExceeded ? '⚠️' : isMatched ? '✓' : ''}
                           </span>
                         </button>
@@ -607,7 +603,7 @@ export default function Workouts() {
                 {activeSelectedExercises.length > 0 ? (
                   activeSelectedExercises.map((ex, i) => (
                     <div key={ex.id} className="p-5 rounded-2xl bg-[#0E1526] border border-slate-800/90 hover:border-cyan-500/40 transition-all flex items-center justify-between gap-4 shadow-lg group">
-                      
+
                       <div className="flex-1 space-y-3">
                         <div className="flex items-center justify-between">
                           <h3 className="font-extrabold text-white text-base group-hover:text-[#00E5FF] transition-colors">
@@ -627,7 +623,7 @@ export default function Workouts() {
                           <span className="px-2 py-0.5 rounded bg-cyan-950/60 text-[#00E5FF] border border-cyan-800/50 font-black text-[10px]">
                             EXERCISE
                           </span>
-                          
+
                           {/* Sets adjustment buttons & direct numeric input */}
                           {!isWorkoutSaved ? (
                             <div className="flex items-center gap-2 bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800">
@@ -702,13 +698,12 @@ export default function Workouts() {
                         onClick={() => toggleCompleteExercise(ex.id)}
                         disabled={!isWorkoutSaved}
                         title={!isWorkoutSaved ? 'Vui lòng bấm LƯU ở trên để bắt đầu tập' : 'Đánh dấu hoàn thành'}
-                        className={`w-9 h-9 rounded-xl border-2 transition-all flex items-center justify-center shrink-0 ${
-                          ex.completed 
-                            ? 'bg-[#00FF87] border-[#00FF87] text-slate-950 shadow-lg shadow-[#00FF87]/30 scale-105' 
+                        className={`w-9 h-9 rounded-xl border-2 transition-all flex items-center justify-center shrink-0 ${ex.completed
+                            ? 'bg-[#00FF87] border-[#00FF87] text-slate-950 shadow-lg shadow-[#00FF87]/30 scale-105'
                             : isWorkoutSaved
                               ? 'border-cyan-500/60 hover:border-[#00E5FF] bg-[#0B101D] text-slate-600'
                               : 'border-slate-800 bg-[#0B101D]/50 text-slate-700 cursor-not-allowed'
-                        }`}
+                          }`}
                       >
                         {ex.completed ? (
                           <span className="font-black text-base">✓</span>
@@ -750,11 +745,10 @@ export default function Workouts() {
                           <button
                             onClick={() => handleAddExerciseFromLibrary(ex.id)}
                             disabled={isAlreadySelected || isWorkoutSaved}
-                            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                              isAlreadySelected || isWorkoutSaved
+                            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${isAlreadySelected || isWorkoutSaved
                                 ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
                                 : 'bg-[#00E5FF] text-slate-950 hover:bg-cyan-300 shadow-md shadow-[#00E5FF]/20'
-                            }`}
+                              }`}
                           >
                             {isAlreadySelected ? 'Đã thêm' : isWorkoutSaved ? '🔒 Đã chốt' : '+ Thêm bài này'}
                           </button>
