@@ -53,7 +53,7 @@ export default function Nutrition() {
           return;
         }
 
-        const res = await fetch('http://localhost:5000/api/users/profile', {
+        const res = await fetch(`${API_URL}/api/users/profile`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

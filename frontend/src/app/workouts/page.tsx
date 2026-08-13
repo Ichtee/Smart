@@ -59,7 +59,7 @@ export default function Workouts() {
   const { t, lang } = useLanguage();
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/routines', { cache: 'no-store' })
+    fetch(`${API_URL}/api/routines`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         const newMap: Record<string, any> = { ...DEFAULT_ROUTINES };
@@ -70,7 +70,7 @@ export default function Workouts() {
       })
       .catch(err => console.error('Failed to fetch routines', err));
 
-    fetch('http://localhost:5000/api/exercises', { cache: 'no-store' })
+    fetch(`${API_URL}/api/exercises`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         const mapped = data.map((ex: any) => ({

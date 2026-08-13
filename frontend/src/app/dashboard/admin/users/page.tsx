@@ -66,7 +66,7 @@ export default function UserManagement() {
     if (!confirm('Bạn có chắc chắn muốn xóa người dùng này vĩnh viễn?')) return;
     if (!token) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+      const res = await fetch(`${API_URL}/api/users/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

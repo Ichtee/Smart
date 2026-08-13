@@ -23,7 +23,7 @@ function VerifyContent() {
 
     const verify = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/users/verify/${token}`);
+        const res = await fetch(`${API_URL}/api/users/verify/${token}`);
         const data = await res.json();
 
         if (res.ok) {

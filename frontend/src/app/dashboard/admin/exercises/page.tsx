@@ -113,7 +113,7 @@ export default function AdminExercises() {
     if (!confirm('Bạn có chắc chắn muốn xóa bài tập này?')) return;
     if (!token) return;
     try {
-      await fetch(`http://localhost:5000/api/exercises/${id}`, {
+      await fetch(`${API_URL}/api/exercises/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
