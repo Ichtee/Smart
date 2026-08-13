@@ -256,8 +256,8 @@ export default function Workouts() {
   let modelColors = ['#00E5FF', '#00FF87'];
 
   if (currentTabWorkout && currentTabWorkout.targets && currentTabWorkout.targets.length > 0) {
-    const rawMuscles = currentTabWorkout.targets.map((t: any) => normalizeMuscleId(t.id));
-    const allMuscles = Array.from(new Set(rawMuscles)).filter(m => VALID_MODEL_MUSCLES.has(m)) as string[];
+    const rawMuscles: string[] = currentTabWorkout.targets.map((t: any) => normalizeMuscleId(t.id));
+    const allMuscles = Array.from(new Set(rawMuscles)).filter((m: string) => VALID_MODEL_MUSCLES.has(m));
     const safeSelected = selectedMuscle ? normalizeMuscleId(selectedMuscle) : null;
 
     if (safeSelected && VALID_MODEL_MUSCLES.has(safeSelected)) {
@@ -534,7 +534,7 @@ export default function Workouts() {
                     <p className="mt-1 leading-relaxed">
                       Bạn đã chọn vượt quá số bài so với mục tiêu đề xuất cho các nhóm cơ:{' '}
                       <strong className="text-white underline">
-                        {exceededTargetMuscles.map(tInfo => `${t(`muscles.${tInfo.id}`) || tInfo.id} (${tInfo.currentCount}/${tInfo.targetCount} bài)`).join(', ')}
+                        {exceededTargetMuscles.map((tInfo: any) => `${t(`muscles.${tInfo.id}`) || tInfo.id} (${tInfo.currentCount}/${tInfo.targetCount} bài)`).join(', ')}
                       </strong>.
                     </p>
                   </div>
