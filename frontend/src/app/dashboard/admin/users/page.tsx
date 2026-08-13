@@ -132,7 +132,7 @@ export default function UserManagement() {
         <p className="text-zinc-400 mt-2">Theo dõi và quản lý tài khoản người dùng trong hệ thống.</p>
       </div>
 
-      <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 shadow-2xl flex flex-col flex-1 min-h-0">
+      <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col flex-1 min-h-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <h2 className="text-xl font-bold text-white">Tổng số tài khoản ({filteredUsers.length})</h2>
           
@@ -142,13 +142,13 @@ export default function UserManagement() {
               placeholder="Tìm kiếm tên, email, username..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500 transition-colors w-full sm:w-[300px]"
+              className="bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#00E5FF] transition-colors w-full sm:w-[300px]"
             />
           </div>
         </div>
         
         {loading ? (
-          <div className="flex-1 flex justify-center items-center p-8"><div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin"></div></div>
+          <div className="flex-1 flex justify-center items-center p-8"><div className="w-8 h-8 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div></div>
         ) : (
           <div className="flex-1 overflow-auto custom-scrollbar pr-2">
             <table className="w-full text-left border-collapse">
@@ -164,15 +164,15 @@ export default function UserManagement() {
               <tbody>
                 {filteredUsers.length > 0 ? (
                   filteredUsers.map((user) => (
-                    <tr key={user._id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
+                    <tr key={user._id} className="border-b border-slate-800/80 hover:bg-[#18233C]/50 transition-colors group">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm uppercase ${user.role === 'admin' ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm uppercase ${user.role === 'admin' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-cyan-500/20 text-[#00E5FF] border border-cyan-500/30'}`}>
                             {user.name ? user.name.charAt(0) : '?'}
                           </div>
                           <div>
                             <p className="font-semibold text-white">{user.name}</p>
-                            <p className="text-xs text-zinc-500">{user.email}</p>
+                            <p className="text-xs text-slate-500">{user.email}</p>
                           </div>
                         </div>
                       </td>
@@ -228,18 +228,18 @@ export default function UserManagement() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* User Detail Modal */}
       {selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUser(null)}></div>
-          <div className="relative bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setSelectedUser(null)}></div>
+          <div className="relative bg-[#131B2E] border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-lg">
             
-            <div className="flex justify-between items-start mb-6 border-b border-white/5 pb-4">
+            <div className="flex justify-between items-start mb-6 border-b border-slate-800 pb-4">
               <div>
-                <h3 className="text-2xl font-bold text-white">Chi tiết Tài khoản</h3>
-                <p className="text-zinc-400 text-sm mt-1">ID: {selectedUser._id}</p>
+                <h3 className="text-2xl font-bold text-white">{selectedUser.name}</h3>
+                <p className="text-slate-400 text-sm mt-1">@{selectedUser.username || 'n/a'}</p>
               </div>
-              <button onClick={() => setSelectedUser(null)} className="text-zinc-500 hover:text-white transition-colors text-xl">&times;</button>
+              <button onClick={() => setSelectedUser(null)} className="text-slate-500 hover:text-white transition-colors text-xl">&times;</button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">

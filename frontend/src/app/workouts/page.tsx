@@ -68,7 +68,6 @@ export default function Workouts() {
     fetch('http://localhost:5000/api/exercises', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
-        // Map database exercises to include UI state (selected: false initially)
         const mappedData = data.map((ex: any) => ({
           id: ex._id,
           muscle: ex.muscle,
@@ -80,7 +79,6 @@ export default function Workouts() {
         setExercises(mappedData);
       })
       .catch(err => console.error('Failed to fetch exercises', err));
-
 
     setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -95,7 +93,6 @@ export default function Workouts() {
     return orderA - orderB;
   });
 
-  // Auto-select the tab that matches today's real day name when routine loads/changes
   useEffect(() => {
     if (sortedSchedule.length > 0) {
       const todayString = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date().getDay()];
@@ -109,7 +106,6 @@ export default function Workouts() {
     }
   }, [activeRoutineId, routinesMap]);
 
-  // Ensure currentDayIndex is within bounds for the active routine during transitions
   const safeDayIndex = sortedSchedule.length && currentDayIndex >= sortedSchedule.length
     ? 0
     : currentDayIndex;
@@ -124,7 +120,7 @@ export default function Workouts() {
   };
 
   let highlighterData: any[] = [];
-  let modelColors = ['#10b981', '#22d3ee'];
+  let modelColors = ['#00E5FF', '#00FF87'];
 
   if (todaysWorkout && todaysWorkout.targets && todaysWorkout.targets.length > 0) {
     const rawMuscles = todaysWorkout.targets.map((t: any) => normalizeMuscleId(t.id));
@@ -136,12 +132,12 @@ export default function Workouts() {
         { name: 'All', muscles: allMuscles },
         { name: 'Selected', muscles: [safeSelected] }
       ];
-      modelColors = ['#10b981', '#22d3ee'];
+      modelColors = ['#00E5FF', '#00FF87'];
     } else {
       highlighterData = [
         { name: todaysWorkout.name, muscles: allMuscles }
       ];
-      modelColors = ['#10b981'];
+      modelColors = ['#00E5FF'];
     }
   } else if (selectedMuscle) {
     const safeSelected = normalizeMuscleId(selectedMuscle);
@@ -149,105 +145,184 @@ export default function Workouts() {
       highlighterData = [
         { name: 'Selected', muscles: [safeSelected] }
       ];
-      modelColors = ['#22d3ee'];
+      modelColors = ['#00FF87'];
     }
   }
 
-  const formattedTime = currentTime ? currentTime.toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
-  const formattedDate = currentTime ? currentTime.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const formattedTime = currentTime ? currentTime.toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '20:16:36';
+  const formattedDate = currentTime ? currentTime.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Thu, Aug 13, 2026';
+
+  // Calculate completed progress
+  const selectedExList = exercises.filter(ex => ex.selected);
+  const completedCount = selectedExList.filter(ex => ex.completed).length;
+  const progressPercent = selectedExList.length > 0 ? Math.round((completedCount / selectedExList.length) * 100) : 0;
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-zinc-950 text-white p-6 relative overflow-hidden">
-      {/* Background glow effects */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none" />
+    <div suppressHydrationWarning className="min-h-screen bg-[#0B0F19] text-white p-4 md:p-8 relative overflow-hidden font-sans">
+      {/* FitPulse Ambient Glow Effects */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none" />
 
-      <div className="max-w-6xl mx-auto relative z-10">
+      <div className="max-w-7xl mx-auto relative z-10 space-y-6">
         <Header />
 
-        {/* Top Control Bar: Routine Selection & Clock */}
-        <div className="mb-8 p-6 bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-xl shadow-black/50 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-white/10 transition-colors">
-
-          <div className="flex flex-col">
-            <h2 className="text-xl font-bold mb-3 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">{t('workouts.manageRoutine')}</h2>
-            <div className="flex flex-wrap items-center gap-4">
-              <select
-                value={activeRoutineId}
-                onChange={(e) => setActiveRoutineId(e.target.value)}
-                className="bg-zinc-950 border border-zinc-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
-              >
-                {Object.values(routinesMap).map(r => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </select>
-
-              {todaysWorkout && activeRoutineId !== 'none' && (
-                <div className="flex items-center gap-2 bg-black/30 px-4 py-2 rounded-lg border border-white/5">
-                  <span className="text-zinc-500 text-sm">{t('workouts.today')}:</span>
-                  <span className="text-emerald-400 font-bold text-sm drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]">{todaysWorkout.name}</span>
-                </div>
-              )}
+        {/* Top Control Bar: Brand / Live Time / Quick Actions */}
+        <div className="p-6 bg-[#131B2E]/90 backdrop-blur-2xl border border-slate-800/80 rounded-3xl shadow-2xl shadow-black/80 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#00E5FF] to-[#00FF87] p-0.5 shadow-lg shadow-[#00E5FF]/20 flex items-center justify-center">
+              <div className="w-full h-full bg-[#0B0F19] rounded-[14px] flex items-center justify-center">
+                <span className="text-xl font-black text-[#00E5FF]">⚡</span>
+              </div>
+            </div>
+            <div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                FitPulse <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-950 text-[#00E5FF] border border-cyan-500/30">MVC</span>
+              </h1>
+              <p className="text-xs text-slate-400 font-medium">Fullstack React & Node.js MVC Daily Checklist</p>
             </div>
           </div>
 
-          <div suppressHydrationWarning className="flex flex-col md:items-end text-left md:text-right border-t border-white/5 md:border-t-0 pt-4 md:pt-0">
-            {currentTime ? (
-              <>
-                <div className="text-zinc-400 text-sm uppercase tracking-wider mb-1">{formattedDate}</div>
-                <div className="text-3xl font-mono font-bold text-white tabular-nums drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">{formattedTime}</div>
-              </>
-            ) : (
-              <div className="text-zinc-500 text-sm">{t('workouts.loading')}</div>
-            )}
+          {/* Live Time Clock Widget */}
+          <div suppressHydrationWarning className="flex items-center gap-3 bg-[#0B101D] px-5 py-3 rounded-2xl border border-slate-800/80 shadow-inner">
+            <div className="flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-[#00FF87] animate-ping" />
+              <span className="text-[10px] font-bold text-[#00FF87] uppercase tracking-wider">LIVE</span>
+            </div>
+            <span className="text-2xl font-mono font-black text-[#00E5FF] tracking-tight">{formattedTime}</span>
+            <span className="text-xs text-slate-400 font-medium border-l border-slate-800 pl-3">{formattedDate}</span>
+          </div>
+
+          {/* Action Tools */}
+          <div className="flex items-center gap-3">
+            <select
+              value={activeRoutineId}
+              onChange={(e) => setActiveRoutineId(e.target.value)}
+              className="bg-[#0B101D] border border-slate-800 text-slate-200 px-4 py-2.5 rounded-xl focus:outline-none focus:border-[#00E5FF] text-sm font-semibold shadow-sm"
+            >
+              {Object.values(routinesMap).map(r => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+
+            <button
+              onClick={() => alert('Mẹo: Bạn có thể chọn ngày tập và đánh dấu bài tập bên dưới!')}
+              className="px-4 py-2.5 bg-gradient-to-r from-[#00E5FF] to-cyan-400 hover:from-cyan-300 hover:to-[#00E5FF] text-slate-950 font-black rounded-xl text-sm transition-all shadow-lg shadow-[#00E5FF]/20 flex items-center gap-1.5"
+            >
+              <span>📥 Export TXT</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Dashboard Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* Stat 1: Progress */}
+          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-5 rounded-3xl flex items-center gap-4 shadow-xl">
+            <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-xl font-bold">
+              📋
+            </div>
+            <div className="flex-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">TIẾN ĐỘ BÀI TẬP TRONG NGÀY</span>
+              <span className="text-xl font-extrabold text-white">{progressPercent}% Hoàn Thành</span>
+              <div className="w-full h-2 bg-[#0B101D] rounded-full mt-2 overflow-hidden border border-slate-800">
+                <div className="h-full bg-gradient-to-r from-[#00E5FF] to-[#00FF87] transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Stat 2: Mode */}
+          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-5 rounded-3xl flex items-center gap-4 shadow-xl">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-[#00FF87] text-xl font-bold">
+              🏋️
+            </div>
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">CHẾ ĐỘ TẬP LUYỆN</span>
+              <span className="text-xl font-extrabold text-[#00FF87]">{activeRoutine?.name || 'Push - Pull - Leg'}</span>
+            </div>
+          </div>
+
+          {/* Stat 3: Streak */}
+          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-5 rounded-3xl flex items-center gap-4 shadow-xl">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-xl font-bold">
+              🔥
+            </div>
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">CHUỖI NGÀY TẬP (STREAK)</span>
+              <span className="text-xl font-extrabold text-white">1 Ngày Liên Tục</span>
+            </div>
           </div>
 
         </div>
 
-        {/* Day Selector Tabs */}
-        {sortedSchedule.length > 0 && activeRoutineId !== 'none' && (
-          <div className="flex overflow-x-auto gap-3 mb-8 pb-2 custom-scrollbar">
-            {sortedSchedule.map((dayObj: any, index: number) => {
-              const realTodayString = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date().getDay()];
-              const isRealToday = dayObj.day === realTodayString;
-              return (
-                <button
-                  key={index}
-                  onClick={() => setCurrentDayIndex(index)}
-                  className={`relative px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all shadow-md flex flex-col items-start min-w-[120px] ${
-                    safeDayIndex === index
-                      ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-emerald-500/20 ring-2 ring-emerald-400/30'
-                      : 'bg-zinc-900/60 border border-white/5 text-zinc-400 hover:bg-zinc-800 hover:text-white hover:border-white/10'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full gap-2">
-                    <span className="text-[10px] uppercase tracking-wider opacity-80">{dayObj.day}</span>
+        {/* Day Selector Navigation Row */}
+        <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-6 rounded-3xl shadow-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-[#00E5FF] text-lg">🧬</span>
+              <h2 className="text-lg font-bold text-white tracking-wide">Lịch Tập Theo Ngày</h2>
+            </div>
+            {todaysWorkout && (
+              <span className="text-xs font-bold text-slate-400">
+                Hôm nay: <span className="text-[#00E5FF] font-black">{todaysWorkout.day} - {todaysWorkout.name}</span>
+              </span>
+            )}
+          </div>
+
+          {/* Day Selector Tabs */}
+          {sortedSchedule.length > 0 && activeRoutineId !== 'none' && (
+            <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar">
+              {sortedSchedule.map((dayObj: any, index: number) => {
+                const realTodayString = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date().getDay()];
+                const isRealToday = dayObj.day === realTodayString;
+                const isActive = safeDayIndex === index;
+
+                return (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentDayIndex(index)}
+                    className={`relative px-6 py-3 rounded-2xl text-xs font-extrabold transition-all duration-300 flex flex-col items-center min-w-[125px] ${
+                      isActive
+                        ? 'bg-[#00E5FF] text-slate-950 shadow-[0_0_20px_rgba(0,229,255,0.4)] scale-105 z-10'
+                        : 'bg-[#18233C] border border-slate-800/90 text-slate-400 hover:bg-[#1E2C4F] hover:text-white'
+                    }`}
+                  >
                     {isRealToday && (
-                      <span className="px-2 py-0.5 text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded-full animate-pulse shadow-sm shadow-rose-500/30 flex items-center gap-1">
-                        📌 Hôm nay
+                      <span className={`absolute -top-2.5 px-2 py-0.5 text-[9px] font-black rounded-full shadow-md uppercase tracking-wider ${
+                        isActive
+                          ? 'bg-[#00FF87] text-slate-950 border border-emerald-950 animate-bounce'
+                          : 'bg-emerald-500 text-slate-950 border border-emerald-400 animate-pulse'
+                      }`}>
+                        HÔM NAY
                       </span>
                     )}
-                  </div>
-                  <span className="text-sm mt-0.5">{dayObj.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+                    <span className="uppercase tracking-wider opacity-80 mb-0.5">{dayObj.day}</span>
+                    <span className="text-sm font-black">{dayObj.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Left side: Body model */}
-          <div className="flex-1 bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-8 flex flex-col items-center shadow-xl shadow-black/50 hover:border-white/10 transition-colors">
-            <div className="flex justify-between items-center w-full mb-6">
-              <h2 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">{t('workouts.bodyMap')}</h2>
+        {/* Main Workouts Layout: Body Highlighter (Left) + Detailed List (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* Left Panel: Body Map */}
+          <div className="lg:col-span-5 bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col items-center justify-between">
+            <div className="flex justify-between items-center w-full mb-6 border-b border-slate-800/80 pb-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <span>🧘</span> {t('workouts.bodyMap')}
+              </h2>
               <button
                 onClick={() => setModelType(prev => prev === 'anterior' ? 'posterior' : 'anterior')}
-                className="px-5 py-2 bg-zinc-800/80 hover:bg-zinc-700 rounded-xl text-sm font-medium transition text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/50 shadow-lg shadow-black/20"
+                className="px-4 py-2 bg-[#18233C] hover:bg-[#1E2C4F] rounded-xl text-xs font-bold text-[#00E5FF] border border-cyan-500/30 transition shadow-sm"
               >
                 {modelType === 'anterior' ? t('workouts.rotateBack') : t('workouts.rotateFront')}
               </button>
             </div>
 
-            <div className="w-full max-w-sm mx-auto">
+            <div className="w-full max-w-xs mx-auto py-4">
               <Model
                 type={modelType}
                 data={highlighterData}
@@ -256,144 +331,157 @@ export default function Workouts() {
                 highlightedColors={modelColors}
               />
             </div>
-            <p className="text-zinc-400 text-sm mt-4 text-center">
+
+            <p className="text-slate-400 text-xs mt-4 text-center bg-[#0B101D] px-4 py-2 rounded-xl border border-slate-800 w-full">
               {t('workouts.bodyMapHint')}
             </p>
           </div>
 
-          {/* Right side: Exercises list */}
-          <div className="flex-1 flex flex-col gap-6">
-
-            {/* Top Bar: Today's Plan */}
-            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-xl shadow-black/50 hover:border-white/10 transition-colors flex flex-col">
-              <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                  {t('workouts.title')}
-                </h1>
+          {/* Right Panel: Exercise Details & Checklist */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-6">
+              
+              {/* Header & Filter Tabs */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>📅</span> Chi tiết danh sách bài tập Gym
+                </h2>
+                
+                <div className="flex items-center gap-2 bg-[#0B101D] p-1 rounded-xl border border-slate-800">
+                  <button className="px-3 py-1 bg-[#00E5FF] text-slate-950 font-bold text-xs rounded-lg shadow-sm">All</button>
+                  <button className="px-3 py-1 text-slate-400 hover:text-white text-xs font-semibold">Exercise</button>
+                  <button className="px-3 py-1 text-slate-400 hover:text-white text-xs font-semibold">Recovery</button>
+                </div>
               </div>
 
-              <div className="mb-6">
-                <p className="text-sm text-zinc-500 mb-3">{t('workouts.muscleFilter')}</p>
+              {/* Targets / Muscles Bar */}
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t('workouts.muscleFilter')}</p>
                 {todaysWorkout && todaysWorkout.targets && todaysWorkout.targets.length > 0 && activeRoutineId !== 'none' ? (
                   <div className="flex flex-wrap gap-2">
                     {todaysWorkout.targets.map((target: any, index: number) => (
                       <button
                         key={`${target.id}-${index}`}
                         onClick={() => setSelectedMuscle(selectedMuscle === target.id ? null : target.id)}
-                        className={`px-3 py-1.5 text-sm rounded-full transition border capitalize flex items-center gap-2 ${selectedMuscle === target.id
-                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20'
-                            : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-white'
-                          }`}
+                        className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all border flex items-center gap-2 ${
+                          selectedMuscle === target.id
+                            ? 'bg-[#00E5FF] text-slate-950 border-[#00E5FF] shadow-lg shadow-[#00E5FF]/20'
+                            : 'bg-[#18233C] text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
+                        }`}
                       >
                         <span>{t(`muscles.${target.id}`)}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${selectedMuscle === target.id ? 'bg-emerald-600/50' : 'bg-zinc-700'}`}>
-                          {target.count} bài
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${selectedMuscle === target.id ? 'bg-slate-950 text-[#00E5FF]' : 'bg-[#0B101D] text-slate-400'}`}>
+                          {target.count} Bài
                         </span>
                       </button>
                     ))}
                   </div>
                 ) : (
                   sortedSchedule[safeDayIndex]?.name === 'Nghỉ ngơi' ? (
-                    <p className="text-emerald-400">{t('workouts.restDay')}</p>
+                    <p className="text-[#00FF87] font-bold text-sm">{t('workouts.restDay')}</p>
                   ) : (
-                    <p className="text-sm text-zinc-500">{t('workouts.emptyMuscleSelection')}</p>
+                    <p className="text-xs text-slate-400">{t('workouts.emptyMuscleSelection')}</p>
                   )
                 )}
               </div>
 
-              {/* Selected Exercises (Editable) */}
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-emerald-400 border-b border-white/5 pb-2">
+              {/* Selected / Checklist Exercises */}
+              <div className="space-y-4">
+                <p className="text-xs font-bold text-[#00E5FF] uppercase tracking-wider">
                   {t('workouts.today')} - {sortedSchedule[safeDayIndex]?.day || t('workouts.unknownDay')}
                 </p>
+
                 {exercises.filter(ex => ex.selected).length > 0 ? (
-                  exercises.filter(ex => ex.selected).map(ex => (
-                    <div key={ex.id} className="p-4 rounded-xl bg-zinc-900/80 border border-emerald-500/30 flex flex-col gap-3 shadow-lg shadow-black/20">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider">{ex.muscle}</span>
-                          <h3 className="font-semibold text-white">{ex.name}</h3>
+                  exercises.filter(ex => ex.selected).map((ex, i) => (
+                    <div key={ex.id} className="p-5 rounded-2xl bg-[#0E1526] border border-slate-800/90 hover:border-cyan-500/40 transition-all flex items-center justify-between gap-4 shadow-lg group">
+                      
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-extrabold text-white text-base group-hover:text-[#00E5FF] transition-colors">
+                            {i + 1}. {ex.name}
+                          </h3>
+                          <button className="text-[11px] px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-[#00E5FF] border border-cyan-500/30 flex items-center gap-1">
+                            ℹ️ Hướng dẫn & Đổi bài
+                          </button>
                         </div>
-                        <button
-                          onClick={() => updateExercise(ex.id, 'selected', false)}
-                          className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-medium transition"
-                        >
-                          {t('workouts.removeBtn')}
-                        </button>
+
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="px-2 py-0.5 rounded bg-cyan-950/60 text-[#00E5FF] border border-cyan-800/50 font-black text-[10px]">
+                            EXERCISE
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-800/50 font-black text-[10px]">
+                            MEDIUM
+                          </span>
+                          <span className="text-slate-400 font-medium">
+                            {ex.sets} sets x {ex.reps} reps
+                          </span>
+                          <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                            🎯 Cơ chính: {ex.muscle}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="text-zinc-500">{t('workouts.sets')}</span>
-                          <input
-                            type="number"
-                            value={ex.sets}
-                            onChange={(e) => updateExercise(ex.id, 'sets', Number(e.target.value))}
-                            className="w-12 bg-black/50 border border-zinc-700 rounded px-2 py-1 text-white focus:border-emerald-500 focus:outline-none"
-                          />
-                        </div>
-                        <span className="text-zinc-600">x</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-zinc-500">{t('workouts.reps')}</span>
-                          <input
-                            type="text"
-                            value={ex.reps}
-                            onChange={(e) => updateExercise(ex.id, 'reps', e.target.value)}
-                            className="w-24 bg-black/50 border border-zinc-700 rounded px-2 py-1 text-white focus:border-emerald-500 focus:outline-none"
-                          />
-                        </div>
-                      </div>
+                      {/* Interactive Checkbox */}
+                      <button
+                        onClick={() => updateExercise(ex.id, 'completed', !ex.completed)}
+                        className={`w-7 h-7 rounded-xl border-2 transition-all flex items-center justify-center ${
+                          ex.completed 
+                            ? 'bg-[#00FF87] border-[#00FF87] text-slate-950 shadow-lg shadow-[#00FF87]/30' 
+                            : 'border-cyan-500/40 hover:border-[#00E5FF] bg-[#0B101D]'
+                        }`}
+                      >
+                        {ex.completed && <span className="font-black text-sm">✓</span>}
+                      </button>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-zinc-500 italic py-4 border-t border-white/5">{t('workouts.emptySelected')}</p>
+                  <p className="text-xs text-slate-400 italic py-4 border-t border-slate-800/80">{t('workouts.emptySelected')}</p>
                 )}
               </div>
 
             </div>
 
-            {/* Bottom Bar: Exercise Library */}
-            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 flex flex-col flex-1 shadow-xl shadow-black/50 hover:border-white/10 transition-colors">
-              <h2 className="text-xl font-bold capitalize bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent mb-6">
-                {selectedMuscle ? `${t('workouts.libraryTitle')}: ${t(`muscles.${selectedMuscle}`)}` : t('workouts.libraryPlaceholder')}
-              </h2>
+            {/* Exercise Library Selection */}
+            <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 space-y-4 shadow-2xl">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <span>📚</span> {selectedMuscle ? `${t('workouts.libraryTitle')}: ${t(`muscles.${selectedMuscle}`)}` : t('workouts.libraryPlaceholder')}
+              </h3>
 
               {selectedMuscle ? (
-                <div className="space-y-3 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+                <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                   {exercises.filter(ex => ex.muscle.toLowerCase() === selectedMuscle.toLowerCase()).length > 0 ? (
                     exercises.filter(ex => ex.muscle.toLowerCase() === selectedMuscle.toLowerCase()).map(ex => (
-                      <div key={ex.id} className="p-4 rounded-xl bg-zinc-900/40 border border-white/5 flex items-center justify-between group hover:bg-zinc-800/80 transition-colors">
-                        <div>
-                          <h3 className="font-semibold text-zinc-300 group-hover:text-white transition-colors">{ex.name}</h3>
-                        </div>
+                      <div key={ex.id} className="p-4 rounded-2xl bg-[#0E1526] border border-slate-800/80 flex items-center justify-between hover:bg-[#18233C] transition-colors">
+                        <span className="font-bold text-sm text-slate-200">{ex.name}</span>
                         <button
                           onClick={() => updateExercise(ex.id, 'selected', true)}
                           disabled={ex.selected}
-                          className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${ex.selected
-                              ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                              : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white shadow-lg shadow-emerald-500/10'
-                            }`}
+                          className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            ex.selected
+                              ? 'bg-slate-800 text-slate-500 border border-slate-700'
+                              : 'bg-[#00E5FF] text-slate-950 hover:bg-cyan-300 shadow-md shadow-[#00E5FF]/20'
+                          }`}
                         >
-                          {ex.selected ? 'Đã thêm' : '+ Thêm'}
+                          {ex.selected ? 'Đã thêm' : '+ Thêm bài này'}
                         </button>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center p-8 bg-zinc-900/30 rounded-xl border border-white/5">
-                      <p className="text-zinc-400">{t('workouts.emptyLibrary')} {t(`muscles.${selectedMuscle}`)}.</p>
-                    </div>
+                    <p className="text-xs text-slate-400 text-center py-6">{t('workouts.emptyLibrary')} {t(`muscles.${selectedMuscle}`)}.</p>
                   )}
                 </div>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 border-2 border-dashed border-white/10 rounded-2xl min-h-[200px] bg-zinc-900/20">
-                  <div className="text-5xl mb-4 opacity-50 drop-shadow-xl">💪</div>
-                  <p className="font-medium text-zinc-400">Vui lòng chọn nhóm cơ ở trên</p>
+                <div className="p-6 text-center border-2 border-dashed border-slate-800 rounded-2xl text-slate-500 text-xs">
+                  Vui lòng chọn một Nhóm Cơ ở trên để xem danh sách bài tập gợi ý.
                 </div>
               )}
             </div>
 
           </div>
+
         </div>
+
       </div>
     </div>
   );

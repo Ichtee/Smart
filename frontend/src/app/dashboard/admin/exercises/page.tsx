@@ -148,17 +148,17 @@ export default function AdminExercises() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Form */}
-          <div className="lg:col-span-1 bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 shadow-2xl h-fit">
+          <div className="lg:col-span-1 bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl h-fit">
             <h2 className="text-xl font-bold text-white mb-6">{editingId ? 'Sửa bài tập' : 'Thêm bài tập mới'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm text-zinc-400 mb-1">Tên bài tập</label>
+                <label className="block text-sm text-slate-400 mb-1">Tên bài tập</label>
                 <input 
                   type="text" 
                   required
                   value={formData.name}
                   onChange={e => setFormData({...formData, name: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:outline-none focus:border-rose-500 transition-colors"
+                  className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-[#00E5FF] transition-colors"
                   placeholder="VD: Barbell Bench Press"
                 />
               </div>
@@ -201,7 +201,7 @@ export default function AdminExercises() {
               </div>
 
               <div className="pt-4 flex gap-2">
-                <button type="submit" className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-4 rounded-xl transition-colors">
+                <button type="submit" className="flex-1 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-extrabold py-3 px-4 rounded-xl transition-colors shadow-md shadow-[#00E5FF]/20">
                   {editingId ? 'Lưu thay đổi' : 'Thêm bài tập'}
                 </button>
                 {editingId && (
@@ -211,7 +211,7 @@ export default function AdminExercises() {
                       setEditingId(null);
                       setFormData({ name: '', muscle: 'Chest', defaultSets: 3, defaultReps: '10-12' });
                     }}
-                    className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 px-4 rounded-xl transition-colors"
+                    className="bg-[#18233C] hover:bg-slate-800 text-slate-300 font-bold py-3 px-4 rounded-xl transition-colors"
                   >
                     Hủy
                   </button>
@@ -221,7 +221,7 @@ export default function AdminExercises() {
           </div>
 
           {/* List */}
-          <div className="lg:col-span-2 bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 shadow-2xl flex flex-col h-[700px]">
+          <div className="lg:col-span-2 bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col h-[700px]">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
               <h2 className="text-xl font-bold text-white">Thư viện dữ liệu ({filteredExercises.length})</h2>
               
@@ -232,12 +232,12 @@ export default function AdminExercises() {
                   placeholder="Tìm kiếm bài tập..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500 transition-colors min-w-[200px]"
+                  className="bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#00E5FF] transition-colors min-w-[200px]"
                 />
                 <select
                   value={filterMuscle}
                   onChange={(e) => setFilterMuscle(e.target.value)}
-                  className="bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500 transition-colors capitalize"
+                  className="bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#00E5FF] transition-colors capitalize"
                 >
                   <option value="">Tất cả nhóm cơ</option>
                   {muscles.map(m => (
@@ -248,7 +248,7 @@ export default function AdminExercises() {
             </div>
             
             {loading ? (
-              <div className="flex-1 flex justify-center items-center p-8"><div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin"></div></div>
+              <div className="flex-1 flex justify-center items-center p-8"><div className="w-8 h-8 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div></div>
             ) : (
               <div className="flex-1 overflow-auto custom-scrollbar pr-2">
                 <table className="w-full text-left border-collapse">

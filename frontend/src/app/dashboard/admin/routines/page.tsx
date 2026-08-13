@@ -268,7 +268,7 @@ export default function RoutineManagement() {
         <p className="text-zinc-400 mt-2">Tạo và chỉnh sửa các lịch tập mẫu (Templates) để cung cấp cho người dùng hệ thống.</p>
       </div>
 
-      <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 shadow-2xl flex flex-col flex-1 min-h-0">
+      <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col flex-1 min-h-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <h2 className="text-xl font-bold text-white">Danh sách Lịch tập ({filteredRoutines.length})</h2>
           
@@ -278,11 +278,11 @@ export default function RoutineManagement() {
               placeholder="Tìm kiếm mã hoặc tên..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500 transition-colors w-full sm:w-[250px]"
+              className="bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#00E5FF] transition-colors w-full sm:w-[250px]"
             />
             <button 
               onClick={handleOpenAdd}
-              className="px-4 py-2 bg-rose-500 text-white font-bold rounded-lg hover:bg-rose-600 transition-colors whitespace-nowrap text-sm"
+              className="px-4 py-2 bg-[#00E5FF] text-slate-950 font-extrabold rounded-xl hover:bg-cyan-300 transition-colors whitespace-nowrap text-sm shadow-md shadow-[#00E5FF]/20"
             >
               + Thêm Mới
             </button>
@@ -305,23 +305,23 @@ export default function RoutineManagement() {
               <tbody>
                 {filteredRoutines.length > 0 ? (
                   filteredRoutines.map((routine) => (
-                    <tr key={routine.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
+                    <tr key={routine.id} className="border-b border-slate-800/80 hover:bg-[#18233C]/50 transition-colors group">
                       <td className="p-4">
-                        <span className="bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full text-xs font-mono font-bold">
+                        <span className="bg-cyan-950 text-[#00E5FF] border border-cyan-500/30 px-3 py-1 rounded-full text-xs font-mono font-bold">
                           {routine.id}
                         </span>
                       </td>
                       <td className="p-4">
                         <p className="font-semibold text-white">{routine.name}</p>
                       </td>
-                      <td className="p-4 text-zinc-400 text-sm">
+                      <td className="p-4 text-slate-400 text-sm">
                         {routine.schedule?.length || 0} ngày
                       </td>
                       <td className="p-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-3">
                           <button 
                             onClick={() => handleOpenEdit(routine)} 
-                            className="text-cyan-400 hover:text-cyan-300 text-sm font-medium"
+                            className="text-[#00E5FF] hover:text-cyan-300 text-sm font-bold"
                           >
                             Sửa
                           </button>
@@ -351,15 +351,15 @@ export default function RoutineManagement() {
       {/* Routine Modal with Visual Builder */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !saving && setIsModalOpen(false)}></div>
-          <div className="relative bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => !saving && setIsModalOpen(false)}></div>
+          <div className="relative bg-[#131B2E] border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             
-            <div className="flex justify-between items-start mb-6 border-b border-white/5 pb-4 shrink-0">
+            <div className="flex justify-between items-start mb-6 border-b border-slate-800 pb-4 shrink-0">
               <div>
                 <h3 className="text-2xl font-bold text-white">{isEditing ? 'Sửa Lịch tập' : 'Thêm Lịch tập Mẫu'}</h3>
-                <p className="text-zinc-400 text-sm mt-1">Dễ dàng xây dựng cấu trúc lịch tập với Visual Builder.</p>
+                <p className="text-slate-400 text-sm mt-1">Dễ dàng xây dựng cấu trúc lịch tập với Visual Builder.</p>
               </div>
-              <button disabled={saving} onClick={() => setIsModalOpen(false)} className="text-zinc-500 hover:text-white transition-colors text-xl disabled:opacity-50">&times;</button>
+              <button disabled={saving} onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-white transition-colors text-xl disabled:opacity-50">&times;</button>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 mb-6">
@@ -509,12 +509,12 @@ export default function RoutineManagement() {
               </form>
             </div>
 
-            <div className="flex gap-3 justify-end items-center pt-4 border-t border-white/5 shrink-0">
+            <div className="flex gap-3 justify-end items-center pt-4 border-t border-slate-800 shrink-0">
               <button 
                 type="button"
                 disabled={saving}
                 onClick={() => setIsModalOpen(false)}
-                className="px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+                className="px-6 py-2.5 bg-[#18233C] hover:bg-slate-800 text-slate-300 font-bold rounded-xl transition-colors disabled:opacity-50"
               >
                 Hủy
               </button>
@@ -522,7 +522,7 @@ export default function RoutineManagement() {
                 type="submit"
                 form="routine-form"
                 disabled={saving}
-                className="px-6 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
+                className="px-6 py-2.5 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-extrabold rounded-xl transition-colors disabled:opacity-50 shadow-md shadow-[#00E5FF]/20"
               >
                 {saving ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Lưu Lịch Tập')}
               </button>
