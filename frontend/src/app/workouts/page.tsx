@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Model from 'react-body-highlighter';
 import Header from '@/components/Header';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { API_URL } from '@/utils/api';
 
 const DEFAULT_ROUTINES = {
   none: {
