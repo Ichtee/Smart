@@ -45,6 +45,7 @@ export default function Workouts() {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   const [exercises, setExercises] = useState<any[]>([]);
+  const [streakDays, setStreakDays] = useState<number>(1);
   const { t, lang } = useLanguage();
 
   const updateExercise = (id: string, field: string, value: any) => {
@@ -66,17 +67,31 @@ export default function Workouts() {
     fetch('http://localhost:5000/api/exercises', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
+        const todayDateStr = new Date().toISOString().split('T')[0];
+        let savedCompletedIds: string[] = [];
+        try {
+          const savedStr = localStorage.getItem(`completed_ex_${todayDateStr}`);
+          if (savedStr) savedCompletedIds = JSON.parse(savedStr);
+        } catch (e) {}
+
         const mappedData = data.map((ex: any) => ({
           id: ex._id,
           muscle: ex.muscle,
           name: ex.name,
           sets: ex.defaultSets || 3,
           reps: ex.defaultReps || '10-12',
-          selected: false
+          selected: false,
+          completed: savedCompletedIds.includes(ex._id)
         }));
         setExercises(mappedData);
       })
       .catch(err => console.error('Failed to fetch exercises', err));
+
+    // Load streak data
+    try {
+      const history = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
+      setStreakDays(Math.max(1, history.length));
+    } catch (e) {}
 
     setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -91,10 +106,13 @@ export default function Workouts() {
     return orderA - orderB;
   });
 
+  // Real-time Today calendar info
+  const realTodayString = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date().getDay()];
+  const realTodayWorkout = sortedSchedule.find((s: any) => s.day === realTodayString);
+
   useEffect(() => {
     if (sortedSchedule.length > 0) {
-      const todayString = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date().getDay()];
-      const matchIndex = sortedSchedule.findIndex((s: any) => s.day === todayString);
+      const matchIndex = sortedSchedule.findIndex((s: any) => s.day === realTodayString);
 
       if (matchIndex !== -1) {
         setCurrentDayIndex(matchIndex);
@@ -108,7 +126,7 @@ export default function Workouts() {
     ? 0
     : currentDayIndex;
 
-  const todaysWorkout = sortedSchedule.length ? sortedSchedule[safeDayIndex] : null;
+  const currentTabWorkout = sortedSchedule.length ? sortedSchedule[safeDayIndex] : null;
 
   const handleClick = (muscle: any) => {
     const muscleId = muscle && muscle.muscle ? muscle.muscle : (typeof muscle === 'string' ? muscle : null);
@@ -117,11 +135,30 @@ export default function Workouts() {
     }
   };
 
+  const toggleCompleteExercise = (id: string) => {
+    const todayDateStr = new Date().toISOString().split('T')[0];
+    setExercises(prev => {
+      const updated = prev.map(ex => ex.id === id ? { ...ex, completed: !ex.completed } : ex);
+      const completedIds = updated.filter(ex => ex.completed).map(ex => ex.id);
+      localStorage.setItem(`completed_ex_${todayDateStr}`, JSON.stringify(completedIds));
+
+      if (completedIds.length > 0) {
+        const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
+        if (!history.includes(todayDateStr)) {
+          const newHistory = [...history, todayDateStr];
+          localStorage.setItem('smart_streak_history', JSON.stringify(newHistory));
+          setStreakDays(newHistory.length);
+        }
+      }
+      return updated;
+    });
+  };
+
   let highlighterData: any[] = [];
   let modelColors = ['#00E5FF', '#00FF87'];
 
-  if (todaysWorkout && todaysWorkout.targets && todaysWorkout.targets.length > 0) {
-    const rawMuscles = todaysWorkout.targets.map((t: any) => normalizeMuscleId(t.id));
+  if (currentTabWorkout && currentTabWorkout.targets && currentTabWorkout.targets.length > 0) {
+    const rawMuscles = currentTabWorkout.targets.map((t: any) => normalizeMuscleId(t.id));
     const allMuscles = Array.from(new Set(rawMuscles)).filter(m => VALID_MODEL_MUSCLES.has(m)) as string[];
     const safeSelected = selectedMuscle ? normalizeMuscleId(selectedMuscle) : null;
 
@@ -133,7 +170,7 @@ export default function Workouts() {
       modelColors = ['#00E5FF', '#00FF87'];
     } else {
       highlighterData = [
-        { name: todaysWorkout.name, muscles: allMuscles }
+        { name: currentTabWorkout.name, muscles: allMuscles }
       ];
       modelColors = ['#00E5FF'];
     }
@@ -240,7 +277,7 @@ export default function Workouts() {
             </div>
             <div>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">CHUỖI NGÀY TẬP (STREAK)</span>
-              <span className="text-xl font-extrabold text-white">1 Ngày Liên Tục</span>
+              <span className="text-xl font-extrabold text-white">{streakDays} Ngày Liên Tục</span>
             </div>
           </div>
 
@@ -248,23 +285,24 @@ export default function Workouts() {
 
         {/* Day Selector Navigation Row */}
         <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-6 rounded-3xl shadow-xl space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <span className="text-[#00E5FF] text-lg">🧬</span>
               <h2 className="text-lg font-bold text-white tracking-wide">Lịch Tập Theo Ngày</h2>
             </div>
-            {todaysWorkout && (
-              <span className="text-xs font-bold text-slate-400">
-                Hôm nay: <span className="text-[#00E5FF] font-black">{todaysWorkout.day} - {todaysWorkout.name}</span>
+            
+            {/* Real-time calendar today indicator */}
+            <div className="text-xs font-bold text-slate-400 bg-[#0B101D] px-3.5 py-1.5 rounded-xl border border-slate-800/90">
+              Hôm nay: <span className="text-[#00E5FF] font-black">
+                {realTodayWorkout ? `${realTodayWorkout.day} - ${realTodayWorkout.name}` : realTodayString}
               </span>
-            )}
+            </div>
           </div>
 
           {/* Day Selector Tabs */}
           {sortedSchedule.length > 0 && activeRoutineId !== 'none' && (
             <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar">
               {sortedSchedule.map((dayObj: any, index: number) => {
-                const realTodayString = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date().getDay()];
                 const isRealToday = dayObj.day === realTodayString;
                 const isActive = safeDayIndex === index;
 
@@ -302,7 +340,7 @@ export default function Workouts() {
           {/* Left Panel: Body Map */}
           <div className="lg:col-span-5 bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col items-center justify-between">
             <div className="flex justify-between items-center w-full mb-6 border-b border-slate-800/80 pb-4">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <h2 className="text-lg font-bold text-[#00E5FF] flex items-center gap-2">
                 <span>🧘</span> {t('workouts.bodyMap')}
               </h2>
               <button
@@ -336,16 +374,16 @@ export default function Workouts() {
               {/* Header */}
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span>📅</span> Chi tiết danh sách bài tập Gym
+                  <span>📅</span> Danh sách bài tập - <span className="text-[#00E5FF]">{currentTabWorkout?.day} ({currentTabWorkout?.name})</span>
                 </h2>
               </div>
 
               {/* Targets / Muscles Bar */}
               <div>
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t('workouts.muscleFilter')}</p>
-                {todaysWorkout && todaysWorkout.targets && todaysWorkout.targets.length > 0 && activeRoutineId !== 'none' ? (
+                {currentTabWorkout && currentTabWorkout.targets && currentTabWorkout.targets.length > 0 && activeRoutineId !== 'none' ? (
                   <div className="flex flex-wrap gap-2">
-                    {todaysWorkout.targets.map((target: any, index: number) => (
+                    {currentTabWorkout.targets.map((target: any, index: number) => (
                       <button
                         key={`${target.id}-${index}`}
                         onClick={() => setSelectedMuscle(selectedMuscle === target.id ? null : target.id)}
@@ -373,27 +411,59 @@ export default function Workouts() {
 
               {/* Selected / Checklist Exercises */}
               <div className="space-y-4">
-                <p className="text-xs font-bold text-[#00E5FF] uppercase tracking-wider">
-                  {t('workouts.today')} - {sortedSchedule[safeDayIndex]?.day || t('workouts.unknownDay')}
-                </p>
+                <div className="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                  <p className="text-xs font-bold text-[#00E5FF] uppercase tracking-wider">
+                    Các bài đã chọn ({selectedExList.length})
+                  </p>
+                  {selectedExList.length > 0 && (
+                    <span className="text-xs text-slate-400">Tích chọn để đánh dấu hoàn thành</span>
+                  )}
+                </div>
 
-                {exercises.filter(ex => ex.selected).length > 0 ? (
-                  exercises.filter(ex => ex.selected).map((ex, i) => (
+                {selectedExList.length > 0 ? (
+                  selectedExList.map((ex, i) => (
                     <div key={ex.id} className="p-5 rounded-2xl bg-[#0E1526] border border-slate-800/90 hover:border-cyan-500/40 transition-all flex items-center justify-between gap-4 shadow-lg group">
                       
                       <div className="flex-1 space-y-2">
-                        <h3 className="font-extrabold text-white text-base group-hover:text-[#00E5FF] transition-colors">
-                          {i + 1}. {ex.name}
-                        </h3>
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-extrabold text-white text-base group-hover:text-[#00E5FF] transition-colors">
+                            {i + 1}. {ex.name}
+                          </h3>
+                          <button
+                            onClick={() => updateExercise(ex.id, 'selected', false)}
+                            className="text-xs text-rose-400 hover:text-rose-300 font-bold"
+                          >
+                            Xóa khỏi danh sách
+                          </button>
+                        </div>
 
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <div className="flex flex-wrap items-center gap-3 text-xs">
                           <span className="px-2 py-0.5 rounded bg-cyan-950/60 text-[#00E5FF] border border-cyan-800/50 font-black text-[10px]">
                             EXERCISE
                           </span>
-                          <span className="text-slate-400 font-medium">
-                            {ex.sets} sets x {ex.reps} reps
-                          </span>
-                          <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                          
+                          <div className="flex items-center gap-1 bg-[#0B101D] px-2 py-1 rounded-lg border border-slate-800">
+                            <span className="text-slate-400">Hiệp:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              value={ex.sets}
+                              onChange={(e) => updateExercise(ex.id, 'sets', Number(e.target.value) || 1)}
+                              className="w-10 bg-transparent text-[#00E5FF] font-bold text-center focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-1 bg-[#0B101D] px-2 py-1 rounded-lg border border-slate-800">
+                            <span className="text-slate-400">Lần:</span>
+                            <input
+                              type="text"
+                              value={ex.reps}
+                              onChange={(e) => updateExercise(ex.id, 'reps', e.target.value)}
+                              className="w-16 bg-transparent text-[#00E5FF] font-bold text-center focus:outline-none"
+                            />
+                          </div>
+
+                          <span className="text-emerald-400 font-semibold">
                             🎯 Cơ chính: {ex.muscle}
                           </span>
                         </div>
@@ -401,14 +471,14 @@ export default function Workouts() {
 
                       {/* Interactive Checkbox */}
                       <button
-                        onClick={() => updateExercise(ex.id, 'completed', !ex.completed)}
-                        className={`w-7 h-7 rounded-xl border-2 transition-all flex items-center justify-center ${
+                        onClick={() => toggleCompleteExercise(ex.id)}
+                        className={`w-8 h-8 rounded-xl border-2 transition-all flex items-center justify-center shrink-0 ${
                           ex.completed 
-                            ? 'bg-[#00FF87] border-[#00FF87] text-slate-950 shadow-lg shadow-[#00FF87]/30' 
+                            ? 'bg-[#00FF87] border-[#00FF87] text-slate-950 shadow-lg shadow-[#00FF87]/30 scale-105' 
                             : 'border-cyan-500/40 hover:border-[#00E5FF] bg-[#0B101D]'
                         }`}
                       >
-                        {ex.completed && <span className="font-black text-sm">✓</span>}
+                        {ex.completed && <span className="font-black text-base">✓</span>}
                       </button>
                     </div>
                   ))
