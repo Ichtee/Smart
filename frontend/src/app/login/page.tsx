@@ -34,7 +34,7 @@ export default function Login() {
 
       // Check for missing profile info to trigger onboarding
       if (data.role === 'admin') {
-        router.push('/admin/exercises');
+        router.push('/dashboard/admin');
       } else if (!data.height || !data.weight || !data.age) {
         router.push('/onboarding');
       } else {

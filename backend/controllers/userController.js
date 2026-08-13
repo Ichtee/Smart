@@ -179,10 +179,82 @@ const updateProfile = async (req, res) => {
   }
 };
 
+// @desc    Get all users
+// @route   GET /api/users
+// @access  Private/Admin
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}).select('-password');
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete user
+// @route   DELETE /api/users/:id
+// @access  Private/Admin
+const deleteUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (user) {
+      if (user._id.toString() === req.user._id.toString()) {
+        return res.status(400).json({ message: 'Cannot delete your own account' });
+      }
+      await User.deleteOne({ _id: user._id });
+      res.json({ message: 'User removed' });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update user role and status
+// @route   PUT /api/users/:id
+// @access  Private/Admin
+const updateUserRoleAndStatus = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (user) {
+      // Allow modifying role and isEmailVerified
+      if (req.body.role) {
+        // Prevent an admin from changing their own role (optional safety check)
+        if (req.user._id.toString() === user._id.toString() && req.body.role !== 'admin') {
+          return res.status(400).json({ message: 'Cannot demote yourself' });
+        }
+        user.role = req.body.role;
+      }
+      
+      if (req.body.isEmailVerified !== undefined) {
+        user.isEmailVerified = req.body.isEmailVerified;
+      }
+
+      const updatedUser = await user.save();
+      res.json({
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        role: updatedUser.role,
+        isEmailVerified: updatedUser.isEmailVerified
+      });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   verifyEmail,
   getProfile,
-  updateProfile
+  updateProfile,
+  getAllUsers,
+  deleteUser,
+  updateUserRoleAndStatus
 };

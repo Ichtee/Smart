@@ -13,6 +13,29 @@ const DEFAULT_ROUTINES = {
   }
 };
 
+const VALID_MODEL_MUSCLES = new Set([
+  'trapezius', 'upper-back', 'lower-back', 'chest', 'biceps', 'triceps',
+  'forearm', 'back-deltoids', 'front-deltoids', 'abs', 'obliques',
+  'adductor', 'abductors', 'hamstring', 'quadriceps', 'calves',
+  'gluteal', 'head', 'neck', 'knees', 'left-soleus', 'right-soleus'
+]);
+
+const normalizeMuscleId = (id: string): string => {
+  if (!id) return '';
+  if (id === 'adductors') return 'adductor';
+  return id;
+};
+
+const DAY_ORDER: Record<string, number> = {
+  'Thứ 2': 1,
+  'Thứ 3': 2,
+  'Thứ 4': 3,
+  'Thứ 5': 4,
+  'Thứ 6': 5,
+  'Thứ 7': 6,
+  'Chủ nhật': 7,
+};
+
 export default function Workouts() {
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [modelType, setModelType] = useState<'anterior' | 'posterior'>('anterior');
@@ -30,7 +53,7 @@ export default function Workouts() {
 
   useEffect(() => {
     // Fetch routines from backend
-    fetch('http://localhost:5000/api/routines')
+    fetch('http://localhost:5000/api/routines', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         const newMap: Record<string, any> = { ...DEFAULT_ROUTINES };
@@ -42,7 +65,7 @@ export default function Workouts() {
       .catch(err => console.error('Failed to fetch routines', err));
 
     // Fetch exercises from backend
-    fetch('http://localhost:5000/api/exercises')
+    fetch('http://localhost:5000/api/exercises', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         // Map database exercises to include UI state (selected: false initially)
@@ -58,11 +81,6 @@ export default function Workouts() {
       })
       .catch(err => console.error('Failed to fetch exercises', err));
 
-    // Get current day of week (0 = Sunday, 1 = Monday, etc.)
-    // Map it to our schedule array where 0 = Monday, 6 = Sunday
-    const today = new Date().getDay();
-    const mappedDay = today === 0 ? 6 : today - 1;
-    setCurrentDayIndex(mappedDay);
 
     setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -70,7 +88,33 @@ export default function Workouts() {
   }, []);
 
   const activeRoutine = routinesMap[activeRoutineId];
-  const todaysWorkout = activeRoutine?.schedule ? activeRoutine.schedule[currentDayIndex] : null;
+  
+  const sortedSchedule = (activeRoutine?.schedule || []).slice().sort((a: any, b: any) => {
+    const orderA = DAY_ORDER[a.day] || 99;
+    const orderB = DAY_ORDER[b.day] || 99;
+    return orderA - orderB;
+  });
+
+  // Auto-select the tab that matches today's real day name when routine loads/changes
+  useEffect(() => {
+    if (sortedSchedule.length > 0) {
+      const todayString = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date().getDay()];
+      const matchIndex = sortedSchedule.findIndex((s: any) => s.day === todayString);
+      
+      if (matchIndex !== -1) {
+        setCurrentDayIndex(matchIndex);
+      } else if (currentDayIndex >= sortedSchedule.length) {
+        setCurrentDayIndex(0);
+      }
+    }
+  }, [activeRoutineId, routinesMap]);
+
+  // Ensure currentDayIndex is within bounds for the active routine during transitions
+  const safeDayIndex = sortedSchedule.length && currentDayIndex >= sortedSchedule.length 
+    ? 0 
+    : currentDayIndex;
+    
+  const todaysWorkout = sortedSchedule.length ? sortedSchedule[safeDayIndex] : null;
 
   const handleClick = (muscle: any) => {
     const muscleId = muscle && muscle.muscle ? muscle.muscle : (typeof muscle === 'string' ? muscle : null);
@@ -83,12 +127,14 @@ export default function Workouts() {
   let modelColors = ['#10b981', '#22d3ee']; 
 
   if (todaysWorkout && todaysWorkout.targets && todaysWorkout.targets.length > 0) {
-    const allMuscles = Array.from(new Set(todaysWorkout.targets.map((t: any) => t.id))) as string[];
-    
-    if (selectedMuscle) {
+    const rawMuscles = todaysWorkout.targets.map((t: any) => normalizeMuscleId(t.id));
+    const allMuscles = Array.from(new Set(rawMuscles)).filter(m => VALID_MODEL_MUSCLES.has(m)) as string[];
+    const safeSelected = selectedMuscle ? normalizeMuscleId(selectedMuscle) : null;
+
+    if (safeSelected && VALID_MODEL_MUSCLES.has(safeSelected)) {
       highlighterData = [
         { name: 'All', muscles: allMuscles },
-        { name: 'Selected', muscles: [selectedMuscle] }
+        { name: 'Selected', muscles: [safeSelected] }
       ];
       modelColors = ['#10b981', '#22d3ee']; 
     } else {
@@ -98,17 +144,20 @@ export default function Workouts() {
       modelColors = ['#10b981']; 
     }
   } else if (selectedMuscle) {
-    highlighterData = [
-      { name: 'Selected', muscles: [selectedMuscle] }
-    ];
-    modelColors = ['#22d3ee']; 
+    const safeSelected = normalizeMuscleId(selectedMuscle);
+    if (VALID_MODEL_MUSCLES.has(safeSelected)) {
+      highlighterData = [
+        { name: 'Selected', muscles: [safeSelected] }
+      ];
+      modelColors = ['#22d3ee']; 
+    }
   }
 
   const formattedTime = currentTime ? currentTime.toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
   const formattedDate = currentTime ? currentTime.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-6 relative overflow-hidden">
+    <div suppressHydrationWarning className="min-h-screen bg-zinc-950 text-white p-6 relative overflow-hidden">
       {/* Background glow effects */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none" />
@@ -141,7 +190,7 @@ export default function Workouts() {
             </div>
           </div>
 
-          <div className="flex flex-col md:items-end text-left md:text-right border-t border-white/5 md:border-t-0 pt-4 md:pt-0">
+          <div suppressHydrationWarning className="flex flex-col md:items-end text-left md:text-right border-t border-white/5 md:border-t-0 pt-4 md:pt-0">
              {currentTime ? (
                <>
                  <div className="text-zinc-400 text-sm uppercase tracking-wider mb-1">{formattedDate}</div>
@@ -153,6 +202,26 @@ export default function Workouts() {
           </div>
 
         </div>
+
+        {/* Day Selector Tabs */}
+        {sortedSchedule.length > 0 && activeRoutineId !== 'none' && (
+          <div className="flex overflow-x-auto gap-3 mb-8 pb-2 custom-scrollbar">
+            {sortedSchedule.map((dayObj: any, index: number) => (
+              <button
+                key={index}
+                onClick={() => setCurrentDayIndex(index)}
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all shadow-md flex flex-col items-start ${
+                  safeDayIndex === index
+                    ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-emerald-500/20'
+                    : 'bg-zinc-900/60 border border-white/5 text-zinc-400 hover:bg-zinc-800 hover:text-white hover:border-white/10'
+                }`}
+              >
+                <span className="text-[10px] uppercase tracking-wider opacity-80">{dayObj.day}</span>
+                <span className="text-sm">{dayObj.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="flex flex-col md:flex-row gap-8">
           {/* Left side: Body model */}
@@ -214,7 +283,7 @@ export default function Workouts() {
                     ))}
                   </div>
                 ) : (
-                  activeRoutine?.schedule[currentDayIndex]?.name === 'Nghỉ ngơi' ? (
+                  sortedSchedule[safeDayIndex]?.name === 'Nghỉ ngơi' ? (
                     <p className="text-emerald-400">{t('workouts.restDay')}</p>
                   ) : (
                     <p className="text-sm text-zinc-500">{t('workouts.emptyMuscleSelection')}</p>
@@ -225,7 +294,7 @@ export default function Workouts() {
               {/* Selected Exercises (Editable) */}
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-emerald-400 border-b border-white/5 pb-2">
-                  {t('workouts.today')} - {activeRoutine?.schedule?.[currentDayIndex]?.day || t('workouts.unknownDay')}
+                  {t('workouts.today')} - {sortedSchedule[safeDayIndex]?.day || t('workouts.unknownDay')}
                 </p>
                 {exercises.filter(ex => ex.selected).length > 0 ? (
                   exercises.filter(ex => ex.selected).map(ex => (

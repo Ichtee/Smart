@@ -1,0 +1,295 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function UserManagement() {
+  const router = useRouter();
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
+  const [token, setToken] = useState<string | null>(null);
+  
+  // Search state
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Modal State
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const storedToken = localStorage.getItem('token');
+      if (!storedToken) {
+        setAuthError('Bạn chưa đăng nhập. Vui lòng đăng nhập bằng tài khoản Admin.');
+        setLoading(false);
+        return;
+      }
+      setToken(storedToken);
+
+      try {
+        const res = await fetch('http://localhost:5000/api/users/profile', {
+          headers: { 'Authorization': `Bearer ${storedToken}` }
+        });
+        const user = await res.json();
+        
+        if (res.ok && user.role === 'admin') {
+          fetchUsers(storedToken);
+        } else {
+          setAuthError('Từ chối truy cập: Bạn không có quyền Quản trị viên (Admin).');
+          setLoading(false);
+        }
+      } catch (err) {
+        setAuthError('Lỗi xác thực.');
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const fetchUsers = async (authToken: string) => {
+    try {
+      const res = await fetch('http://localhost:5000/api/users', {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (!res.ok) throw new Error(`Lỗi Server: ${res.status}`);
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      console.error('Failed to fetch users', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string, role: string) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa người dùng này vĩnh viễn?')) return;
+    if (!token) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setSelectedUser(null);
+        fetchUsers(token);
+      } else {
+        const error = await res.json();
+        alert(error.message || 'Lỗi khi xóa tài khoản');
+      }
+    } catch (err) {
+      console.error('Failed to delete user', err);
+    }
+  };
+
+  const handleUpdateField = async (id: string, field: string, value: any) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          [field]: value
+        })
+      });
+      if (res.ok) {
+        fetchUsers(token);
+      } else {
+        const error = await res.json();
+        alert(error.message || 'Lỗi khi cập nhật tài khoản');
+        fetchUsers(token);
+      }
+    } catch (err) {
+      console.error('Failed to update user', err);
+    }
+  };
+
+  const filteredUsers = users.filter(user => {
+    const term = searchTerm.toLowerCase();
+    return user.name?.toLowerCase().includes(term) || user.email?.toLowerCase().includes(term) || user.username?.toLowerCase().includes(term);
+  });
+
+  const openModal = (user: any) => {
+    setSelectedUser(user);
+  };
+
+  if (authError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <div className="text-6xl mb-4">⛔</div>
+        <h1 className="text-2xl font-bold text-rose-500 mb-2">{authError}</h1>
+        <button onClick={() => router.push('/')} className="mt-6 px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">Về trang chủ</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto h-full flex flex-col relative">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-white">Quản lý Người dùng</h1>
+        <p className="text-zinc-400 mt-2">Theo dõi và quản lý tài khoản người dùng trong hệ thống.</p>
+      </div>
+
+      <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 shadow-2xl flex flex-col flex-1 min-h-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+          <h2 className="text-xl font-bold text-white">Tổng số tài khoản ({filteredUsers.length})</h2>
+          
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              placeholder="Tìm kiếm tên, email, username..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500 transition-colors w-full sm:w-[300px]"
+            />
+          </div>
+        </div>
+        
+        {loading ? (
+          <div className="flex-1 flex justify-center items-center p-8"><div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin"></div></div>
+        ) : (
+          <div className="flex-1 overflow-auto custom-scrollbar pr-2">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 bg-zinc-900 z-10">
+                <tr className="border-b border-white/10 text-zinc-400 text-sm">
+                  <th className="p-4 font-medium">Người dùng</th>
+                  <th className="p-4 font-medium">Vai trò</th>
+                  <th className="p-4 font-medium">Trạng thái</th>
+                  <th className="p-4 font-medium">Chỉ số (Cân nặng / Chiều cao)</th>
+                  <th className="p-4 font-medium text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.length > 0 ? (
+                  filteredUsers.map((user) => (
+                    <tr key={user._id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm uppercase ${user.role === 'admin' ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                            {user.name ? user.name.charAt(0) : '?'}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white">{user.name}</p>
+                            <p className="text-xs text-zinc-500">{user.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <select 
+                          value={user.role} 
+                          onChange={(e) => handleUpdateField(user._id, 'role', e.target.value)}
+                          className={`bg-zinc-900 border rounded-lg p-1.5 text-xs font-semibold focus:outline-none ${user.role === 'admin' ? 'border-rose-500/20 text-rose-400' : 'border-zinc-700 text-zinc-300'}`}
+                        >
+                          <option value="user">User</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </td>
+                      <td className="p-4">
+                        <select 
+                          value={user.isEmailVerified ? 'true' : 'false'} 
+                          onChange={(e) => handleUpdateField(user._id, 'isEmailVerified', e.target.value === 'true')}
+                          className={`bg-zinc-900 border rounded-lg p-1.5 text-xs font-semibold focus:outline-none ${user.isEmailVerified ? 'border-emerald-500/20 text-emerald-400' : 'border-zinc-700 text-zinc-500'}`}
+                        >
+                          <option value="true">Đã xác thực</option>
+                          <option value="false">Chưa xác thực</option>
+                        </select>
+                      </td>
+                      <td className="p-4 text-sm text-zinc-400">
+                        {user.weight ? `${user.weight} kg` : '--'} / {user.height ? `${user.height} cm` : '--'}
+                      </td>
+                      <td className="p-4 text-right whitespace-nowrap flex justify-end gap-4 items-center h-full pt-6">
+                        <button 
+                          onClick={() => handleDelete(user._id, user.role)} 
+                          className="text-rose-400 hover:text-rose-300 text-sm font-medium"
+                        >
+                          Xóa
+                        </button>
+                        <button 
+                          onClick={() => openModal(user)} 
+                          className="text-cyan-400 hover:text-cyan-300 text-sm font-medium"
+                        >
+                          Chi tiết
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-zinc-500">
+                      Không tìm thấy người dùng nào.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Modal */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUser(null)}></div>
+          <div className="relative bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+            
+            <div className="flex justify-between items-start mb-6 border-b border-white/5 pb-4">
+              <div>
+                <h3 className="text-2xl font-bold text-white">Chi tiết Tài khoản</h3>
+                <p className="text-zinc-400 text-sm mt-1">ID: {selectedUser._id}</p>
+              </div>
+              <button onClick={() => setSelectedUser(null)} className="text-zinc-500 hover:text-white transition-colors text-xl">&times;</button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              {/* Profile Info */}
+              <div className="space-y-4">
+                <h4 className="text-rose-400 font-semibold mb-2">Hồ sơ cá nhân</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="text-zinc-500">Họ và Tên:</div>
+                  <div className="text-white font-medium">{selectedUser.name}</div>
+                  
+                  <div className="text-zinc-500">Tên đăng nhập:</div>
+                  <div className="text-white font-medium">{selectedUser.username}</div>
+                  
+                  <div className="text-zinc-500">Email:</div>
+                  <div className="text-white font-medium truncate" title={selectedUser.email}>{selectedUser.email}</div>
+                  
+                  <div className="text-zinc-500">Ngày tạo:</div>
+                  <div className="text-white font-medium">{new Date(selectedUser.createdAt).toLocaleDateString('vi-VN')}</div>
+                </div>
+              </div>
+
+              {/* Physical Info */}
+              <div className="space-y-4">
+                <h4 className="text-cyan-400 font-semibold mb-2">Chỉ số Cơ thể</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="text-zinc-500">Tuổi:</div>
+                  <div className="text-white font-medium">{selectedUser.age || '--'}</div>
+                  
+                  <div className="text-zinc-500">Giới tính:</div>
+                  <div className="text-white font-medium">{selectedUser.gender || '--'}</div>
+                  
+                  <div className="text-zinc-500">Chiều cao:</div>
+                  <div className="text-white font-medium">{selectedUser.height ? `${selectedUser.height} cm` : '--'}</div>
+                  
+                  <div className="text-zinc-500">Cân nặng:</div>
+                  <div className="text-white font-medium">{selectedUser.weight ? `${selectedUser.weight} kg` : '--'}</div>
+                  
+                  <div className="text-zinc-500">Mục tiêu:</div>
+                  <div className="text-white font-medium truncate" title={selectedUser.goal}>{selectedUser.goal || '--'}</div>
+                  
+                  <div className="text-zinc-500">Vận động:</div>
+                  <div className="text-white font-medium truncate" title={selectedUser.activityLevel}>{selectedUser.activityLevel || '--'}</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
