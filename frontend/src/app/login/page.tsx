@@ -58,7 +58,7 @@ export default function Login() {
             </div>
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white">
-            FitPulse
+            Smart
           </h1>
           <p className="text-xs text-slate-400 font-semibold mt-1">Đăng nhập tài khoản hệ thống</p>
         </div>

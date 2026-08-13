@@ -318,7 +318,7 @@ export default function Profile() {
                 </div>
                 
                 <h3 className="text-xl font-bold text-white mb-1">{formData.name || 'Người dùng'}</h3>
-                <p className="text-emerald-400/80 text-sm font-medium mb-8">Thành viên MyFitness</p>
+                <p className="text-[#00E5FF]/80 text-sm font-medium mb-8">Thành viên Smart</p>
 
                 <div className="w-full bg-black/20 rounded-2xl p-6 border border-white/5 backdrop-blur-md">
                   <h4 className="text-zinc-400 text-sm font-medium mb-4 uppercase tracking-wider text-center">Chỉ số BMI</h4>

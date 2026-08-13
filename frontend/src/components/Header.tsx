@@ -44,12 +44,11 @@ export default function Header() {
     <header className="flex justify-between items-center mb-6 pb-4 border-b border-slate-800/80">
       <div className="flex items-center gap-8">
         <Link href="/dashboard" className="text-2xl font-black tracking-tight text-white flex items-center gap-2 cursor-pointer">
-          <span className="text-[#00E5FF]">FitPulse</span>
+          <span className="text-[#00E5FF]">Smart</span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 text-xs text-slate-400 font-bold uppercase tracking-wider">
           <Link href="/workouts" className="hover:text-[#00E5FF] transition">{t('header.workouts')}</Link>
           <Link href="/nutrition" className="hover:text-[#00E5FF] transition">{t('header.nutrition')}</Link>
-          <a href="#" className="hover:text-[#00E5FF] transition">{t('header.progress')}</a>
         </nav>
       </div>
       

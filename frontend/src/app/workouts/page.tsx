@@ -52,7 +52,6 @@ export default function Workouts() {
   };
 
   useEffect(() => {
-    // Fetch routines from backend
     fetch('http://localhost:5000/api/routines', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
@@ -64,7 +63,6 @@ export default function Workouts() {
       })
       .catch(err => console.error('Failed to fetch routines', err));
 
-    // Fetch exercises from backend
     fetch('http://localhost:5000/api/exercises', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
@@ -152,21 +150,20 @@ export default function Workouts() {
   const formattedTime = currentTime ? currentTime.toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '20:16:36';
   const formattedDate = currentTime ? currentTime.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Thu, Aug 13, 2026';
 
-  // Calculate completed progress
   const selectedExList = exercises.filter(ex => ex.selected);
   const completedCount = selectedExList.filter(ex => ex.completed).length;
   const progressPercent = selectedExList.length > 0 ? Math.round((completedCount / selectedExList.length) * 100) : 0;
 
   return (
     <div suppressHydrationWarning className="min-h-screen bg-[#0B0F19] text-white p-4 md:p-8 relative overflow-hidden font-sans">
-      {/* FitPulse Ambient Glow Effects */}
+      {/* Smart Ambient Glow Effects */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto relative z-10 space-y-6">
         <Header />
 
-        {/* Top Control Bar: Brand / Live Time / Quick Actions */}
+        {/* Top Control Bar: Brand / Live Time / Routine Selector */}
         <div className="p-6 bg-[#131B2E]/90 backdrop-blur-2xl border border-slate-800/80 rounded-3xl shadow-2xl shadow-black/80 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           
           <div className="flex items-center gap-4">
@@ -177,9 +174,9 @@ export default function Workouts() {
             </div>
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
-                FitPulse <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-950 text-[#00E5FF] border border-cyan-500/30">MVC</span>
+                Smart
               </h1>
-              <p className="text-xs text-slate-400 font-medium">Fullstack React & Node.js MVC Daily Checklist</p>
+              <p className="text-xs text-slate-400 font-medium">Hệ thống Quản lý & Luyện tập Thông minh</p>
             </div>
           </div>
 
@@ -193,8 +190,9 @@ export default function Workouts() {
             <span className="text-xs text-slate-400 font-medium border-l border-slate-800 pl-3">{formattedDate}</span>
           </div>
 
-          {/* Action Tools */}
+          {/* Active Routine Selection */}
           <div className="flex items-center gap-3">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">Lịch tập:</label>
             <select
               value={activeRoutineId}
               onChange={(e) => setActiveRoutineId(e.target.value)}
@@ -204,13 +202,6 @@ export default function Workouts() {
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </select>
-
-            <button
-              onClick={() => alert('Mẹo: Bạn có thể chọn ngày tập và đánh dấu bài tập bên dưới!')}
-              className="px-4 py-2.5 bg-gradient-to-r from-[#00E5FF] to-cyan-400 hover:from-cyan-300 hover:to-[#00E5FF] text-slate-950 font-black rounded-xl text-sm transition-all shadow-lg shadow-[#00E5FF]/20 flex items-center gap-1.5"
-            >
-              <span>📥 Export TXT</span>
-            </button>
           </div>
         </div>
 
@@ -293,7 +284,7 @@ export default function Workouts() {
                           ? 'bg-[#00FF87] text-slate-950 border border-emerald-950 animate-bounce'
                           : 'bg-emerald-500 text-slate-950 border border-emerald-400 animate-pulse'
                       }`}>
-                        HÔM NAY
+                        📌 HÔM NAY
                       </span>
                     )}
                     <span className="uppercase tracking-wider opacity-80 mb-0.5">{dayObj.day}</span>
@@ -342,17 +333,11 @@ export default function Workouts() {
             
             <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-6">
               
-              {/* Header & Filter Tabs */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <span>📅</span> Chi tiết danh sách bài tập Gym
                 </h2>
-                
-                <div className="flex items-center gap-2 bg-[#0B101D] p-1 rounded-xl border border-slate-800">
-                  <button className="px-3 py-1 bg-[#00E5FF] text-slate-950 font-bold text-xs rounded-lg shadow-sm">All</button>
-                  <button className="px-3 py-1 text-slate-400 hover:text-white text-xs font-semibold">Exercise</button>
-                  <button className="px-3 py-1 text-slate-400 hover:text-white text-xs font-semibold">Recovery</button>
-                </div>
               </div>
 
               {/* Targets / Muscles Bar */}
@@ -397,21 +382,13 @@ export default function Workouts() {
                     <div key={ex.id} className="p-5 rounded-2xl bg-[#0E1526] border border-slate-800/90 hover:border-cyan-500/40 transition-all flex items-center justify-between gap-4 shadow-lg group">
                       
                       <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-3">
-                          <h3 className="font-extrabold text-white text-base group-hover:text-[#00E5FF] transition-colors">
-                            {i + 1}. {ex.name}
-                          </h3>
-                          <button className="text-[11px] px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-[#00E5FF] border border-cyan-500/30 flex items-center gap-1">
-                            ℹ️ Hướng dẫn & Đổi bài
-                          </button>
-                        </div>
+                        <h3 className="font-extrabold text-white text-base group-hover:text-[#00E5FF] transition-colors">
+                          {i + 1}. {ex.name}
+                        </h3>
 
                         <div className="flex flex-wrap items-center gap-2 text-xs">
                           <span className="px-2 py-0.5 rounded bg-cyan-950/60 text-[#00E5FF] border border-cyan-800/50 font-black text-[10px]">
                             EXERCISE
-                          </span>
-                          <span className="px-2 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-800/50 font-black text-[10px]">
-                            MEDIUM
                           </span>
                           <span className="text-slate-400 font-medium">
                             {ex.sets} sets x {ex.reps} reps

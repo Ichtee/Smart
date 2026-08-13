@@ -39,7 +39,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="w-64 bg-[#131B2E] border-r border-slate-800/80 flex flex-col">
         <div className="p-6 border-b border-slate-800/80">
           <Link href="/dashboard/admin" className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-            <span className="text-[#00E5FF]">FitPulse</span>
+            <span className="text-[#00E5FF]">Smart</span>
           </Link>
           <p className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-widest">Admin Control Center</p>
         </div>

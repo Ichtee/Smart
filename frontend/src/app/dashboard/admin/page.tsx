@@ -74,7 +74,7 @@ export default function AdminDashboard() {
     <div className="max-w-7xl mx-auto h-full flex flex-col">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white">Tổng quan Hệ thống</h1>
-        <p className="text-slate-400 mt-2">Báo cáo thống kê (Statistic Report) chung của FitPulse.</p>
+        <p className="text-slate-400 mt-2">Báo cáo thống kê (Statistic Report) chung của Smart.</p>
       </div>
 
       {loading ? (

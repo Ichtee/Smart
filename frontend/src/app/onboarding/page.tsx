@@ -124,7 +124,7 @@ export default function Onboarding() {
         {step === 1 && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Bắt đầu nào!</h2>
-            <p className="text-zinc-400 mb-8">Hãy cho MyFitness biết một vài thông tin cơ bản về bạn nhé.</p>
+            <p className="text-zinc-400 mb-8">Hãy cho Smart biết một vài thông tin cơ bản về bạn nhé.</p>
             
             <div className="space-y-6">
               <div>
@@ -197,7 +197,7 @@ export default function Onboarding() {
         {step === 3 && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Mục tiêu của bạn</h2>
-            <p className="text-zinc-400 mb-8">Bạn đang hướng tới điều gì cùng MyFitness?</p>
+            <p className="text-zinc-400 mb-8">Bạn đang hướng tới điều gì cùng Smart?</p>
             
             <div className="space-y-6">
               <div>
