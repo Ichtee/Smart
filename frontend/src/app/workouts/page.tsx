@@ -206,20 +206,31 @@ export default function Workouts() {
         {/* Day Selector Tabs */}
         {sortedSchedule.length > 0 && activeRoutineId !== 'none' && (
           <div className="flex overflow-x-auto gap-3 mb-8 pb-2 custom-scrollbar">
-            {sortedSchedule.map((dayObj: any, index: number) => (
-              <button
-                key={index}
-                onClick={() => setCurrentDayIndex(index)}
-                className={`px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all shadow-md flex flex-col items-start ${
-                  safeDayIndex === index
-                    ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-emerald-500/20'
-                    : 'bg-zinc-900/60 border border-white/5 text-zinc-400 hover:bg-zinc-800 hover:text-white hover:border-white/10'
-                }`}
-              >
-                <span className="text-[10px] uppercase tracking-wider opacity-80">{dayObj.day}</span>
-                <span className="text-sm">{dayObj.name}</span>
-              </button>
-            ))}
+            {sortedSchedule.map((dayObj: any, index: number) => {
+              const realTodayString = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date().getDay()];
+              const isRealToday = dayObj.day === realTodayString;
+              return (
+                <button
+                  key={index}
+                  onClick={() => setCurrentDayIndex(index)}
+                  className={`relative px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all shadow-md flex flex-col items-start min-w-[110px] ${
+                    safeDayIndex === index
+                      ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-emerald-500/20 ring-2 ring-emerald-400/30'
+                      : 'bg-zinc-900/60 border border-white/5 text-zinc-400 hover:bg-zinc-800 hover:text-white hover:border-white/10'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full gap-2">
+                    <span className="text-[10px] uppercase tracking-wider opacity-80">{dayObj.day}</span>
+                    {isRealToday && (
+                      <span className="px-1.5 py-0.5 text-[9px] font-extrabold bg-emerald-400/20 text-emerald-300 border border-emerald-400/40 rounded-full animate-pulse shadow-sm shadow-emerald-500/30">
+                        • Hôm nay
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-sm mt-0.5">{dayObj.name}</span>
+                </button>
+              );
+            })}
           </div>
         )}
 
