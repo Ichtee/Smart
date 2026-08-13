@@ -1,7 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Model from 'react-body-highlighter';
-import Link from 'next/link';
 import Header from '@/components/Header';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -22,8 +21,13 @@ const VALID_MODEL_MUSCLES = new Set([
 
 const normalizeMuscleId = (id: string): string => {
   if (!id) return '';
-  if (id === 'adductors') return 'adductor';
-  return id;
+  const s = id.toLowerCase().trim();
+  if (s === 'adductors' || s === 'adductor') return 'adductor';
+  if (s === 'delts' || s === 'deltoids' || s === 'front-deltoids' || s === 'front deltoids') return 'front-deltoids';
+  if (s === 'rear delts' || s === 'back-deltoids' || s === 'back deltoids') return 'back-deltoids';
+  if (s === 'upper back' || s === 'upper-back') return 'upper-back';
+  if (s === 'lower back' || s === 'lower-back') return 'lower-back';
+  return s;
 };
 
 const DAY_ORDER: Record<string, number> = {
@@ -44,13 +48,15 @@ export default function Workouts() {
   const [routinesMap, setRoutinesMap] = useState<Record<string, any>>(DEFAULT_ROUTINES);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
-  const [exercises, setExercises] = useState<any[]>([]);
+  const [allExercises, setAllExercises] = useState<any[]>([]);
+  const [daySelections, setDaySelections] = useState<Record<string, string[]>>({});
+  const [dayCompleted, setDayCompleted] = useState<Record<string, string[]>>({});
+  const [daySavedStatus, setDaySavedStatus] = useState<Record<string, boolean>>({});
+  const [exerciseDetails, setExerciseDetails] = useState<Record<string, { sets: number; reps: string }>>({});
+  
   const [streakDays, setStreakDays] = useState<number>(1);
+  const [noticeMessage, setNoticeMessage] = useState<string>('');
   const { t, lang } = useLanguage();
-
-  const updateExercise = (id: string, field: string, value: any) => {
-    setExercises(prev => prev.map(ex => ex.id === id ? { ...ex, [field]: value } : ex));
-  };
 
   useEffect(() => {
     fetch('http://localhost:5000/api/routines', { cache: 'no-store' })
@@ -67,27 +73,18 @@ export default function Workouts() {
     fetch('http://localhost:5000/api/exercises', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
-        const todayDateStr = new Date().toISOString().split('T')[0];
-        let savedCompletedIds: string[] = [];
-        try {
-          const savedStr = localStorage.getItem(`completed_ex_${todayDateStr}`);
-          if (savedStr) savedCompletedIds = JSON.parse(savedStr);
-        } catch (e) {}
-
-        const mappedData = data.map((ex: any) => ({
+        const mapped = data.map((ex: any) => ({
           id: ex._id,
           muscle: ex.muscle,
+          normMuscle: normalizeMuscleId(ex.muscle),
           name: ex.name,
-          sets: ex.defaultSets || 3,
-          reps: ex.defaultReps || '10-12',
-          selected: false,
-          completed: savedCompletedIds.includes(ex._id)
+          defaultSets: ex.defaultSets || 3,
+          defaultReps: ex.defaultReps || '10-12',
         }));
-        setExercises(mappedData);
+        setAllExercises(mapped);
       })
       .catch(err => console.error('Failed to fetch exercises', err));
 
-    // Load streak data
     try {
       const history = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
       setStreakDays(Math.max(1, history.length));
@@ -100,58 +97,159 @@ export default function Workouts() {
 
   const activeRoutine = routinesMap[activeRoutineId];
 
-  const sortedSchedule = (activeRoutine?.schedule || []).slice().sort((a: any, b: any) => {
-    const orderA = DAY_ORDER[a.day] || 99;
-    const orderB = DAY_ORDER[b.day] || 99;
-    return orderA - orderB;
-  });
+  const sortedSchedule = useMemo(() => {
+    return (activeRoutine?.schedule || []).slice().sort((a: any, b: any) => {
+      const orderA = DAY_ORDER[a.day] || 99;
+      const orderB = DAY_ORDER[b.day] || 99;
+      return orderA - orderB;
+    });
+  }, [activeRoutine]);
 
-  // Real-time Today calendar info
-  const realTodayString = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date().getDay()];
-  const realTodayWorkout = sortedSchedule.find((s: any) => s.day === realTodayString);
+  const realTodayString = useMemo(() => {
+    return ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date().getDay()];
+  }, []);
+
+  const realTodayWorkout = useMemo(() => {
+    return sortedSchedule.find((s: any) => s.day === realTodayString);
+  }, [sortedSchedule, realTodayString]);
 
   useEffect(() => {
     if (sortedSchedule.length > 0) {
       const matchIndex = sortedSchedule.findIndex((s: any) => s.day === realTodayString);
-
       if (matchIndex !== -1) {
         setCurrentDayIndex(matchIndex);
       } else if (currentDayIndex >= sortedSchedule.length) {
         setCurrentDayIndex(0);
       }
     }
-  }, [activeRoutineId, routinesMap]);
+  }, [activeRoutineId, sortedSchedule, realTodayString]);
 
-  const safeDayIndex = sortedSchedule.length && currentDayIndex >= sortedSchedule.length
-    ? 0
-    : currentDayIndex;
-
+  const safeDayIndex = sortedSchedule.length && currentDayIndex >= sortedSchedule.length ? 0 : currentDayIndex;
   const currentTabWorkout = sortedSchedule.length ? sortedSchedule[safeDayIndex] : null;
+  const currentDayKey = `${activeRoutineId}_${currentTabWorkout?.day || 'day'}`;
+  const todayDateStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  const handleClick = (muscle: any) => {
-    const muscleId = muscle && muscle.muscle ? muscle.muscle : (typeof muscle === 'string' ? muscle : null);
-    if (muscleId) {
-      setSelectedMuscle(prev => prev === muscleId ? null : muscleId);
+  // Load / Initialize Day Selections per Day Tab
+  useEffect(() => {
+    if (!currentTabWorkout || allExercises.length === 0) return;
+
+    const savedSel = localStorage.getItem(`smart_sel_${todayDateStr}_${currentDayKey}`);
+    const savedComp = localStorage.getItem(`smart_comp_${todayDateStr}_${currentDayKey}`);
+    const savedSaved = localStorage.getItem(`smart_saved_${todayDateStr}_${currentDayKey}`);
+
+    let selectedIds: string[] = [];
+    if (savedSel) {
+      try { selectedIds = JSON.parse(savedSel); } catch (e) {}
     }
+
+    let completedIds: string[] = [];
+    if (savedComp) {
+      try { completedIds = JSON.parse(savedComp); } catch (e) {}
+    }
+
+    setDaySelections(prev => ({ ...prev, [currentDayKey]: selectedIds }));
+    setDayCompleted(prev => ({ ...prev, [currentDayKey]: completedIds }));
+    setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: savedSaved === 'true' }));
+  }, [currentDayKey, allExercises, todayDateStr, currentTabWorkout]);
+
+  const currentSelectedIds = daySelections[currentDayKey] || [];
+  const currentCompletedIds = dayCompleted[currentDayKey] || [];
+  const isWorkoutSaved = !!daySavedStatus[currentDayKey];
+
+  // Active exercises list for the current day tab
+  const activeSelectedExercises = useMemo(() => {
+    return currentSelectedIds.map(id => {
+      const ex = allExercises.find(item => item.id === id);
+      const detail = exerciseDetails[id] || { sets: ex?.defaultSets || 3, reps: ex?.defaultReps || '10-12' };
+      return {
+        ...ex,
+        sets: detail.sets,
+        reps: detail.reps,
+        completed: currentCompletedIds.includes(id)
+      };
+    }).filter(Boolean);
+  }, [currentSelectedIds, allExercises, exerciseDetails, currentCompletedIds]);
+
+  const updateExerciseSets = (id: string, sets: number) => {
+    setExerciseDetails(prev => ({
+      ...prev,
+      [id]: { ...(prev[id] || { sets: 3, reps: '10-12' }), sets: Math.max(1, sets) }
+    }));
+  };
+
+  const adjustExerciseReps = (id: string, delta: number) => {
+    setExerciseDetails(prev => {
+      const currentReps = prev[id]?.reps || '10-12';
+      const numMatch = currentReps.match(/\d+/);
+      const baseNum = numMatch ? parseInt(numMatch[0]) : 10;
+      const newNum = Math.max(1, baseNum + delta);
+      return {
+        ...prev,
+        [id]: { ...(prev[id] || { sets: 3, reps: '10-12' }), reps: `${newNum}` }
+      };
+    });
+  };
+
+  const handleAddExerciseFromLibrary = (exId: string) => {
+    if (isWorkoutSaved) return;
+    const newSel = Array.from(new Set([...currentSelectedIds, exId]));
+    setDaySelections(prev => ({ ...prev, [currentDayKey]: newSel }));
+    localStorage.setItem(`smart_sel_${todayDateStr}_${currentDayKey}`, JSON.stringify(newSel));
+  };
+
+  const handleRemoveExercise = (exId: string) => {
+    if (isWorkoutSaved) return;
+    const newSel = currentSelectedIds.filter(id => id !== exId);
+    setDaySelections(prev => ({ ...prev, [currentDayKey]: newSel }));
+    localStorage.setItem(`smart_sel_${todayDateStr}_${currentDayKey}`, JSON.stringify(newSel));
+  };
+
+  const handleSaveWorkout = () => {
+    if (currentSelectedIds.length === 0) {
+      setNoticeMessage('Vui lòng chọn ít nhất 1 bài tập từ thư viện bên dưới trước khi chốt lịch!');
+      setTimeout(() => setNoticeMessage(''), 4000);
+      return;
+    }
+
+    setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: true }));
+    localStorage.setItem(`smart_saved_${todayDateStr}_${currentDayKey}`, 'true');
+    setNoticeMessage('');
+  };
+
+  const handleUnlockWorkout = () => {
+    setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: false }));
+    localStorage.setItem(`smart_saved_${todayDateStr}_${currentDayKey}`, 'false');
   };
 
   const toggleCompleteExercise = (id: string) => {
-    const todayDateStr = new Date().toISOString().split('T')[0];
-    setExercises(prev => {
-      const updated = prev.map(ex => ex.id === id ? { ...ex, completed: !ex.completed } : ex);
-      const completedIds = updated.filter(ex => ex.completed).map(ex => ex.id);
-      localStorage.setItem(`completed_ex_${todayDateStr}`, JSON.stringify(completedIds));
+    if (!isWorkoutSaved) {
+      setNoticeMessage('Vui lòng nhấn "💾 LƯU & BẮT ĐẦU TẬP" ở trên để chốt danh sách bài tập trước!');
+      setTimeout(() => setNoticeMessage(''), 4000);
+      return;
+    }
 
-      if (completedIds.length > 0) {
-        const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
-        if (!history.includes(todayDateStr)) {
-          const newHistory = [...history, todayDateStr];
-          localStorage.setItem('smart_streak_history', JSON.stringify(newHistory));
-          setStreakDays(newHistory.length);
-        }
+    const isAlreadyComp = currentCompletedIds.includes(id);
+    const newComp = isAlreadyComp ? currentCompletedIds.filter(i => i !== id) : [...currentCompletedIds, id];
+    
+    setDayCompleted(prev => ({ ...prev, [currentDayKey]: newComp }));
+    localStorage.setItem(`smart_comp_${todayDateStr}_${currentDayKey}`, JSON.stringify(newComp));
+
+    if (newComp.length > 0) {
+      const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
+      if (!history.includes(todayDateStr)) {
+        const newHistory = [...history, todayDateStr];
+        localStorage.setItem('smart_streak_history', JSON.stringify(newHistory));
+        setStreakDays(newHistory.length);
       }
-      return updated;
-    });
+    }
+  };
+
+  const handleClickBodyMuscle = (muscle: any) => {
+    const muscleId = muscle && muscle.muscle ? muscle.muscle : (typeof muscle === 'string' ? muscle : null);
+    if (muscleId) {
+      const norm = normalizeMuscleId(muscleId);
+      setSelectedMuscle(prev => prev === norm ? null : norm);
+    }
   };
 
   let highlighterData: any[] = [];
@@ -187,9 +285,24 @@ export default function Workouts() {
   const formattedTime = currentTime ? currentTime.toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '20:16:36';
   const formattedDate = currentTime ? currentTime.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Thu, Aug 13, 2026';
 
-  const selectedExList = exercises.filter(ex => ex.selected);
-  const completedCount = selectedExList.filter(ex => ex.completed).length;
-  const progressPercent = selectedExList.length > 0 ? Math.round((completedCount / selectedExList.length) * 100) : 0;
+  const completedCount = activeSelectedExercises.filter(ex => ex.completed).length;
+  const progressPercent = (isWorkoutSaved && activeSelectedExercises.length > 0) 
+    ? Math.round((completedCount / activeSelectedExercises.length) * 100) 
+    : 0;
+
+  // Calculate Exceeded Muscle Target Warnings
+  const exceededTargetMuscles = (currentTabWorkout?.targets || []).map((target: any) => {
+    const normTargetId = normalizeMuscleId(target.id);
+    const targetCount = target.count || 2;
+    const currentCount = activeSelectedExercises.filter(ex => ex.normMuscle === normTargetId).length;
+    return {
+      id: target.id,
+      normId: normTargetId,
+      targetCount,
+      currentCount,
+      isExceeded: currentCount > targetCount
+    };
+  }).filter((t: any) => t.isExceeded);
 
   return (
     <div suppressHydrationWarning className="min-h-screen bg-[#0B0F19] text-white p-4 md:p-8 relative overflow-hidden font-sans">
@@ -252,7 +365,9 @@ export default function Workouts() {
             </div>
             <div className="flex-1">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">TIẾN ĐỘ BÀI TẬP TRONG NGÀY</span>
-              <span className="text-xl font-extrabold text-white">{progressPercent}% Hoàn Thành</span>
+              <span className="text-xl font-extrabold text-white">
+                {isWorkoutSaved ? `${progressPercent}% Hoàn Thành` : 'Đang chọn bài...'}
+              </span>
               <div className="w-full h-2 bg-[#0B101D] rounded-full mt-2 overflow-hidden border border-slate-800">
                 <div className="h-full bg-gradient-to-r from-[#00E5FF] to-[#00FF87] transition-all duration-500" style={{ width: `${progressPercent}%` }} />
               </div>
@@ -301,7 +416,7 @@ export default function Workouts() {
 
           {/* Day Selector Tabs */}
           {sortedSchedule.length > 0 && activeRoutineId !== 'none' && (
-            <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar">
+            <div className="flex overflow-x-auto gap-3 pt-5 pb-3 custom-scrollbar">
               {sortedSchedule.map((dayObj: any, index: number) => {
                 const isRealToday = dayObj.day === realTodayString;
                 const isActive = safeDayIndex === index;
@@ -309,18 +424,21 @@ export default function Workouts() {
                 return (
                   <button
                     key={index}
-                    onClick={() => setCurrentDayIndex(index)}
-                    className={`relative px-6 py-3 rounded-2xl text-xs font-extrabold transition-all duration-300 flex flex-col items-center min-w-[125px] ${
+                    onClick={() => {
+                      setCurrentDayIndex(index);
+                      setSelectedMuscle(null);
+                    }}
+                    className={`relative px-6 py-3.5 rounded-2xl text-xs font-extrabold transition-all duration-300 flex flex-col items-center min-w-[130px] ${
                       isActive
                         ? 'bg-[#00E5FF] text-slate-950 shadow-[0_0_20px_rgba(0,229,255,0.4)] scale-105 z-10'
                         : 'bg-[#18233C] border border-slate-800/90 text-slate-400 hover:bg-[#1E2C4F] hover:text-white'
                     }`}
                   >
                     {isRealToday && (
-                      <span className={`absolute -top-2.5 px-2 py-0.5 text-[9px] font-black rounded-full shadow-md uppercase tracking-wider ${
+                      <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-2.5 py-0.5 text-[9px] font-black rounded-full shadow-lg uppercase tracking-wider whitespace-nowrap z-20 ${
                         isActive
-                          ? 'bg-[#00FF87] text-slate-950 border border-emerald-950 animate-bounce'
-                          : 'bg-emerald-500 text-slate-950 border border-emerald-400 animate-pulse'
+                          ? 'bg-[#00FF87] text-slate-950 border border-emerald-950 shadow-[#00FF87]/40'
+                          : 'bg-[#00FF87] text-slate-950 border border-emerald-400 animate-pulse'
                       }`}>
                         📌 HÔM NAY
                       </span>
@@ -356,7 +474,7 @@ export default function Workouts() {
                 type={modelType}
                 data={highlighterData}
                 style={{ width: '100%' }}
-                onClick={handleClick}
+                onClick={handleClickBodyMuscle}
                 highlightedColors={modelColors}
               />
             </div>
@@ -371,34 +489,100 @@ export default function Workouts() {
             
             <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-6">
               
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+              {/* Header with Save / Locked Action */}
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 flex-wrap gap-3">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <span>📅</span> Danh sách bài tập - <span className="text-[#00E5FF]">{currentTabWorkout?.day} ({currentTabWorkout?.name})</span>
                 </h2>
+
+                {isWorkoutSaved ? (
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 bg-emerald-950/80 border border-emerald-500/40 text-[#00FF87] text-xs font-extrabold rounded-xl shadow-md">
+                      🔒 ĐÃ CHỐT LỊCH
+                    </span>
+                    <button
+                      onClick={handleUnlockWorkout}
+                      className="px-3 py-1 bg-[#18233C] hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-700 transition"
+                    >
+                      ✏️ Sửa lại
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleSaveWorkout}
+                    className="px-4 py-2 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-[#00E5FF]/20 transition active:scale-95"
+                  >
+                    💾 LƯU & BẮT ĐẦU TẬP
+                  </button>
+                )}
               </div>
+
+              {/* Inline Notice Message Banner */}
+              {noticeMessage && (
+                <div className="bg-amber-500/10 border border-amber-500/40 rounded-2xl p-4 flex items-center gap-3 text-xs text-amber-300 shadow-md">
+                  <span className="text-lg">💡</span>
+                  <span className="font-bold">{noticeMessage}</span>
+                </div>
+              )}
+
+              {/* Dynamic Over-Target Warning Banner */}
+              {exceededTargetMuscles.length > 0 && (
+                <div className="bg-rose-500/10 border border-rose-500/40 rounded-2xl p-4 flex items-start gap-3 text-xs text-rose-300 shadow-lg">
+                  <span className="text-xl">⚠️</span>
+                  <div>
+                    <p className="font-black text-rose-400 uppercase tracking-wider">CẢNH BÁO VƯỢT QUÁ LỊCH TẬP ĐỀ XUẤT!</p>
+                    <p className="mt-1 leading-relaxed">
+                      Bạn đã chọn vượt quá số bài so với mục tiêu đề xuất cho các nhóm cơ:{' '}
+                      <strong className="text-white underline">
+                        {exceededTargetMuscles.map(tInfo => `${t(`muscles.${tInfo.id}`) || tInfo.id} (${tInfo.currentCount}/${tInfo.targetCount} bài)`).join(', ')}
+                      </strong>.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Targets / Muscles Bar */}
               <div>
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t('workouts.muscleFilter')}</p>
                 {currentTabWorkout && currentTabWorkout.targets && currentTabWorkout.targets.length > 0 && activeRoutineId !== 'none' ? (
                   <div className="flex flex-wrap gap-2">
-                    {currentTabWorkout.targets.map((target: any, index: number) => (
-                      <button
-                        key={`${target.id}-${index}`}
-                        onClick={() => setSelectedMuscle(selectedMuscle === target.id ? null : target.id)}
-                        className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all border flex items-center gap-2 ${
-                          selectedMuscle === target.id
-                            ? 'bg-[#00E5FF] text-slate-950 border-[#00E5FF] shadow-lg shadow-[#00E5FF]/20'
-                            : 'bg-[#18233C] text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
-                        }`}
-                      >
-                        <span>{t(`muscles.${target.id}`)}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${selectedMuscle === target.id ? 'bg-slate-950 text-[#00E5FF]' : 'bg-[#0B101D] text-slate-400'}`}>
-                          {target.count} Bài
-                        </span>
-                      </button>
-                    ))}
+                    {currentTabWorkout.targets.map((target: any, index: number) => {
+                      const normTargetId = normalizeMuscleId(target.id);
+                      const targetCount = target.count || 2;
+                      const currentCount = activeSelectedExercises.filter(ex => ex.normMuscle === normTargetId).length;
+                      const isExceeded = currentCount > targetCount;
+                      const isMatched = currentCount === targetCount;
+
+                      return (
+                        <button
+                          key={`${target.id}-${index}`}
+                          onClick={() => setSelectedMuscle(selectedMuscle === normTargetId ? null : normTargetId)}
+                          className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all border flex items-center gap-2 ${
+                            selectedMuscle === normTargetId
+                              ? 'bg-[#00E5FF] text-slate-950 border-[#00E5FF] shadow-lg shadow-[#00E5FF]/20'
+                              : isExceeded
+                                ? 'bg-rose-950/40 text-rose-300 border-rose-500/50 hover:bg-rose-900/50'
+                                : isMatched
+                                  ? 'bg-emerald-950/40 text-[#00FF87] border-emerald-500/40 hover:bg-emerald-900/50'
+                                  : 'bg-[#18233C] text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
+                          }`}
+                        >
+                          <span>{t(`muscles.${target.id}`) || target.id}</span>
+                          
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                            selectedMuscle === normTargetId
+                              ? 'bg-slate-950 text-[#00E5FF]'
+                              : isExceeded
+                                ? 'bg-rose-500/30 text-rose-300 border border-rose-500/50'
+                                : isMatched
+                                  ? 'bg-emerald-500/30 text-[#00FF87] border border-emerald-500/40'
+                                  : 'bg-[#0B101D] text-slate-400'
+                          }`}>
+                            {currentCount}/{targetCount} Bài {isExceeded ? '⚠️' : isMatched ? '✓' : ''}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : (
                   sortedSchedule[safeDayIndex]?.name === 'Nghỉ ngơi' ? (
@@ -413,28 +597,30 @@ export default function Workouts() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b border-slate-800/80 pb-2">
                   <p className="text-xs font-bold text-[#00E5FF] uppercase tracking-wider">
-                    Các bài đã chọn ({selectedExList.length})
+                    Các bài đã chọn ({activeSelectedExercises.length})
                   </p>
-                  {selectedExList.length > 0 && (
-                    <span className="text-xs text-slate-400">Tích chọn để đánh dấu hoàn thành</span>
-                  )}
+                  <span className="text-xs text-slate-400 font-semibold">
+                    {isWorkoutSaved ? 'Tích chọn để đánh dấu hoàn thành' : 'Chỉnh số Hiệp/Lần rồi bấm LƯU ở trên'}
+                  </span>
                 </div>
 
-                {selectedExList.length > 0 ? (
-                  selectedExList.map((ex, i) => (
+                {activeSelectedExercises.length > 0 ? (
+                  activeSelectedExercises.map((ex, i) => (
                     <div key={ex.id} className="p-5 rounded-2xl bg-[#0E1526] border border-slate-800/90 hover:border-cyan-500/40 transition-all flex items-center justify-between gap-4 shadow-lg group">
                       
-                      <div className="flex-1 space-y-2">
+                      <div className="flex-1 space-y-3">
                         <div className="flex items-center justify-between">
                           <h3 className="font-extrabold text-white text-base group-hover:text-[#00E5FF] transition-colors">
                             {i + 1}. {ex.name}
                           </h3>
-                          <button
-                            onClick={() => updateExercise(ex.id, 'selected', false)}
-                            className="text-xs text-rose-400 hover:text-rose-300 font-bold"
-                          >
-                            Xóa khỏi danh sách
-                          </button>
+                          {!isWorkoutSaved && (
+                            <button
+                              onClick={() => handleRemoveExercise(ex.id)}
+                              className="text-xs text-rose-400 hover:text-rose-300 font-bold"
+                            >
+                              Xóa khỏi danh sách
+                            </button>
+                          )}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -442,29 +628,71 @@ export default function Workouts() {
                             EXERCISE
                           </span>
                           
-                          <div className="flex items-center gap-1 bg-[#0B101D] px-2 py-1 rounded-lg border border-slate-800">
-                            <span className="text-slate-400">Hiệp:</span>
-                            <input
-                              type="number"
-                              min="1"
-                              value={ex.sets}
-                              onChange={(e) => updateExercise(ex.id, 'sets', Number(e.target.value) || 1)}
-                              className="w-10 bg-transparent text-[#00E5FF] font-bold text-center focus:outline-none"
-                            />
-                          </div>
+                          {/* Sets adjustment buttons & direct numeric input */}
+                          {!isWorkoutSaved ? (
+                            <div className="flex items-center gap-2 bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800">
+                              <span className="text-slate-400 font-semibold">Hiệp:</span>
+                              <button
+                                onClick={() => updateExerciseSets(ex.id, ex.sets - 1)}
+                                className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-sm border border-slate-700"
+                              >-</button>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={ex.sets}
+                                onChange={(e) => {
+                                  const clean = e.target.value.replace(/[^0-9]/g, '');
+                                  updateExerciseSets(ex.id, parseInt(clean) || 1);
+                                }}
+                                className="w-8 bg-transparent text-[#00E5FF] font-black text-center focus:outline-none focus:border-b focus:border-[#00E5FF]"
+                              />
+                              <button
+                                onClick={() => updateExerciseSets(ex.id, ex.sets + 1)}
+                                className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-sm border border-slate-700"
+                              >+</button>
+                            </div>
+                          ) : (
+                            <span className="bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800 text-slate-300 font-bold">
+                              Hiệp: <strong className="text-[#00E5FF]">{ex.sets}</strong>
+                            </span>
+                          )}
 
-                          <div className="flex items-center gap-1 bg-[#0B101D] px-2 py-1 rounded-lg border border-slate-800">
-                            <span className="text-slate-400">Lần:</span>
-                            <input
-                              type="text"
-                              value={ex.reps}
-                              onChange={(e) => updateExercise(ex.id, 'reps', e.target.value)}
-                              className="w-16 bg-transparent text-[#00E5FF] font-bold text-center focus:outline-none"
-                            />
-                          </div>
+                          {/* Reps adjustment buttons & direct numeric input */}
+                          {!isWorkoutSaved ? (
+                            <div className="flex items-center gap-2 bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800">
+                              <span className="text-slate-400 font-semibold">Lần:</span>
+                              <button
+                                onClick={() => adjustExerciseReps(ex.id, -1)}
+                                className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-sm border border-slate-700"
+                              >-</button>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={ex.reps}
+                                onChange={(e) => {
+                                  const cleanVal = e.target.value.replace(/[^0-9]/g, '');
+                                  setExerciseDetails(prev => ({
+                                    ...prev,
+                                    [ex.id]: { ...(prev[ex.id] || { sets: ex.sets, reps: '10' }), reps: cleanVal }
+                                  }));
+                                }}
+                                className="w-10 bg-transparent text-[#00E5FF] font-black text-center focus:outline-none focus:border-b focus:border-[#00E5FF]"
+                              />
+                              <button
+                                onClick={() => adjustExerciseReps(ex.id, 1)}
+                                className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-sm border border-slate-700"
+                              >+</button>
+                            </div>
+                          ) : (
+                            <span className="bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800 text-slate-300 font-bold">
+                              Lần: <strong className="text-[#00E5FF]">{ex.reps}</strong>
+                            </span>
+                          )}
 
                           <span className="text-emerald-400 font-semibold">
-                            🎯 Cơ chính: {ex.muscle}
+                            🎯 Cơ chính: {t(`muscles.${ex.normMuscle}`) || ex.muscle}
                           </span>
                         </div>
                       </div>
@@ -472,13 +700,21 @@ export default function Workouts() {
                       {/* Interactive Checkbox */}
                       <button
                         onClick={() => toggleCompleteExercise(ex.id)}
-                        className={`w-8 h-8 rounded-xl border-2 transition-all flex items-center justify-center shrink-0 ${
+                        disabled={!isWorkoutSaved}
+                        title={!isWorkoutSaved ? 'Vui lòng bấm LƯU ở trên để bắt đầu tập' : 'Đánh dấu hoàn thành'}
+                        className={`w-9 h-9 rounded-xl border-2 transition-all flex items-center justify-center shrink-0 ${
                           ex.completed 
                             ? 'bg-[#00FF87] border-[#00FF87] text-slate-950 shadow-lg shadow-[#00FF87]/30 scale-105' 
-                            : 'border-cyan-500/40 hover:border-[#00E5FF] bg-[#0B101D]'
+                            : isWorkoutSaved
+                              ? 'border-cyan-500/60 hover:border-[#00E5FF] bg-[#0B101D] text-slate-600'
+                              : 'border-slate-800 bg-[#0B101D]/50 text-slate-700 cursor-not-allowed'
                         }`}
                       >
-                        {ex.completed && <span className="font-black text-base">✓</span>}
+                        {ex.completed ? (
+                          <span className="font-black text-base">✓</span>
+                        ) : !isWorkoutSaved ? (
+                          <span className="text-[10px] text-slate-600">🔒</span>
+                        ) : null}
                       </button>
                     </div>
                   ))
@@ -491,31 +727,42 @@ export default function Workouts() {
 
             {/* Exercise Library Selection */}
             <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 space-y-4 shadow-2xl">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <span>📚</span> {selectedMuscle ? `${t('workouts.libraryTitle')}: ${t(`muscles.${selectedMuscle}`)}` : t('workouts.libraryPlaceholder')}
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>📚</span> {selectedMuscle ? `${t('workouts.libraryTitle')}: ${t(`muscles.${selectedMuscle}`) || selectedMuscle}` : t('workouts.libraryPlaceholder')}
+                </h3>
+                {isWorkoutSaved && (
+                  <span className="text-[11px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
+                    🔒 Lịch hôm nay đã chốt
+                  </span>
+                )}
+              </div>
 
               {selectedMuscle ? (
                 <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                  {exercises.filter(ex => ex.muscle.toLowerCase() === selectedMuscle.toLowerCase()).length > 0 ? (
-                    exercises.filter(ex => ex.muscle.toLowerCase() === selectedMuscle.toLowerCase()).map(ex => (
-                      <div key={ex.id} className="p-4 rounded-2xl bg-[#0E1526] border border-slate-800/80 flex items-center justify-between hover:bg-[#18233C] transition-colors">
-                        <span className="font-bold text-sm text-slate-200">{ex.name}</span>
-                        <button
-                          onClick={() => updateExercise(ex.id, 'selected', true)}
-                          disabled={ex.selected}
-                          className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                            ex.selected
-                              ? 'bg-slate-800 text-slate-500 border border-slate-700'
-                              : 'bg-[#00E5FF] text-slate-950 hover:bg-cyan-300 shadow-md shadow-[#00E5FF]/20'
-                          }`}
-                        >
-                          {ex.selected ? 'Đã thêm' : '+ Thêm bài này'}
-                        </button>
-                      </div>
-                    ))
+                  {allExercises.filter(ex => ex.normMuscle === normalizeMuscleId(selectedMuscle)).length > 0 ? (
+                    allExercises.filter(ex => ex.normMuscle === normalizeMuscleId(selectedMuscle)).map(ex => {
+                      const isAlreadySelected = currentSelectedIds.includes(ex.id);
+
+                      return (
+                        <div key={ex.id} className="p-4 rounded-2xl bg-[#0E1526] border border-slate-800/80 flex items-center justify-between hover:bg-[#18233C] transition-colors">
+                          <span className="font-bold text-sm text-slate-200">{ex.name}</span>
+                          <button
+                            onClick={() => handleAddExerciseFromLibrary(ex.id)}
+                            disabled={isAlreadySelected || isWorkoutSaved}
+                            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                              isAlreadySelected || isWorkoutSaved
+                                ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                                : 'bg-[#00E5FF] text-slate-950 hover:bg-cyan-300 shadow-md shadow-[#00E5FF]/20'
+                            }`}
+                          >
+                            {isAlreadySelected ? 'Đã thêm' : isWorkoutSaved ? '🔒 Đã chốt' : '+ Thêm bài này'}
+                          </button>
+                        </div>
+                      );
+                    })
                   ) : (
-                    <p className="text-xs text-slate-400 text-center py-6">{t('workouts.emptyLibrary')} {t(`muscles.${selectedMuscle}`)}.</p>
+                    <p className="text-xs text-slate-400 text-center py-6">{t('workouts.emptyLibrary')} {t(`muscles.${selectedMuscle}`) || selectedMuscle}.</p>
                   )}
                 </div>
               ) : (
