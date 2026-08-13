@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import { useRouter } from 'next/navigation';
+import { API_URL } from '@/utils/api';
 
 export default function Profile() {
   const router = useRouter();

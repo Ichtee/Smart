@@ -2,6 +2,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { API_URL } from '@/utils/api';
 
 function VerifyContent() {
   const searchParams = useSearchParams();
