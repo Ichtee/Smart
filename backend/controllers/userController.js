@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const User = require('../models/User');
+
 const sendEmail = async ({ to, subject, html }) => {
   const scriptUrl = process.env.GMAIL_SCRIPT_URL;
   if (!scriptUrl) {
