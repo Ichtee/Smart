@@ -34,7 +34,12 @@ const registerUser = async (req, res) => {
 
     const userExists = await User.findOne({ $or: [{ email }, { username }] });
     if (userExists) {
-      return res.status(400).json({ message: 'User (email or username) already exists' });
+      if (!userExists.isEmailVerified) {
+        // Delete unverified account from previous failed attempt so user can re-register
+        await User.deleteOne({ _id: userExists._id });
+      } else {
+        return res.status(400).json({ message: 'User (email or username) already exists' });
+      }
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -58,30 +63,39 @@ const registerUser = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const verifyUrl = `${frontendUrl}/verify?token=${verificationToken}`;
 
-    await transporter.sendMail({
-      from: `"Smart App" <${process.env.GMAIL_USER}>`,
-      to: user.email,
-      subject: 'Xác thực email - Smart App',
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #0B0F19; color: #fff; padding: 40px; border-radius: 16px;">
-          <div style="text-align: center; margin-bottom: 32px;">
-            <span style="font-size: 32px;">⚡</span>
-            <h1 style="color: #00E5FF; margin: 8px 0 4px;">Smart App</h1>
-            <p style="color: #94a3b8; font-size: 14px;">Xác thực tài khoản</p>
+    try {
+      await transporter.sendMail({
+        from: `"Smart App" <${process.env.GMAIL_USER}>`,
+        to: user.email,
+        subject: 'Xác thực email - Smart App',
+        html: `
+          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #0B0F19; color: #fff; padding: 40px; border-radius: 16px;">
+            <div style="text-align: center; margin-bottom: 32px;">
+              <span style="font-size: 32px;">⚡</span>
+              <h1 style="color: #00E5FF; margin: 8px 0 4px;">Smart App</h1>
+              <p style="color: #94a3b8; font-size: 14px;">Xác thực tài khoản</p>
+            </div>
+            <p style="color: #cbd5e1;">Xin chào <strong style="color:#fff">${user.name}</strong>,</p>
+            <p style="color: #cbd5e1;">Cảm ơn bạn đã đăng ký! Nhấn nút bên dưới để xác thực email trong vòng <strong style="color:#facc15">10 phút</strong>.</p>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${verifyUrl}" style="background: #00E5FF; color: #0B0F19; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 15px;">
+                Xác thực Email
+              </a>
+            </div>
+            <p style="color: #64748b; font-size: 12px;">Nếu bạn không đăng ký tài khoản này, hãy bỏ qua email này.</p>
+            <hr style="border-color: #1e293b; margin: 24px 0;" />
+            <p style="color: #ef4444; font-size: 11px; text-align: center;">⚠️ Link hết hạn sau 10 phút. Tài khoản chưa xác thực sẽ bị xóa tự động.</p>
           </div>
-          <p style="color: #cbd5e1;">Xin chào <strong style="color:#fff">${user.name}</strong>,</p>
-          <p style="color: #cbd5e1;">Cảm ơn bạn đã đăng ký! Nhấn nút bên dưới để xác thực email trong vòng <strong style="color:#facc15">10 phút</strong>.</p>
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${verifyUrl}" style="background: #00E5FF; color: #0B0F19; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 15px;">
-              Xác thực Email
-            </a>
-          </div>
-          <p style="color: #64748b; font-size: 12px;">Nếu bạn không đăng ký tài khoản này, hãy bỏ qua email này.</p>
-          <hr style="border-color: #1e293b; margin: 24px 0;" />
-          <p style="color: #ef4444; font-size: 11px; text-align: center;">⚠️ Link hết hạn sau 10 phút. Tài khoản chưa xác thực sẽ bị xóa tự động.</p>
-        </div>
-      `,
-    });
+        `,
+      });
+    } catch (emailErr) {
+      console.error('Error sending verification email:', emailErr);
+      // Clean up the created user so database doesn't stay blocked
+      await User.deleteOne({ _id: user._id });
+      return res.status(500).json({ 
+        message: 'Lỗi gửi email xác thực. Vui lòng kiểm tra lại cấu hình GMAIL_USER và GMAIL_PASS trên Render server.' 
+      });
+    }
 
     res.status(201).json({
       message: 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản trong 10 phút.',
