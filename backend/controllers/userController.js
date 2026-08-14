@@ -3,30 +3,41 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const User = require('../models/User');
 
-const sendEmail = async ({ to, subject, html }) => {
-  const scriptUrl = process.env.GMAIL_SCRIPT_URL;
-  if (!scriptUrl) {
-    throw new Error('Chưa cấu hình GMAIL_SCRIPT_URL trên Render Environment Variables!');
+const sendEmail = async ({ to, to_name, verify_url, subject }) => {
+  const serviceId = process.env.EMAILJS_SERVICE_ID;
+  const templateId = process.env.EMAILJS_TEMPLATE_ID;
+  const publicKey = process.env.EMAILJS_PUBLIC_KEY;
+  const privateKey = process.env.EMAILJS_PRIVATE_KEY; // Optional private key
+
+  if (!serviceId || !templateId || !publicKey) {
+    throw new Error('Chưa cấu hình EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID hoặc EMAILJS_PUBLIC_KEY trên Render!');
   }
 
-  const res = await fetch(scriptUrl, {
+  const payload = {
+    service_id: serviceId,
+    template_id: templateId,
+    user_id: publicKey,
+    template_params: {
+      to_email: to,
+      to_name: to_name || 'User',
+      verify_url: verify_url || '',
+      subject: subject || 'Smart App',
+    },
+  };
+
+  if (privateKey) {
+    payload.accessToken = privateKey;
+  }
+
+  const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to, subject, html }),
-    redirect: 'follow',
+    body: JSON.stringify(payload),
   });
 
-  const text = await res.text();
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch (e) {
-    // Apps Script redirects or plain response
-    return;
-  }
-
-  if (data && data.status === 'error') {
-    throw new Error(data.message || 'Lỗi gửi mail qua Google Apps Script');
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`EmailJS (${res.status}): ${errorText || res.statusText}`);
   }
 };
 
@@ -82,36 +93,18 @@ const registerUser = async (req, res) => {
     const verifyUrl = `${frontendUrl}/verify?token=${verificationToken}`;
 
     try {
-      await createMailTransporter().sendMail({
-        from: `"Smart App" <${process.env.GMAIL_USER}>`,
+      await sendEmail({
         to: user.email,
-        subject: 'Xác thực email - Smart App',
-        html: `
-          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #0B0F19; color: #fff; padding: 40px; border-radius: 16px;">
-            <div style="text-align: center; margin-bottom: 32px;">
-              <span style="font-size: 32px;">⚡</span>
-              <h1 style="color: #00E5FF; margin: 8px 0 4px;">Smart App</h1>
-              <p style="color: #94a3b8; font-size: 14px;">Xác thực tài khoản</p>
-            </div>
-            <p style="color: #cbd5e1;">Xin chào <strong style="color:#fff">${user.name}</strong>,</p>
-            <p style="color: #cbd5e1;">Cảm ơn bạn đã đăng ký! Nhấn nút bên dưới để xác thực email trong vòng <strong style="color:#facc15">10 phút</strong>.</p>
-            <div style="text-align: center; margin: 32px 0;">
-              <a href="${verifyUrl}" style="background: #00E5FF; color: #0B0F19; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 15px;">
-                Xác thực Email
-              </a>
-            </div>
-            <p style="color: #64748b; font-size: 12px;">Nếu bạn không đăng ký tài khoản này, hãy bỏ qua email này.</p>
-            <hr style="border-color: #1e293b; margin: 24px 0;" />
-            <p style="color: #ef4444; font-size: 11px; text-align: center;">⚠️ Link hết hạn sau 10 phút. Tài khoản chưa xác thực sẽ bị xóa tự động.</p>
-          </div>
-        `,
+        to_name: user.name,
+        verify_url: verifyUrl,
+        subject: 'Xác thực tài khoản Smart App',
       });
     } catch (emailErr) {
       console.error('Error sending verification email:', emailErr);
       // Clean up the created user so database doesn't stay blocked
       await User.deleteOne({ _id: user._id });
       return res.status(500).json({
-        message: `Lỗi gửi email: ${emailErr.message || 'Vui lòng kiểm tra GMAIL_USER và GMAIL_PASS'}`
+        message: `Lỗi gửi email: ${emailErr.message}`
       });
     }
 
@@ -240,23 +233,9 @@ const resendVerification = async (req, res) => {
     try {
       await sendEmail({
         to: user.email,
-        subject: 'Xác thực email (gửi lại) - Smart App',
-        html: `
-          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #0B0F19; color: #fff; padding: 40px; border-radius: 16px;">
-            <div style="text-align: center; margin-bottom: 32px;">
-              <span style="font-size: 32px;">⚡</span>
-              <h1 style="color: #00E5FF; margin: 8px 0 4px;">Smart App</h1>
-            </div>
-            <p style="color: #cbd5e1;">Xin chào <strong style="color:#fff">${user.name}</strong>,</p>
-            <p style="color: #cbd5e1;">Chúng tôi đã gửi lại link xác thực. Link có hiệu lực trong <strong style="color:#facc15">10 phút</strong>.</p>
-            <div style="text-align: center; margin: 32px 0;">
-              <a href="${verifyUrl}" style="background: #00E5FF; color: #0B0F19; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 15px;">
-                Xác thực Email
-              </a>
-            </div>
-            <p style="color: #ef4444; font-size: 11px; text-align: center;">Link hết hạn sau 10 phút.</p>
-          </div>
-        `,
+        to_name: user.name,
+        verify_url: verifyUrl,
+        subject: 'Xác thực tài khoản Smart App (Gửi lại)',
       });
     } catch (emailErr) {
       console.error('resendVerification sendEmail error:', emailErr);
@@ -427,34 +406,16 @@ const forgotPassword = async (req, res) => {
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
     try {
-      await createMailTransporter().sendMail({
-        from: `"Smart App" <${process.env.GMAIL_USER}>`,
+      await sendEmail({
         to: user.email,
+        to_name: user.name,
+        verify_url: resetUrl,
         subject: 'Đặt lại mật khẩu Smart App',
-        html: `
-          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #0B0F19; color: #fff; padding: 40px; border-radius: 16px;">
-            <div style="text-align: center; margin-bottom: 32px;">
-              <span style="font-size: 32px;">⚡</span>
-              <h1 style="color: #00E5FF; margin: 8px 0 4px;">Smart App</h1>
-              <p style="color: #94a3b8; font-size: 14px;">Đặt lại mật khẩu</p>
-            </div>
-            <p style="color: #cbd5e1;">Xin chào <strong style="color:#fff">${user.name}</strong>,</p>
-            <p style="color: #cbd5e1;">Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Link dưới đây có hiệu lực trong <strong>1 giờ</strong>.</p>
-            <div style="text-align: center; margin: 32px 0;">
-              <a href="${resetUrl}" style="background: #00E5FF; color: #0B0F19; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 15px;">
-                Đặt lại mật khẩu
-              </a>
-            </div>
-            <p style="color: #64748b; font-size: 12px;">Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này. Tài khoản của bạn vẫn an toàn.</p>
-            <hr style="border-color: #1e293b; margin: 24px 0;" />
-            <p style="color: #475569; font-size: 11px; text-align: center;">Link hết hạn sau 1 giờ. Smart App không bao giờ hỏi mật khẩu của bạn.</p>
-          </div>
-        `,
       });
     } catch (emailErr) {
-      console.error('forgotPassword sendMail error:', emailErr);
+      console.error('forgotPassword sendEmail error:', emailErr);
       return res.status(500).json({
-        message: `Lỗi gửi email: ${emailErr.message || 'Kiểm tra GMAIL_USER và GMAIL_PASS'}`
+        message: `Lỗi gửi email: ${emailErr.message}`
       });
     }
 
