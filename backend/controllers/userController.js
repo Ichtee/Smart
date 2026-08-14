@@ -3,19 +3,22 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const User = require('../models/User');
 
-const sendEmail = async ({ to, to_name, verify_url, subject }) => {
+const sendEmail = async ({ to, to_name, verify_url, subject, template_id }) => {
   const serviceId = process.env.EMAILJS_SERVICE_ID;
-  const templateId = process.env.EMAILJS_TEMPLATE_ID;
+  const defaultTemplateId = process.env.EMAILJS_TEMPLATE_ID;
+  const forgotTemplateId = process.env.EMAILJS_FORGOT_TEMPLATE_ID || defaultTemplateId;
   const publicKey = process.env.EMAILJS_PUBLIC_KEY;
   const privateKey = process.env.EMAILJS_PRIVATE_KEY; // Optional private key
 
-  if (!serviceId || !templateId || !publicKey) {
+  const targetTemplateId = template_id || defaultTemplateId;
+
+  if (!serviceId || !targetTemplateId || !publicKey) {
     throw new Error('Chưa cấu hình EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID hoặc EMAILJS_PUBLIC_KEY trên Render!');
   }
 
   const payload = {
     service_id: serviceId,
-    template_id: templateId,
+    template_id: targetTemplateId,
     user_id: publicKey,
     template_params: {
       to_email: to,
@@ -411,6 +414,7 @@ const forgotPassword = async (req, res) => {
         to_name: user.name,
         verify_url: resetUrl,
         subject: 'Đặt lại mật khẩu Smart App',
+        template_id: process.env.EMAILJS_FORGOT_TEMPLATE_ID,
       });
     } catch (emailErr) {
       console.error('forgotPassword sendEmail error:', emailErr);
