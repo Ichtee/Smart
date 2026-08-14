@@ -20,6 +20,9 @@ connectDB();
 
 const app = express();
 
+// Trust proxy for Render/Vercel reverse proxies (fixes rate limiter error)
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(helmet());
 
