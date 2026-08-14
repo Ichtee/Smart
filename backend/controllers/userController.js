@@ -288,12 +288,8 @@ const updateProfile = async (req, res) => {
 // @access  Private/Admin
 const getAllUsers = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
-    const skip = (page - 1) * limit;
-    const users = await User.find({}).select('-password').skip(skip).limit(limit);
-    const total = await User.countDocuments();
-    res.json({ users, total, page, pages: Math.ceil(total / limit) });
+    const users = await User.find({}).select('-password');
+    res.json(users);
   } catch (error) {
     console.error('getAllUsers error:', error);
     res.status(500).json({ message: 'Server error' });

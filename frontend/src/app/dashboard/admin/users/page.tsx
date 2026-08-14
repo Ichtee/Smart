@@ -54,7 +54,7 @@ export default function UserManagement() {
       });
       if (!res.ok) throw new Error(`Lỗi Server: ${res.status}`);
       const data = await res.json();
-      setUsers(data);
+      setUsers(Array.isArray(data) ? data : (data.users || []));
     } catch (err) {
       console.error('Failed to fetch users', err);
     } finally {

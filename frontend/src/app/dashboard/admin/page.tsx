@@ -37,7 +37,7 @@ export default function AdminDashboard() {
 
           if (usersRes.ok) {
             const usersData = await usersRes.json();
-            usersCount = usersData.length || 0;
+            usersCount = Array.isArray(usersData) ? usersData.length : (usersData.total || usersData.users?.length || 0);
           }
           if (exercisesRes.ok) {
             const exercisesData = await exercisesRes.json();
