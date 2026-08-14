@@ -38,7 +38,7 @@ const createRoutine = async (req, res) => {
 
 // @desc    Update a routine
 // @route   PUT /api/routines/:id
-// @access  Public (should be Admin later)
+// @access  Private/Admin
 const updateRoutine = async (req, res) => {
   try {
     const routine = await Routine.findOne({ id: req.params.id });
@@ -47,15 +47,22 @@ const updateRoutine = async (req, res) => {
       return res.status(404).json({ message: 'Routine not found' });
     }
 
+    // Explicitly pick only allowed fields to prevent mass assignment
+    const { name, schedule } = req.body;
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (schedule !== undefined) updateData.schedule = schedule;
+
     const updatedRoutine = await Routine.findOneAndUpdate(
       { id: req.params.id },
-      req.body,
-      { new: true }
+      updateData,
+      { new: true, runValidators: true }
     );
 
     res.status(200).json(updatedRoutine);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('updateRoutine error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

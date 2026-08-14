@@ -7,8 +7,11 @@ const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_deploy');
 
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'fallback_secret_123', {
-    expiresIn: '30d',
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is not set');
+  }
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: '7d',
   });
 };
 
@@ -18,6 +21,10 @@ const registerUser = async (req, res) => {
 
     if (!name || !username || !email || !password) {
       return res.status(400).json({ message: 'Please add all fields' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
     }
 
     const userExists = await User.findOne({ $or: [{ email }, { username }] });
@@ -35,7 +42,6 @@ const registerUser = async (req, res) => {
       username,
       email,
       password: hashedPassword,
-      rawPassword: password,
       verificationToken
     });
 
@@ -58,13 +64,18 @@ const registerUser = async (req, res) => {
       res.status(400).json({ message: 'Invalid user data' });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('registerUser error:', error);
+    res.status(500).json({ message: 'Server error during registration' });
   }
 };
 
 const loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Please provide username and password' });
+    }
 
     // Allow login with either username or email
     const user = await User.findOne({ 
@@ -74,8 +85,6 @@ const loginUser = async (req, res) => {
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-
-    // Email verification check removed
 
     if (await bcrypt.compare(password, user.password)) {
       res.json({
@@ -96,7 +105,8 @@ const loginUser = async (req, res) => {
       res.status(401).json({ message: 'Invalid credentials' });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('loginUser error:', error);
+    res.status(500).json({ message: 'Server error during login' });
   }
 };
 
@@ -120,7 +130,8 @@ const verifyEmail = async (req, res) => {
 
     res.status(200).json({ message: 'Email verified successfully' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('verifyEmail error:', error);
+    res.status(500).json({ message: 'Server error during email verification' });
   }
 };
 
@@ -133,7 +144,8 @@ const getProfile = async (req, res) => {
       res.status(404).json({ message: 'User not found' });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('getProfile error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -175,7 +187,8 @@ const updateProfile = async (req, res) => {
       res.status(404).json({ message: 'User not found' });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('updateProfile error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -184,10 +197,15 @@ const updateProfile = async (req, res) => {
 // @access  Private/Admin
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select('-password');
-    res.json(users);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+    const users = await User.find({}).select('-password').skip(skip).limit(limit);
+    const total = await User.countDocuments();
+    res.json({ users, total, page, pages: Math.ceil(total / limit) });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('getAllUsers error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

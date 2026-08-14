@@ -1,17 +1,32 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
+const { generalLimiter } = require('./middleware/rateLimiter');
 
 // Load env vars
 dotenv.config();
+
+// Validate required environment variables
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set. Exiting.');
+  process.exit(1);
+}
 
 // Connect to database
 connectDB();
 
 const app = express();
 
-// Middleware
+// Security headers
+app.use(helmet());
+
+// Gzip compression for all responses
+app.use(compression());
+
+// CORS — only allow known origins
 const allowedOrigins = [
   'http://localhost:3000',
   process.env.FRONTEND_URL, // Set this to your Vercel URL in Render env vars
@@ -28,7 +43,12 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json());
+
+// Limit request body to 10kb to prevent payload-based DoS
+app.use(express.json({ limit: '10kb' }));
+
+// Apply general rate limiter to all API routes
+app.use('/api', generalLimiter);
 
 // Routes
 app.use('/api/users', require('./routes/userRoutes'));
