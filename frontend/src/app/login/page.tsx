@@ -62,13 +62,14 @@ export default function Login() {
   const handleResendVerification = async () => {
     setResendStatus('loading');
     setResendMessage('');
+    const emailToSend = unverifiedEmail || username;
     try {
       const res = await fetch(`${API_URL}/api/users/resend-verification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: unverifiedEmail }),
+        body: JSON.stringify({ email: emailToSend }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to resend email');

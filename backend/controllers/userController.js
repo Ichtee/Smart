@@ -10,6 +10,9 @@ const transporter = nodemailer.createTransport({
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_PASS,
   },
+  connectionTimeout: 8000, // 8 second timeout to prevent hanging
+  greetingTimeout: 8000,
+  socketTimeout: 8000,
 });
 
 const generateToken = (id) => {
@@ -191,14 +194,23 @@ const resendVerification = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) {
-      return res.status(400).json({ message: 'Please provide your email address' });
+      return res.status(400).json({ message: 'Please provide your email address or username' });
     }
 
-    const user = await User.findOne({ email, isEmailVerified: false });
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
+      return res.status(500).json({ 
+        message: 'Server chưa được cấu hình GMAIL_USER và GMAIL_PASS trên Render Environment Variables!' 
+      });
+    }
 
-    // Always return success to prevent email enumeration
+    const searchStr = email.trim();
+    const user = await User.findOne({ 
+      $or: [{ email: searchStr.toLowerCase() }, { email: searchStr }, { username: searchStr }], 
+      isEmailVerified: false 
+    });
+
     if (!user) {
-      return res.status(200).json({ message: 'If that email exists and is unverified, a new link has been sent.' });
+      return res.status(404).json({ message: 'Không tìm thấy tài khoản chưa xác thực phù hợp với thông tin này.' });
     }
 
     // Generate new token and extend expiry by 10 minutes
@@ -210,29 +222,36 @@ const resendVerification = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const verifyUrl = `${frontendUrl}/verify?token=${verificationToken}`;
 
-    await transporter.sendMail({
-      from: `"Smart App" <${process.env.GMAIL_USER}>`,
-      to: user.email,
-      subject: 'Xác thực email (gửi lại) - Smart App',
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #0B0F19; color: #fff; padding: 40px; border-radius: 16px;">
-          <div style="text-align: center; margin-bottom: 32px;">
-            <span style="font-size: 32px;">⚡</span>
-            <h1 style="color: #00E5FF; margin: 8px 0 4px;">Smart App</h1>
+    try {
+      await transporter.sendMail({
+        from: `"Smart App" <${process.env.GMAIL_USER}>`,
+        to: user.email,
+        subject: 'Xác thực email (gửi lại) - Smart App',
+        html: `
+          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #0B0F19; color: #fff; padding: 40px; border-radius: 16px;">
+            <div style="text-align: center; margin-bottom: 32px;">
+              <span style="font-size: 32px;">⚡</span>
+              <h1 style="color: #00E5FF; margin: 8px 0 4px;">Smart App</h1>
+            </div>
+            <p style="color: #cbd5e1;">Xin chào <strong style="color:#fff">${user.name}</strong>,</p>
+            <p style="color: #cbd5e1;">Chúng tôi đã gửi lại link xác thực. Link có hiệu lực trong <strong style="color:#facc15">10 phút</strong>.</p>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${verifyUrl}" style="background: #00E5FF; color: #0B0F19; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 15px;">
+                Xác thực Email
+              </a>
+            </div>
+            <p style="color: #ef4444; font-size: 11px; text-align: center;">Link hết hạn sau 10 phút.</p>
           </div>
-          <p style="color: #cbd5e1;">Xin chào <strong style="color:#fff">${user.name}</strong>,</p>
-          <p style="color: #cbd5e1;">Chúng tôi đã gửi lại link xác thực. Link có hiệu lực trong <strong style="color:#facc15">10 phút</strong>.</p>
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${verifyUrl}" style="background: #00E5FF; color: #0B0F19; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 15px;">
-              Xác thực Email
-            </a>
-          </div>
-          <p style="color: #ef4444; font-size: 11px; text-align: center;">Link hết hạn sau 10 phút.</p>
-        </div>
-      `,
-    });
+        `,
+      });
+    } catch (emailErr) {
+      console.error('resendVerification sendMail error:', emailErr);
+      return res.status(500).json({ 
+        message: 'Lỗi gửi email. Vui lòng kiểm tra lại GMAIL_USER và GMAIL_PASS (App Password) trên Render.' 
+      });
+    }
 
-    res.status(200).json({ message: 'Email xác thực đã được gửi lại!' });
+    res.status(200).json({ message: 'Email xác thực đã được gửi lại thành công! Vui lòng kiểm tra hộp thư.' });
   } catch (error) {
     console.error('resendVerification error:', error);
     res.status(500).json({ message: 'Server error resending verification email' });
