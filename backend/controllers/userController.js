@@ -266,6 +266,102 @@ const updateUserRoleAndStatus = async (req, res) => {
   }
 };
 
+// @desc    Forgot password — send reset email
+// @route   POST /api/users/forgot-password
+// @access  Public
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'Please provide an email address' });
+    }
+
+    const user = await User.findOne({ email });
+
+    // Always return success to prevent email enumeration attacks
+    if (!user) {
+      return res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
+    }
+
+    // Generate a secure reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+    await user.save();
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+    await resend.emails.send({
+      from: 'Smart App <onboarding@resend.dev>',
+      to: user.email,
+      subject: 'Đặt lại mật khẩu Smart App',
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #0B0F19; color: #fff; padding: 40px; border-radius: 16px;">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <span style="font-size: 32px;">⚡</span>
+            <h1 style="color: #00E5FF; margin: 8px 0 4px;">Smart App</h1>
+            <p style="color: #94a3b8; font-size: 14px;">Đặt lại mật khẩu</p>
+          </div>
+          <p style="color: #cbd5e1;">Xin chào <strong style="color:#fff">${user.name}</strong>,</p>
+          <p style="color: #cbd5e1;">Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Link dưới đây có hiệu lực trong <strong>1 giờ</strong>.</p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${resetUrl}" style="background: #00E5FF; color: #0B0F19; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 15px;">
+              Đặt lại mật khẩu
+            </a>
+          </div>
+          <p style="color: #64748b; font-size: 12px;">Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này. Tài khoản của bạn vẫn an toàn.</p>
+          <hr style="border-color: #1e293b; margin: 24px 0;" />
+          <p style="color: #475569; font-size: 11px; text-align: center;">Link hết hạn sau 1 giờ. Smart App không bao giờ hỏi mật khẩu của bạn.</p>
+        </div>
+      `,
+    });
+
+    res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
+  } catch (error) {
+    console.error('forgotPassword error:', error);
+    res.status(500).json({ message: 'Server error sending reset email' });
+  }
+};
+
+// @desc    Reset password using token
+// @route   POST /api/users/reset-password/:token
+// @access  Public
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ message: 'Please provide a new password' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }, // token not expired
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    // Set new password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successfully. You can now log in.' });
+  } catch (error) {
+    console.error('resetPassword error:', error);
+    res.status(500).json({ message: 'Server error resetting password' });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -274,5 +370,7 @@ module.exports = {
   updateProfile,
   getAllUsers,
   deleteUser,
-  updateUserRoleAndStatus
+  updateUserRoleAndStatus,
+  forgotPassword,
+  resetPassword,
 };
