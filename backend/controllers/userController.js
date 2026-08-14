@@ -1,10 +1,16 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const User = require('../models/User');
-const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_deploy');
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
+  },
+});
 
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
@@ -292,8 +298,8 @@ const forgotPassword = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
-    await resend.emails.send({
-      from: 'Smart App <onboarding@resend.dev>',
+    await transporter.sendMail({
+      from: `"Smart App" <${process.env.GMAIL_USER}>`,
       to: user.email,
       subject: 'Đặt lại mật khẩu Smart App',
       html: `
