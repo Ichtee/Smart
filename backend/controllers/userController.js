@@ -24,6 +24,8 @@ const sendEmail = async ({ to, to_name, verify_url, subject, template_id }) => {
       to_email: to,
       to_name: to_name || 'User',
       verify_url: verify_url || '',
+      link: verify_url || '',
+      message: verify_url || '',
       subject: subject || 'Smart App',
     },
   };
