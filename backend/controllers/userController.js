@@ -22,6 +22,10 @@ const sendEmail = async ({ to, to_name, verify_url, subject, template_id }) => {
     user_id: publicKey,
     template_params: {
       to_email: to,
+      to: to,
+      email: to,
+      user_email: to,
+      recipient: to,
       to_name: to_name || 'User',
       verify_url: verify_url || '',
       link: verify_url || '',
