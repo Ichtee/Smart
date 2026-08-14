@@ -1,26 +1,31 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
-const User = require('../models/User');
+const sendEmail = async ({ to, subject, html }) => {
+  const scriptUrl = process.env.GMAIL_SCRIPT_URL;
+  if (!scriptUrl) {
+    throw new Error('Chưa cấu hình GMAIL_SCRIPT_URL trên Render Environment Variables!');
+  }
 
-const createMailTransporter = () => {
-  const user = (process.env.GMAIL_USER || '').trim();
-  const pass = (process.env.GMAIL_PASS || '').replace(/\s+/g, '');
-
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // STARTTLS required for cloud platforms like Render
-    requireTLS: true,
-    auth: { user, pass },
-    tls: {
-      rejectUnauthorized: false
-    },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 15000,
+  const res = await fetch(scriptUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to, subject, html }),
+    redirect: 'follow',
   });
+
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    // Apps Script redirects or plain response
+    return;
+  }
+
+  if (data && data.status === 'error') {
+    throw new Error(data.message || 'Lỗi gửi mail qua Google Apps Script');
+  }
 };
 
 const generateToken = (id) => {
@@ -103,8 +108,8 @@ const registerUser = async (req, res) => {
       console.error('Error sending verification email:', emailErr);
       // Clean up the created user so database doesn't stay blocked
       await User.deleteOne({ _id: user._id });
-      return res.status(500).json({ 
-        message: `Lỗi gửi email: ${emailErr.message || 'Vui lòng kiểm tra GMAIL_USER và GMAIL_PASS'}` 
+      return res.status(500).json({
+        message: `Lỗi gửi email: ${emailErr.message || 'Vui lòng kiểm tra GMAIL_USER và GMAIL_PASS'}`
       });
     }
 
@@ -171,7 +176,7 @@ const loginUser = async (req, res) => {
 const verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
-    
+
     if (!token) {
       return res.status(400).json({ message: 'Token is required' });
     }
@@ -206,15 +211,15 @@ const resendVerification = async (req, res) => {
     }
 
     if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
-      return res.status(500).json({ 
-        message: 'Server chưa được cấu hình GMAIL_USER và GMAIL_PASS trên Render Environment Variables!' 
+      return res.status(500).json({
+        message: 'Server chưa được cấu hình GMAIL_USER và GMAIL_PASS trên Render Environment Variables!'
       });
     }
 
     const searchStr = email.trim();
-    const user = await User.findOne({ 
-      $or: [{ email: searchStr.toLowerCase() }, { email: searchStr }, { username: searchStr }], 
-      isEmailVerified: false 
+    const user = await User.findOne({
+      $or: [{ email: searchStr.toLowerCase() }, { email: searchStr }, { username: searchStr }],
+      isEmailVerified: false
     });
 
     if (!user) {
@@ -231,8 +236,7 @@ const resendVerification = async (req, res) => {
     const verifyUrl = `${frontendUrl}/verify?token=${verificationToken}`;
 
     try {
-      await createMailTransporter().sendMail({
-        from: `"Smart App" <${process.env.GMAIL_USER}>`,
+      await sendEmail({
         to: user.email,
         subject: 'Xác thực email (gửi lại) - Smart App',
         html: `
@@ -253,9 +257,9 @@ const resendVerification = async (req, res) => {
         `,
       });
     } catch (emailErr) {
-      console.error('resendVerification sendMail error:', emailErr);
-      return res.status(500).json({ 
-        message: `Lỗi gửi email: ${emailErr.message || 'Kiểm tra GMAIL_USER và GMAIL_PASS (App Password)'}` 
+      console.error('resendVerification sendEmail error:', emailErr);
+      return res.status(500).json({
+        message: `Lỗi gửi email: ${emailErr.message}`
       });
     }
 
@@ -374,7 +378,7 @@ const updateUserRoleAndStatus = async (req, res) => {
         }
         user.role = req.body.role;
       }
-      
+
       if (req.body.isEmailVerified !== undefined) {
         user.isEmailVerified = req.body.isEmailVerified;
       }
@@ -447,8 +451,8 @@ const forgotPassword = async (req, res) => {
       });
     } catch (emailErr) {
       console.error('forgotPassword sendMail error:', emailErr);
-      return res.status(500).json({ 
-        message: `Lỗi gửi email: ${emailErr.message || 'Kiểm tra GMAIL_USER và GMAIL_PASS'}` 
+      return res.status(500).json({
+        message: `Lỗi gửi email: ${emailErr.message || 'Kiểm tra GMAIL_USER và GMAIL_PASS'}`
       });
     }
 
