@@ -27,6 +27,11 @@ const userSchema = new mongoose.Schema({
   verificationToken: {
     type: String
   },
+  // TTL index field — MongoDB auto-deletes unverified accounts when this date passes
+  // Set to Date.now() + 10min on register, cleared on verify so verified users are never deleted
+  verificationTokenExpires: {
+    type: Date
+  },
   resetPasswordToken: {
     type: String
   },
@@ -67,5 +72,9 @@ const userSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// TTL index: MongoDB automatically deletes documents when verificationTokenExpires date passes.
+// Cleared after email verification so verified accounts are never auto-deleted.
+userSchema.index({ verificationTokenExpires: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model('User', userSchema);

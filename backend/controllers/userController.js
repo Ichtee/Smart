@@ -28,7 +28,6 @@ const registerUser = async (req, res) => {
     if (!name || !username || !email || !password) {
       return res.status(400).json({ message: 'Please add all fields' });
     }
-
     if (password.length < 8) {
       return res.status(400).json({ message: 'Password must be at least 8 characters' });
     }
@@ -40,7 +39,6 @@ const registerUser = async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
     const user = await User.create({
@@ -48,31 +46,52 @@ const registerUser = async (req, res) => {
       username,
       email,
       password: hashedPassword,
-      verificationToken
+      verificationToken,
+      verificationTokenExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
     });
 
-    if (user) {
-      res.status(201).json({
-        _id: user.id,
-        name: user.name,
-        username: user.username,
-        email: user.email,
-        height: user.height,
-        weight: user.weight,
-        age: user.age,
-        gender: user.gender,
-        goal: user.goal,
-        activityLevel: user.activityLevel,
-        role: user.role,
-        token: generateToken(user._id),
-      });
-    } else {
-      res.status(400).json({ message: 'Invalid user data' });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid user data' });
     }
+
+    // Send verification email
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const verifyUrl = `${frontendUrl}/verify?token=${verificationToken}`;
+
+    await transporter.sendMail({
+      from: `"Smart App" <${process.env.GMAIL_USER}>`,
+      to: user.email,
+      subject: 'Xác thực email - Smart App',
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #0B0F19; color: #fff; padding: 40px; border-radius: 16px;">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <span style="font-size: 32px;">⚡</span>
+            <h1 style="color: #00E5FF; margin: 8px 0 4px;">Smart App</h1>
+            <p style="color: #94a3b8; font-size: 14px;">Xác thực tài khoản</p>
+          </div>
+          <p style="color: #cbd5e1;">Xin chào <strong style="color:#fff">${user.name}</strong>,</p>
+          <p style="color: #cbd5e1;">Cảm ơn bạn đã đăng ký! Nhấn nút bên dưới để xác thực email trong vòng <strong style="color:#facc15">10 phút</strong>.</p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${verifyUrl}" style="background: #00E5FF; color: #0B0F19; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 15px;">
+              Xác thực Email
+            </a>
+          </div>
+          <p style="color: #64748b; font-size: 12px;">Nếu bạn không đăng ký tài khoản này, hãy bỏ qua email này.</p>
+          <hr style="border-color: #1e293b; margin: 24px 0;" />
+          <p style="color: #ef4444; font-size: 11px; text-align: center;">⚠️ Link hết hạn sau 10 phút. Tài khoản chưa xác thực sẽ bị xóa tự động.</p>
+        </div>
+      `,
+    });
+
+    res.status(201).json({
+      message: 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản trong 10 phút.',
+      email: user.email,
+    });
   } catch (error) {
     console.error('registerUser error:', error);
     res.status(500).json({ message: 'Server error during registration' });
   }
+};
 };
 
 const loginUser = async (req, res) => {
@@ -83,13 +102,21 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: 'Please provide username and password' });
     }
 
-    // Allow login with either username or email
-    const user = await User.findOne({ 
-      $or: [{ username: username }, { email: username }] 
+    const user = await User.findOne({
+      $or: [{ username: username }, { email: username }]
     });
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Block login if email not verified
+    if (!user.isEmailVerified) {
+      return res.status(403).json({
+        message: 'Email chưa được xác thực. Vui lòng kiểm tra hộp thư của bạn.',
+        notVerified: true,
+        email: user.email,
+      });
     }
 
     if (await bcrypt.compare(password, user.password)) {
@@ -116,6 +143,7 @@ const loginUser = async (req, res) => {
   }
 };
 
+
 const verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
@@ -127,19 +155,77 @@ const verifyEmail = async (req, res) => {
     const user = await User.findOne({ verificationToken: token });
 
     if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired verification token' });
+      return res.status(400).json({ message: 'Invalid or expired verification token. Please register again.' });
     }
 
+    // Mark verified and clear both token fields to prevent TTL auto-deletion
     user.isEmailVerified = true;
     user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
     await user.save();
 
-    res.status(200).json({ message: 'Email verified successfully' });
+    res.status(200).json({ message: 'Email verified successfully! You can now log in.' });
   } catch (error) {
     console.error('verifyEmail error:', error);
     res.status(500).json({ message: 'Server error during email verification' });
   }
 };
+
+// @desc    Resend verification email
+// @route   POST /api/users/resend-verification
+// @access  Public
+const resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'Please provide your email address' });
+    }
+
+    const user = await User.findOne({ email, isEmailVerified: false });
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return res.status(200).json({ message: 'If that email exists and is unverified, a new link has been sent.' });
+    }
+
+    // Generate new token and extend expiry by 10 minutes
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const verifyUrl = `${frontendUrl}/verify?token=${verificationToken}`;
+
+    await transporter.sendMail({
+      from: `"Smart App" <${process.env.GMAIL_USER}>`,
+      to: user.email,
+      subject: 'Xác thực email (gửi lại) - Smart App',
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #0B0F19; color: #fff; padding: 40px; border-radius: 16px;">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <span style="font-size: 32px;">⚡</span>
+            <h1 style="color: #00E5FF; margin: 8px 0 4px;">Smart App</h1>
+          </div>
+          <p style="color: #cbd5e1;">Xin chào <strong style="color:#fff">${user.name}</strong>,</p>
+          <p style="color: #cbd5e1;">Chúng tôi đã gửi lại link xác thực. Link có hiệu lực trong <strong style="color:#facc15">10 phút</strong>.</p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${verifyUrl}" style="background: #00E5FF; color: #0B0F19; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 15px;">
+              Xác thực Email
+            </a>
+          </div>
+          <p style="color: #ef4444; font-size: 11px; text-align: center;">Link hết hạn sau 10 phút.</p>
+        </div>
+      `,
+    });
+
+    res.status(200).json({ message: 'Email xác thực đã được gửi lại!' });
+  } catch (error) {
+    console.error('resendVerification error:', error);
+    res.status(500).json({ message: 'Server error resending verification email' });
+  }
+};
+
 
 const getProfile = async (req, res) => {
   try {
@@ -372,6 +458,7 @@ module.exports = {
   registerUser,
   loginUser,
   verifyEmail,
+  resendVerification,
   getProfile,
   updateProfile,
   getAllUsers,
@@ -380,3 +467,4 @@ module.exports = {
   forgotPassword,
   resetPassword,
 };
+

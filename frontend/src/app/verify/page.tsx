@@ -15,7 +15,7 @@ function VerifyContent() {
   useEffect(() => {
     if (!token) {
       setStatus('error');
-      setMessage('No verification token found in the URL.');
+      setMessage('Không tìm thấy mã xác thực (token) trong liên kết URL.');
       return;
     }
 
@@ -29,14 +29,14 @@ function VerifyContent() {
 
         if (res.ok) {
           setStatus('success');
-          setMessage('Your email has been verified successfully!');
+          setMessage(data.message || 'Tài khoản của bạn đã được kích hoạt thành công!');
         } else {
           setStatus('error');
-          setMessage(data.message || 'Verification failed.');
+          setMessage(data.message || 'Xác thực tài khoản thất bại.');
         }
       } catch (err: any) {
         setStatus('error');
-        setMessage('Network error. Please try again.');
+        setMessage('Lỗi kết nối mạng. Vui lòng thử lại sau.');
       }
     };
 
@@ -44,37 +44,41 @@ function VerifyContent() {
   }, [token]);
 
   return (
-    <div className="bg-zinc-900 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-zinc-800 text-center">
+    <div className="bg-[#131B2E]/90 backdrop-blur-2xl p-8 md:p-10 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800/80 text-center relative z-10">
       {status === 'loading' && (
-        <div>
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <h1 className="text-2xl font-bold mb-2">Verifying...</h1>
-          <p className="text-zinc-400">Please wait while we verify your email.</p>
+        <div className="space-y-4">
+          <div className="w-12 h-12 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h1 className="text-2xl font-extrabold text-white">Đang xác thực...</h1>
+          <p className="text-slate-400 text-sm">Vui lòng chờ trong giây lát để hệ thống kiểm tra tài khoản của bạn.</p>
         </div>
       )}
 
       {status === 'success' && (
-        <div>
-          <div className="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+        <div className="space-y-6">
+          <div className="w-16 h-16 bg-[#00FF87]/10 border border-[#00FF87]/30 text-[#00FF87] rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
             ✓
           </div>
-          <h1 className="text-2xl font-bold mb-2 text-emerald-400">Success!</h1>
-          <p className="text-zinc-400 mb-6">{message}</p>
-          <Link href="/login" className="block w-full py-3 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold hover:opacity-90 transition">
-            Continue to Login
+          <div>
+            <h1 className="text-2xl font-extrabold text-[#00FF87] mb-2">Thành công!</h1>
+            <p className="text-slate-300 text-sm leading-relaxed">{message}</p>
+          </div>
+          <Link href="/login" className="block w-full py-3.5 rounded-xl bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black text-sm transition-all shadow-lg shadow-[#00E5FF]/20">
+            Tiếp tục đăng nhập
           </Link>
         </div>
       )}
 
       {status === 'error' && (
-        <div>
-          <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+        <div className="space-y-6">
+          <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
             ✗
           </div>
-          <h1 className="text-2xl font-bold mb-2 text-red-500">Verification Failed</h1>
-          <p className="text-zinc-400 mb-6">{message}</p>
-          <Link href="/login" className="block w-full py-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition">
-            Back to Login
+          <div>
+            <h1 className="text-2xl font-extrabold text-rose-400 mb-2">Xác thực thất bại</h1>
+            <p className="text-slate-300 text-sm leading-relaxed">{message}</p>
+          </div>
+          <Link href="/login" className="block w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm transition-all">
+            Quay lại trang đăng nhập
           </Link>
         </div>
       )}
@@ -84,8 +88,12 @@ function VerifyContent() {
 
 export default function VerifyEmail() {
   return (
-    <div suppressHydrationWarning className="min-h-screen flex items-center justify-center bg-zinc-950 text-white px-4">
-      <Suspense fallback={<div>Loading...</div>}>
+    <div suppressHydrationWarning className="min-h-screen flex items-center justify-center bg-[#0B0F19] text-white px-4 relative overflow-hidden font-sans">
+      {/* FitPulse Glow */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none" />
+
+      <Suspense fallback={<div className="text-slate-400 text-sm">Đang tải...</div>}>
         <VerifyContent />
       </Suspense>
     </div>

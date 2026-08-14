@@ -9,10 +9,18 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isUnverified, setIsUnverified] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendStatus, setResendStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [resendMessage, setResendMessage] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsUnverified(false);
+    setResendStatus('idle');
+    setResendMessage('');
+
     try {
       const res = await fetch(`${API_URL}/api/users/login`, {
         method: 'POST',
@@ -22,7 +30,14 @@ export default function Login() {
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Login failed');
+      
+      if (!res.ok) {
+        if (res.status === 403 && data.notVerified) {
+          setIsUnverified(true);
+          setUnverifiedEmail(data.email || '');
+        }
+        throw new Error(data.message || 'Login failed');
+      }
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify({
@@ -41,6 +56,27 @@ export default function Login() {
       }
     } catch (err: any) {
       setError(err.message);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendStatus('loading');
+    setResendMessage('');
+    try {
+      const res = await fetch(`${API_URL}/api/users/resend-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to resend email');
+      setResendStatus('success');
+      setResendMessage(data.message || 'Đã gửi lại link xác thực thành công!');
+    } catch (err: any) {
+      setResendStatus('error');
+      setResendMessage(err.message);
     }
   };
 
@@ -64,7 +100,34 @@ export default function Login() {
           <p className="text-xs text-slate-400 font-semibold mt-1">Đăng nhập tài khoản hệ thống</p>
         </div>
 
-        {error && <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3.5 rounded-2xl mb-6 text-xs font-bold">{error}</div>}
+        {error && (
+          <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3.5 rounded-2xl mb-6 text-xs font-bold">
+            {error}
+          </div>
+        )}
+
+        {isUnverified && (
+          <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 p-4 rounded-2xl mb-6 text-xs space-y-3">
+            <p className="font-semibold leading-relaxed">
+              Tài khoản này chưa được kích hoạt qua email. Nếu quá 10 phút chưa xác thực, tài khoản sẽ bị tự động xóa.
+            </p>
+            {resendStatus === 'success' ? (
+              <p className="text-[#00FF87] font-bold">{resendMessage}</p>
+            ) : (
+              <div className="flex flex-col space-y-2">
+                {resendStatus === 'error' && <p className="text-rose-400 font-bold">{resendMessage}</p>}
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendStatus === 'loading'}
+                  className="px-3 py-2 bg-[#00E5FF]/10 text-[#00E5FF] hover:bg-[#00E5FF]/20 disabled:opacity-50 transition font-bold rounded-lg self-start"
+                >
+                  {resendStatus === 'loading' ? 'Đang gửi lại...' : 'Gửi lại email xác thực'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>

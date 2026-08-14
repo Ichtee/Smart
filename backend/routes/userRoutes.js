@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser, verifyEmail, getProfile, updateProfile, getAllUsers, deleteUser, updateUserRoleAndStatus, forgotPassword, resetPassword } = require('../controllers/userController');
+const { registerUser, loginUser, verifyEmail, resendVerification, getProfile, updateProfile, getAllUsers, deleteUser, updateUserRoleAndStatus, forgotPassword, resetPassword } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
 const { loginLimiter, registerLimiter } = require('../middleware/rateLimiter');
 
 router.post('/register', registerLimiter, registerUser);
 router.post('/login', loginLimiter, loginUser);
 router.get('/verify/:token', verifyEmail);
+router.post('/resend-verification', resendVerification);
 router.post('/forgot-password', loginLimiter, forgotPassword);
 router.post('/reset-password/:token', resetPassword);
 
