@@ -271,23 +271,6 @@ export default function Workouts() {
 
         const exId = matched ? (matched.id || matched._id?.toString()) : `template_${tmplEx.exerciseName.replace(/\s+/g, '_')}`;
 
-        if (!matched) {
-          setAllExercises(prev => {
-            if (prev.some(item => item.id === exId)) return prev;
-            return [
-              ...prev,
-              {
-                id: exId,
-                name: tmplEx.exerciseName,
-                muscle: tmplEx.muscle || 'chest',
-                normMuscle: normalizeMuscleId(tmplEx.muscle || 'chest'),
-                defaultSets: tmplEx.sets || 3,
-                defaultReps: tmplEx.repsRange || '8-12',
-              }
-            ];
-          });
-        }
-
         if (exId) {
           selectedIds.push(exId);
           detailsMap[exId] = {
