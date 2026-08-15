@@ -395,22 +395,25 @@ export default function Workouts() {
     const detailsMap: Record<string, any> = {};
 
     currentTabWorkout.exercises.forEach((tmplEx: any) => {
+      if (!tmplEx.exerciseName) return;
       let matched = allExercises.find(
-        item => item.name.toLowerCase().trim() === tmplEx.exerciseName.toLowerCase().trim()
+        item => item.name && item.name.toLowerCase().trim() === tmplEx.exerciseName.toLowerCase().trim()
       );
-      const exId = matched ? matched.id : `template_${tmplEx.exerciseName.replace(/\s+/g, '_')}`;
+      const exId = matched ? (matched.id || matched._id?.toString()) : `template_${tmplEx.exerciseName.replace(/\s+/g, '_')}`;
 
-      selectedIds.push(exId);
-      detailsMap[exId] = {
-        sets: tmplEx.sets || 3,
-        reps: tmplEx.repsRange || '8-12',
-        rir: tmplEx.rir || '1',
-        restTimeSeconds: tmplEx.restTimeSeconds || 180,
-        isOptional: !!tmplEx.isOptional,
-        requiresWarmup: !!tmplEx.requiresWarmup,
-        warmupNotes: tmplEx.warmupNotes || '',
-        notes: tmplEx.notes || ''
-      };
+      if (exId) {
+        selectedIds.push(exId);
+        detailsMap[exId] = {
+          sets: tmplEx.sets || 3,
+          reps: tmplEx.repsRange || '8-12',
+          rir: tmplEx.rir || '1',
+          restTimeSeconds: tmplEx.restTimeSeconds || 180,
+          isOptional: !!tmplEx.isOptional,
+          requiresWarmup: !!tmplEx.requiresWarmup,
+          warmupNotes: tmplEx.warmupNotes || '',
+          notes: tmplEx.notes || ''
+        };
+      }
     });
 
     setDaySelections(prev => ({ ...prev, [currentDayKey]: selectedIds }));
