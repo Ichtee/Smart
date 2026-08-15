@@ -148,6 +148,7 @@ export default function Workouts() {
 
   const [streakDays, setStreakDays] = useState<number>(1);
   const [noticeMessage, setNoticeMessage] = useState<string>('');
+  const [librarySearchTerm, setLibrarySearchTerm] = useState<string>('');
 
   useEffect(() => {
     fetch(`${API_URL}/api/routines`, { cache: 'no-store' })
@@ -506,6 +507,20 @@ export default function Workouts() {
       count: countsMap[mKey].count
     }));
   }, [currentTabWorkout, allExercises, activeSelectedExercises]);
+
+  const filteredLibraryExercises = useMemo(() => {
+    return allExercises.filter(ex => {
+      const matchMuscle = selectedMuscle ? ex.normMuscle === normalizeMuscleId(selectedMuscle) : true;
+      const q = librarySearchTerm.toLowerCase().trim();
+      const matchSearch = q
+        ? (ex.name && ex.name.toLowerCase().includes(q)) ||
+          (ex.equipment && ex.equipment.toLowerCase().includes(q)) ||
+          (ex.muscle && ex.muscle.toLowerCase().includes(q)) ||
+          (MUSCLE_NAMES_VI[ex.normMuscle] && MUSCLE_NAMES_VI[ex.normMuscle].toLowerCase().includes(q))
+        : true;
+      return matchMuscle && matchSearch;
+    });
+  }, [allExercises, selectedMuscle, librarySearchTerm]);
 
   let highlighterData: any[] = [];
   let modelColors = ['#00E5FF', '#00FF87'];
@@ -1030,55 +1045,70 @@ export default function Workouts() {
 
             {/* Exercise Library Selection */}
             <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 space-y-4 shadow-2xl">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <span>📚</span> {selectedMuscle ? `Thư viện bài tập: ${MUSCLE_NAMES_VI[normalizeMuscleId(selectedMuscle)] || selectedMuscle}` : 'Thư viện bài tập'}
+                  <span>📚</span> {selectedMuscle ? `Thư viện bài tập: ${MUSCLE_NAMES_VI[normalizeMuscleId(selectedMuscle)] || selectedMuscle}` : 'Thư viện bài tập (Tất cả)'}
                 </h3>
-                {isWorkoutSaved && (
-                  <span className="text-[11px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
-                    🔒 Lịch hôm nay đã chốt
-                  </span>
-                )}
+
+                {/* Real-time Exercise Search Input */}
+                <div className="relative w-full sm:w-64">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Tìm tên bài tập, dụng cụ..."
+                    value={librarySearchTerm}
+                    onChange={(e) => setLibrarySearchTerm(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 bg-[#0B101D] border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00E5FF] transition-colors"
+                  />
+                </div>
               </div>
 
-              {selectedMuscle ? (
-                <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                  {allExercises.filter(ex => ex.normMuscle === normalizeMuscleId(selectedMuscle)).length > 0 ? (
-                    allExercises.filter(ex => ex.normMuscle === normalizeMuscleId(selectedMuscle)).map(ex => {
-                      const isAlreadySelected = currentSelectedIds.includes(ex.id);
+              <div className="space-y-3 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar">
+                {filteredLibraryExercises.length > 0 ? (
+                  filteredLibraryExercises.map(ex => {
+                    const isAlreadySelected = currentSelectedIds.includes(ex.id);
 
-                      return (
-                        <div key={ex.id} className="p-4 rounded-2xl bg-[#0E1526] border border-slate-800/80 flex items-center justify-between hover:bg-[#18233C] transition-colors group">
+                    return (
+                      <div key={ex.id} className="p-3.5 rounded-2xl bg-[#0E1526] border border-slate-800/80 flex items-center justify-between hover:bg-[#18233C] transition-colors group gap-3">
+                        <div className="space-y-1 overflow-hidden">
                           <span 
                             onClick={() => setSelectedDetailExercise(ex)}
-                            className="font-bold text-sm text-slate-200 group-hover:text-[#00E5FF] cursor-pointer transition-colors flex items-center gap-1.5"
+                            className="font-bold text-sm text-slate-200 group-hover:text-[#00E5FF] cursor-pointer transition-colors flex items-center gap-1.5 truncate"
                             title="Bấm để xem hướng dẫn & chi tiết bài tập"
                           >
-                            <span>{ex.name}</span>
-                            <span className="text-[10px] font-semibold text-cyan-400 opacity-70 group-hover:opacity-100">ℹ️</span>
+                            <span className="truncate">{ex.name}</span>
+                            <span className="text-[10px] font-semibold text-cyan-400 opacity-70 group-hover:opacity-100 shrink-0">ℹ️</span>
                           </span>
-                          <button
-                            onClick={() => handleAddExerciseFromLibrary(ex.id)}
-                            disabled={isAlreadySelected || isWorkoutSaved}
-                            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${isAlreadySelected || isWorkoutSaved
-                                ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                                : 'bg-[#00E5FF] text-slate-950 hover:bg-cyan-300 shadow-md shadow-[#00E5FF]/20'
-                              }`}
-                          >
-                            {isAlreadySelected ? 'Đã thêm' : isWorkoutSaved ? '🔒 Đã chốt' : '+ Thêm bài này'}
-                          </button>
+                          <div className="flex items-center gap-2 text-[11px]">
+                            <span className="text-cyan-400 font-semibold">{MUSCLE_NAMES_VI[ex.normMuscle] || ex.muscle}</span>
+                            <span className="text-slate-600">•</span>
+                            <span className="text-slate-400 font-medium">{ex.equipment || 'Tạ / Máy'}</span>
+                          </div>
                         </div>
-                      );
-                    })
-                  ) : (
-                    <p className="text-xs text-slate-400 text-center py-6">Chưa có dữ liệu bài tập cho nhóm cơ {MUSCLE_NAMES_VI[normalizeMuscleId(selectedMuscle)] || selectedMuscle}.</p>
-                  )}
-                </div>
-              ) : (
-                <div className="p-6 text-center border-2 border-dashed border-slate-800 rounded-2xl text-slate-500 text-xs">
-                  Vui lòng chọn một Nhóm Cơ ở trên để xem danh sách bài tập gợi ý.
-                </div>
-              )}
+
+                        <button
+                          onClick={() => handleAddExerciseFromLibrary(ex.id)}
+                          disabled={isAlreadySelected || isWorkoutSaved}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${isAlreadySelected || isWorkoutSaved
+                              ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                              : 'bg-[#00E5FF] text-slate-950 hover:bg-cyan-300 shadow-md shadow-[#00E5FF]/20'
+                            }`}
+                        >
+                          {isAlreadySelected ? 'Đã thêm' : isWorkoutSaved ? '🔒 Đã chốt' : '+ Thêm bài này'}
+                        </button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="p-6 text-center border border-dashed border-slate-800 rounded-2xl text-slate-400 text-xs">
+                    {librarySearchTerm 
+                      ? `Không tìm thấy bài tập nào khớp từ khóa "${librarySearchTerm}"` 
+                      : selectedMuscle 
+                        ? `Chưa có bài tập nào thuộc nhóm cơ ${MUSCLE_NAMES_VI[normalizeMuscleId(selectedMuscle)] || selectedMuscle}.` 
+                        : 'Không có bài tập nào.'}
+                  </div>
+                )}
+              </div>
             </div>
 
           </div>

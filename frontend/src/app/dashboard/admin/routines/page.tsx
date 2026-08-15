@@ -1,7 +1,103 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { API_URL } from '@/utils/api';
+
+function SearchableExerciseSelect({
+  value,
+  onChange,
+  exercises,
+  musclesMap
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  exercises: any[];
+  musclesMap: Record<string, string>;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filtered = exercises.filter(ex => {
+    const q = search.toLowerCase();
+    const nameMatch = ex.name ? ex.name.toLowerCase().includes(q) : false;
+    const muscleMatch = (musclesMap[ex.muscle] || ex.muscle || '').toLowerCase().includes(q);
+    const equipMatch = (ex.equipment || '').toLowerCase().includes(q);
+    return nameMatch || muscleMatch || equipMatch;
+  });
+
+  const selectedExercise = exercises.find(e => e.name === value);
+
+  return (
+    <div className="relative flex-1 min-w-[240px]" ref={wrapperRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full bg-zinc-950 border border-slate-700 hover:border-[#00FF87] rounded-xl px-3 py-2 text-xs text-white flex items-center justify-between gap-2 text-left transition-colors shadow-sm"
+      >
+        <span className="truncate font-bold text-emerald-300">
+          {value ? `${value} (${musclesMap[selectedExercise?.muscle || ''] || selectedExercise?.muscle || 'Thư viện'})` : '🔍 -- Tìm & Chọn bài tập --'}
+        </span>
+        <span className="text-slate-400 text-[10px]">▼</span>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[#0E1526] border border-cyan-500/50 rounded-2xl p-2.5 shadow-2xl z-[999] space-y-2 animate-in fade-in duration-150">
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs">🔍</span>
+            <input
+              type="text"
+              autoFocus
+              placeholder="Gõ để tìm tên bài tập, dụng cụ, nhóm cơ..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 bg-[#0B101D] border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00E5FF]"
+            />
+          </div>
+
+          <div className="max-h-52 overflow-y-auto custom-scrollbar space-y-1">
+            {filtered.length > 0 ? (
+              filtered.map(ex => (
+                <div
+                  key={ex._id || ex.id || ex.name}
+                  onClick={() => {
+                    onChange(ex.name);
+                    setIsOpen(false);
+                    setSearch('');
+                  }}
+                  className={`p-2 rounded-xl text-xs cursor-pointer transition-colors flex items-center justify-between gap-2 ${
+                    ex.name === value 
+                      ? 'bg-emerald-950/80 text-[#00FF87] border border-emerald-500/40 font-bold' 
+                      : 'hover:bg-[#18233C] text-slate-200'
+                  }`}
+                >
+                  <span className="font-medium truncate">{ex.name}</span>
+                  <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded-full border border-cyan-500/30 shrink-0">
+                    {musclesMap[ex.muscle] || ex.muscle}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="p-3 text-center text-xs text-slate-500">
+                Không tìm thấy bài tập nào chứa từ khóa "{search}"
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function RoutineManagement() {
   const router = useRouter();
@@ -573,21 +669,12 @@ export default function RoutineManagement() {
                         {dayObj.exercises?.map((exObj: any, exIndex: number) => (
                           <div key={exIndex} className="p-3 bg-zinc-900 rounded-xl border border-white/5 space-y-2">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <select
+                              <SearchableExerciseSelect
                                 value={exObj.exerciseName}
-                                onChange={(e) => updateExerciseInDay(dayIndex, exIndex, 'exerciseName', e.target.value)}
-                                className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#00FF87] flex-1 min-w-[200px]"
-                              >
-                                <option value="" disabled>-- Chọn bài tập từ Thư viện --</option>
-                                {exercises.map((ex: any) => (
-                                  <option key={ex._id || ex.id || ex.name} value={ex.name}>
-                                    {ex.name} ({musclesMap[ex.muscle] || ex.muscle})
-                                  </option>
-                                ))}
-                                {!exercises.some((e: any) => e.name === exObj.exerciseName) && exObj.exerciseName && (
-                                  <option value={exObj.exerciseName}>{exObj.exerciseName}</option>
-                                )}
-                              </select>
+                                onChange={(newVal) => updateExerciseInDay(dayIndex, exIndex, 'exerciseName', newVal)}
+                                exercises={exercises}
+                                musclesMap={musclesMap}
+                              />
 
                               <div className="flex items-center gap-2 text-xs">
                                 <span className="text-slate-400">Hiệp:</span>
