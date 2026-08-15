@@ -177,8 +177,13 @@ export default function Workouts() {
       setRoutinesMap(newMap);
 
       // Restore last selected active routine if present
+      // Restore last trained routine (chốt & tập gần nhất) if present
+      const lastTrainedRoutineId = localStorage.getItem('smart_last_trained_routine_id');
       const savedRoutineId = localStorage.getItem('smart_last_active_routine_id');
-      if (savedRoutineId && newMap[savedRoutineId]) {
+
+      if (lastTrainedRoutineId && newMap[lastTrainedRoutineId]) {
+        setActiveRoutineId(lastTrainedRoutineId);
+      } else if (savedRoutineId && newMap[savedRoutineId]) {
         setActiveRoutineId(savedRoutineId);
       } else if (routinesData.length > 0) {
         setActiveRoutineId(routinesData[0].id);
@@ -249,6 +254,19 @@ export default function Workouts() {
 
   useEffect(() => {
     if (sortedSchedule.length > 0) {
+      // Priority 1: Check if there's a last trained day index for this routine
+      const lastTrainedRoutineId = localStorage.getItem('smart_last_trained_routine_id');
+      const lastTrainedDayIdxStr = localStorage.getItem('smart_last_trained_day_index');
+
+      if (lastTrainedRoutineId === activeRoutineId && lastTrainedDayIdxStr !== null) {
+        const trainedIdx = parseInt(lastTrainedDayIdxStr, 10);
+        if (!isNaN(trainedIdx) && trainedIdx >= 0 && trainedIdx < sortedSchedule.length) {
+          setCurrentDayIndex(trainedIdx);
+          return;
+        }
+      }
+
+      // Priority 2: Routine-specific saved day index
       const savedDayIdxStr = localStorage.getItem(`smart_last_day_index_${activeRoutineId}`);
       if (savedDayIdxStr !== null) {
         const savedIdx = parseInt(savedDayIdxStr, 10);
@@ -258,6 +276,7 @@ export default function Workouts() {
         }
       }
 
+      // Priority 3: Real today day of week match
       const matchIndex = sortedSchedule.findIndex((s: any) => s.day === realTodayString);
       if (matchIndex !== -1) {
         setCurrentDayIndex(matchIndex);
@@ -461,7 +480,14 @@ export default function Workouts() {
 
     setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: true }));
     localStorage.setItem(`smart_saved_${todayDateStr}_${currentDayKey}`, 'true');
-    setNoticeMessage('');
+
+    // Save as the last trained routine & day tab (họ đã chốt và tập)
+    localStorage.setItem('smart_last_trained_routine_id', activeRoutineId);
+    localStorage.setItem('smart_last_trained_day_index', currentDayIndex.toString());
+    localStorage.setItem('smart_last_active_routine_id', activeRoutineId);
+
+    setNoticeMessage('Đã chốt lịch tập thành công! Bạn có thể bắt đầu tích chọn hoàn thành các bài tập.');
+    setTimeout(() => setNoticeMessage(''), 4000);
   };
 
   const handleUnlockWorkout = () => {
@@ -475,6 +501,10 @@ export default function Workouts() {
       setTimeout(() => setNoticeMessage(''), 4000);
       return;
     }
+
+    // Save as the last trained routine & day tab
+    localStorage.setItem('smart_last_trained_routine_id', activeRoutineId);
+    localStorage.setItem('smart_last_trained_day_index', currentDayIndex.toString());
 
     const isAlreadyComp = currentCompletedIds.includes(id);
     const newComp = isAlreadyComp ? currentCompletedIds.filter(i => i !== id) : [...currentCompletedIds, id];
