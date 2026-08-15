@@ -154,6 +154,28 @@ export default function RoutineManagement() {
     }
   };
 
+  const deriveTargetsFromExercises = (dayExercises: any[], catalogExercises: any[]) => {
+    if (!dayExercises || dayExercises.length === 0) return [];
+
+    const counts: Record<string, number> = {};
+
+    dayExercises.forEach(exItem => {
+      let muscle = exItem.muscle;
+      if (!muscle) {
+        const found = catalogExercises.find(c => c.name === exItem.exerciseName);
+        if (found) muscle = found.muscle;
+      }
+      muscle = muscle ? muscle.toLowerCase() : 'chest';
+      counts[muscle] = (counts[muscle] || 0) + 1;
+    });
+
+    return Object.entries(counts).map(([muscleId, count]) => ({
+      id: muscleId,
+      label: musclesMap[muscleId] || muscleId,
+      count
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -165,7 +187,15 @@ export default function RoutineManagement() {
       
       const method = isEditing ? 'PUT' : 'POST';
 
-      const sortedSchedule = [...formData.schedule].sort((a, b) => {
+      const preparedSchedule = formData.schedule.map(dayObj => {
+        const autoTargets = deriveTargetsFromExercises(dayObj.exercises || [], exercises);
+        return {
+          ...dayObj,
+          targets: autoTargets
+        };
+      });
+
+      const sortedSchedule = [...preparedSchedule].sort((a, b) => {
         const orderA = DAY_ORDER[a.day] || 99;
         const orderB = DAY_ORDER[b.day] || 99;
         return orderA - orderB;
@@ -498,56 +528,39 @@ export default function RoutineManagement() {
                         </button>
                       </div>
 
-                      {/* Muscle Targets */}
-                      <div className="pl-4 border-l-2 border-cyan-500/30 space-y-3">
-                        <p className="text-xs font-bold text-[#00E5FF] uppercase tracking-wider">Target Nhóm Cơ (Chỉ tiêu)</p>
-                        {dayObj.targets?.map((target: any, targetIndex: number) => (
-                          <div key={targetIndex} className="flex gap-3 items-center bg-zinc-900 p-2 rounded-xl border border-white/5">
-                            <select 
-                              value={target.id}
-                              onChange={(e) => updateTarget(dayIndex, targetIndex, e.target.value)}
-                              className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500 flex-1 truncate"
-                              required
-                            >
-                              <option value="" disabled>-- Chọn nhóm cơ --</option>
-                              {dynamicCategories.map(cat => (
-                                <option key={cat} value={cat}>{musclesMap[cat] || cat}</option>
-                              ))}
-                              {!dynamicCategories.includes(target.id) && target.id && (
-                                <option value={target.id}>{target.label || target.id}</option>
-                              )}
-                            </select>
-                            
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-zinc-500">Số bài</span>
-                              <input 
-                                type="number" 
-                                min="1"
-                                value={target.count}
-                                onChange={(e) => updateTargetCount(dayIndex, targetIndex, parseInt(e.target.value) || 1)}
-                                className="bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-rose-500 w-16 text-center"
-                                required
-                              />
-                            </div>
-                            
-                            <button 
-                              type="button"
-                              onClick={() => removeTarget(dayIndex, targetIndex)}
-                              className="text-zinc-600 hover:text-rose-400 p-2"
-                              title="Xóa target này"
-                            >
-                              &times;
-                            </button>
-                          </div>
-                        ))}
-                        
-                        <button 
-                          type="button"
-                          onClick={() => addTarget(dayIndex)}
-                          className="text-xs px-3 py-1.5 border border-dashed border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white rounded-lg transition-colors w-full"
-                        >
-                          + Thêm Target Nhóm Cơ
-                        </button>
+                      {/* Auto-Calculated Target Muscle Groups */}
+                      <div className="pl-4 border-l-2 border-cyan-500/30 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-[#00E5FF] uppercase tracking-wider flex items-center gap-1.5">
+                            <span>🎯</span> Target Nhóm Cơ (Tự Động Tính Theo Bài Tập)
+                          </p>
+                          <span className="text-[10px] text-cyan-400 font-bold bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded-md">
+                            ⚡ Tự động tổng hợp
+                          </span>
+                        </div>
+
+                        {(() => {
+                          const autoTargets = deriveTargetsFromExercises(dayObj.exercises || [], exercises);
+                          if (autoTargets.length > 0) {
+                            return (
+                              <div className="flex flex-wrap gap-2 pt-1">
+                                {autoTargets.map((tgt: any) => (
+                                  <div key={tgt.id} className="px-3 py-1.5 bg-[#0B101D] border border-cyan-500/30 rounded-xl text-xs flex items-center gap-2 shadow-sm">
+                                    <span className="text-white font-extrabold">{tgt.label}</span>
+                                    <span className="px-2 py-0.5 bg-cyan-950 text-[#00E5FF] border border-cyan-500/40 rounded-full font-black text-[11px]">
+                                      {tgt.count} bài
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return (
+                            <p className="text-xs text-slate-500 italic py-1">
+                              Chưa có bài tập nào. Hãy thêm bài tập ở bên dưới để hệ thống tự động tính Target Nhóm Cơ!
+                            </p>
+                          );
+                        })()}
                       </div>
 
                       {/* Prescribed Exercises from Catalog */}
