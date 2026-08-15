@@ -58,12 +58,15 @@ export default function Dashboard() {
           </div>
 
           {/* Card 3: Progress */}
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl hover:border-purple-500/50 transition cursor-pointer group">
+          <div 
+            onClick={() => router.push('/progress')}
+            className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl hover:border-purple-500/50 transition cursor-pointer group"
+          >
             <div className="w-12 h-12 bg-purple-500/10 text-purple-400 rounded-xl flex items-center justify-center mb-4 text-2xl group-hover:scale-110 transition">
               📈
             </div>
-            <h3 className="text-xl font-semibold mb-2">Theo dõi tiến độ</h3>
-            <p className="text-zinc-400 text-sm">Xem biểu đồ cân nặng và các chỉ số cơ thể thay đổi.</p>
+            <h3 className="text-xl font-semibold mb-2">Theo dõi tiến độ & Thống kê</h3>
+            <p className="text-zinc-400 text-sm">Báo cáo lịch tập luyện trong tháng, calo hàng ngày & chỉ số cơ thể.</p>
           </div>
 
         </div>

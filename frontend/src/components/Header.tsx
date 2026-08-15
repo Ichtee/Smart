@@ -48,6 +48,9 @@ export default function Header() {
           <nav className="hidden md:flex items-center gap-6 text-xs text-slate-400 font-bold uppercase tracking-wider">
             <Link href="/workouts" className="hover:text-[#00E5FF] transition">Lịch tập luyện</Link>
             <Link href="/nutrition" className="hover:text-[#00E5FF] transition">Nhật ký ăn uống</Link>
+            <Link href="/progress" className="hover:text-[#00E5FF] transition flex items-center gap-1">
+              <span className="text-[#00FF87]">📈</span> Báo cáo tiến độ
+            </Link>
           </nav>
         </div>
 
@@ -79,6 +82,13 @@ export default function Header() {
                   onClick={() => setIsDropdownOpen(false)}
                 >
                   Hồ sơ cá nhân
+                </Link>
+                <Link 
+                  href="/progress" 
+                  className="block px-4 py-2 text-xs font-bold text-slate-300 hover:bg-[#18233C] hover:text-[#00FF87] transition"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  📈 Báo cáo tiến độ
                 </Link>
                 <div className="h-px bg-slate-800 my-1" />
                 <button 
@@ -144,6 +154,14 @@ export default function Header() {
               className="px-4 py-2.5 rounded-xl hover:bg-[#18233C] text-slate-200 hover:text-[#00E5FF] transition flex items-center gap-2"
             >
               <span>🥗</span> Nhật ký ăn uống
+            </Link>
+
+            <Link 
+              href="/progress" 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="px-4 py-2.5 rounded-xl hover:bg-[#18233C] text-slate-200 hover:text-[#00FF87] transition flex items-center gap-2"
+            >
+              <span>📈</span> Báo cáo tiến độ & Thống kê
             </Link>
 
             <Link 
