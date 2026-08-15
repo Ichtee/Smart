@@ -10,6 +10,7 @@ router.get('/verify/:token', verifyEmail);
 router.post('/resend-verification', resendVerification);
 router.post('/forgot-password', loginLimiter, forgotPassword);
 router.post('/reset-password/:token', resetPassword);
+router.post('/reset-password', resetPassword);
 
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);

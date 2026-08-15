@@ -408,7 +408,7 @@ const forgotPassword = async (req, res) => {
     // Generate a secure reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -429,7 +429,7 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
+    res.status(200).json({ message: 'Nếu email tồn tại trong hệ thống, link đặt lại mật khẩu đã được gửi tới hòm thư của bạn.' });
   } catch (error) {
     console.error('forgotPassword error:', error);
     res.status(500).json({ message: 'Server error sending reset email' });
@@ -441,23 +441,26 @@ const forgotPassword = async (req, res) => {
 // @access  Public
 const resetPassword = async (req, res) => {
   try {
-    const { token } = req.params;
+    const token = req.params.token || req.query.token || req.body.token;
     const { password } = req.body;
 
+    if (!token) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp mã reset token hợp lệ.' });
+    }
     if (!password) {
-      return res.status(400).json({ message: 'Please provide a new password' });
+      return res.status(400).json({ message: 'Vui lòng nhập mật khẩu mới' });
     }
     if (password.length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+      return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 8 ký tự' });
     }
 
     const user = await User.findOne({
       resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() }, // token not expired
+      resetPasswordExpires: { $gt: new Date() }, // token not expired (Date comparison)
     });
 
     if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired reset token' });
+      return res.status(400).json({ message: 'Mã đặt lại mật khẩu không hợp lệ hoặc đã hết hạn (hạn 60 phút).' });
     }
 
     // Set new password
@@ -467,7 +470,7 @@ const resetPassword = async (req, res) => {
     user.resetPasswordExpires = undefined;
     await user.save();
 
-    res.status(200).json({ message: 'Password reset successfully. You can now log in.' });
+    res.status(200).json({ message: 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới ngay bây giờ.' });
   } catch (error) {
     console.error('resetPassword error:', error);
     res.status(500).json({ message: 'Server error resetting password' });
