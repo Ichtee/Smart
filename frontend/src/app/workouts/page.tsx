@@ -505,6 +505,36 @@ export default function Workouts() {
     localStorage.setItem('smart_last_trained_day_index', currentDayIndex.toString());
     localStorage.setItem('smart_last_active_routine_id', activeRoutineId);
 
+    // Save structured workout log entry into smart_workout_logs
+    try {
+      const logsMap = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
+      const selectedExerciseList = activeSelectedExercises.map(ex => ({
+        id: ex.id,
+        name: ex.name,
+        sets: ex.sets,
+        reps: ex.reps,
+        muscle: ex.muscle,
+        normMuscle: ex.normMuscle
+      }));
+
+      logsMap[todayDateStr] = {
+        date: todayDateStr,
+        routineId: activeRoutineId,
+        routineName: activeRoutine?.name || 'Lịch tập tự do',
+        dayName: currentTabWorkout ? `${currentTabWorkout.day}: ${currentTabWorkout.name}` : 'Buổi tập',
+        exercises: selectedExerciseList,
+        updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem('smart_workout_logs', JSON.stringify(logsMap));
+
+      const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
+      if (!history.includes(todayDateStr)) {
+        const newHistory = [...history, todayDateStr];
+        localStorage.setItem('smart_streak_history', JSON.stringify(newHistory));
+        setStreakDays(newHistory.length);
+      }
+    } catch (e) { }
+
     setNoticeMessage('Đã chốt lịch tập thành công! Bạn có thể bắt đầu tích chọn hoàn thành các bài tập.');
     setTimeout(() => setNoticeMessage(''), 4000);
   };
@@ -557,7 +587,7 @@ export default function Workouts() {
           date: todayDateStr,
           routineId: activeRoutineId,
           routineName: activeRoutine?.name || 'Lịch tập tự do',
-          dayName: currentTabWorkout ? `${currentTabWorkout.day} (${currentTabWorkout.name})` : 'Buổi tập',
+          dayName: currentTabWorkout ? `${currentTabWorkout.day}: ${currentTabWorkout.name}` : 'Buổi tập',
           exercises: completedExercises,
           updatedAt: new Date().toISOString()
         };

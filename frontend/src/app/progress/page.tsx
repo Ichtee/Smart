@@ -406,13 +406,19 @@ export default function ProgressPage() {
 
               {selectedDayLog ? (
                 <div className="space-y-4">
-                  {/* Routine & Day Schedule Badge */}
-                  <div className="p-4 bg-[#0B101D] rounded-2xl border border-slate-800 space-y-1.5">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">LỊCH TẬP ĐÃ CHỌN (ROUTINE & SỬ DỤNG):</span>
-                    <div className="flex items-center gap-2 text-sm font-extrabold text-white">
-                      <span className="text-[#00E5FF]">🏋️ {selectedDayLog.routineName}</span>
-                      <span className="text-slate-600">•</span>
-                      <span className="text-[#00FF87]">{selectedDayLog.dayName}</span>
+                  {/* Routine & Day Schedule Badges */}
+                  <div className="p-4 bg-[#0B101D] rounded-2xl border border-slate-800 space-y-2">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">THÔNG TIN LỊCH TẬP & BUỔI TẬP:</span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800 flex flex-col justify-center">
+                        <span className="text-slate-400 font-medium text-[11px] block">Lịch tập (Routine):</span>
+                        <strong className="text-[#00E5FF] font-extrabold text-sm mt-0.5">🏋️ {selectedDayLog.routineName}</strong>
+                      </div>
+                      <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800 flex flex-col justify-center">
+                        <span className="text-slate-400 font-medium text-[11px] block">Buổi tập trong lịch (Day):</span>
+                        <strong className="text-[#00FF87] font-extrabold text-sm mt-0.5">🎯 {selectedDayLog.dayName}</strong>
+                      </div>
                     </div>
                   </div>
 
@@ -452,12 +458,26 @@ export default function ProgressPage() {
                   </div>
                 </div>
               ) : streakHistory.includes(selectedCalendarDate || '') ? (
-                <div className="p-4 bg-[#0B101D] rounded-2xl border border-slate-800 space-y-2 text-xs">
-                  <div className="flex items-center gap-2 text-[#00FF87] font-bold">
+                <div className="p-5 bg-[#0B101D] rounded-2xl border border-slate-800 space-y-3 text-xs">
+                  <div className="flex items-center gap-2 text-[#00FF87] font-bold text-sm">
                     <span>✓</span> Ngày này bạn đã ghi nhận hoàn thành buổi tập!
                   </div>
-                  <p className="text-slate-400">
-                    Lịch tập mặc định: Push - Pull - Leg (Theo lịch tập luyện được chọn ở trang Workouts).
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800">
+                      <span className="text-slate-400 font-medium text-[11px] block">Lịch tập đã chọn:</span>
+                      <strong className="text-[#00E5FF] font-extrabold text-sm mt-0.5">🏋️ Push - Pull - Leg (PPL)</strong>
+                    </div>
+                    <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800">
+                      <span className="text-slate-400 font-medium text-[11px] block">Buổi tập trong tuần:</span>
+                      <strong className="text-[#00FF87] font-extrabold text-sm mt-0.5">
+                        🎯 {selectedCalendarDate ? ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date(selectedCalendarDate).getDay()] : 'Buổi tập'}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <p className="text-slate-400 text-[11px] pt-1">
+                    💡 Ghi chú: Buổi tập này đã được chốt và tích xanh hoàn thành ở trang Lịch tập luyện (Workouts).
                   </p>
                 </div>
               ) : (
