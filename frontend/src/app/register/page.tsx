@@ -16,12 +16,51 @@ export default function Register() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    const trimmedName = name.trim().replace(/\s+/g, ' ');
+    if (trimmedName.length < 2 || trimmedName.length > 50) {
+      setError('Họ và tên không được chứa toàn khoảng trắng, độ dài từ 2 đến 50 ký tự.');
+      return;
+    }
+
+    const trimmedUsername = username.trim();
+    if (/\s/.test(trimmedUsername) || trimmedUsername.length < 3 || trimmedUsername.length > 30) {
+      setError('Tên đăng nhập không được chứa khoảng trắng, độ dài từ 3 đến 30 ký tự.');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(trimmedUsername)) {
+      setError('Tên đăng nhập chỉ được chứa chữ cái, chữ số, gạch dưới (_) và gạch nối (-).');
+      return;
+    }
+
+    const trimmedEmail = email.trim();
+    if (/\s/.test(trimmedEmail) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError('Email không được chứa dấu cách và phải đúng định dạng (VD: user@example.com).');
+      return;
+    }
+
+    if (password !== password.trim()) {
+      setError('Mật khẩu không được chứa khoảng trắng ở đầu hoặc cuối.');
+      return;
+    }
+
+    if (password.length < 8 || password.length > 100) {
+      setError('Mật khẩu phải từ 8 đến 100 ký tự.');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/users/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, username, email, password }),
+        body: JSON.stringify({
+          name: trimmedName,
+          username: trimmedUsername,
+          email: trimmedEmail.toLowerCase(),
+          password
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');

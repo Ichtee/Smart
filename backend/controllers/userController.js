@@ -61,22 +61,48 @@ const generateToken = (id) => {
 
 const registerUser = async (req, res) => {
   try {
-    const { name, username, email, password } = req.body;
+    let { name, username, email, password } = req.body;
 
     if (!name || !username || !email || !password) {
-      return res.status(400).json({ message: 'Please add all fields' });
-    }
-    if (password.length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+      return res.status(400).json({ message: 'Vui lòng điền đầy đủ các thông tin bắt buộc.' });
     }
 
-    const userExists = await User.findOne({ $or: [{ email }, { username }] });
+    // 1. Validate Name
+    const trimmedName = name.trim().replace(/\s+/g, ' ');
+    if (trimmedName.length < 2 || trimmedName.length > 50) {
+      return res.status(400).json({ message: 'Họ và tên không được để trống khoảng trắng, độ dài từ 2 đến 50 ký tự.' });
+    }
+
+    // 2. Validate Username (cấm chứa khoảng trắng)
+    const trimmedUsername = username.trim();
+    if (/\s/.test(trimmedUsername) || trimmedUsername.length < 3 || trimmedUsername.length > 30) {
+      return res.status(400).json({ message: 'Tên đăng nhập không được chứa khoảng trắng, độ dài từ 3 đến 30 ký tự.' });
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(trimmedUsername)) {
+      return res.status(400).json({ message: 'Tên đăng nhập chỉ được chứa chữ cái, chữ số, gạch dưới (_) và gạch nối (-).' });
+    }
+
+    // 3. Validate Email (cấm chứa khoảng trắng & kiểm tra regex)
+    const trimmedEmail = email.trim().toLowerCase();
+    if (/\s/.test(trimmedEmail) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail) || trimmedEmail.length > 100) {
+      return res.status(400).json({ message: 'Email không được chứa dấu cách và phải đúng định dạng (VD: user@example.com).' });
+    }
+
+    // 4. Validate Password (không chứa khoảng trắng ở 2 đầu, 8..100 ký tự)
+    if (password !== password.trim()) {
+      return res.status(400).json({ message: 'Mật khẩu không được chứa khoảng trắng ở đầu hoặc cuối.' });
+    }
+    if (password.length < 8 || password.length > 100) {
+      return res.status(400).json({ message: 'Mật khẩu phải từ 8 đến 100 ký tự.' });
+    }
+
+    const userExists = await User.findOne({ $or: [{ email: trimmedEmail }, { username: trimmedUsername }] });
     if (userExists) {
       if (!userExists.isEmailVerified) {
         // Delete unverified account from previous failed attempt so user can re-register
         await User.deleteOne({ _id: userExists._id });
       } else {
-        return res.status(400).json({ message: 'User (email or username) already exists' });
+        return res.status(400).json({ message: 'Tên đăng nhập hoặc Email đã tồn tại trên hệ thống.' });
       }
     }
 
@@ -85,9 +111,9 @@ const registerUser = async (req, res) => {
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
     const user = await User.create({
-      name,
-      username,
-      email,
+      name: trimmedName,
+      username: trimmedUsername,
+      email: trimmedEmail,
       password: hashedPassword,
       verificationToken,
       verificationTokenExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
@@ -280,7 +306,13 @@ const updateProfile = async (req, res) => {
     const user = await User.findById(req.user.id);
 
     if (user) {
-      user.name = req.body.name || user.name;
+      if (req.body.name !== undefined) {
+        const trimmedName = req.body.name.trim().replace(/\s+/g, ' ');
+        if (trimmedName.length < 2 || trimmedName.length > 50) {
+          return res.status(400).json({ message: 'Họ và tên không được để trống khoảng trắng, độ dài từ 2 đến 50 ký tự.' });
+        }
+        user.name = trimmedName;
+      }
       
       if (req.body.age !== undefined && req.body.age !== null && req.body.age !== '') {
         const ageNum = Number(req.body.age);

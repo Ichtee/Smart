@@ -74,6 +74,12 @@ export default function Profile() {
     setMessage({ text: '', type: '' });
 
     // Business Logic Validations
+    const trimmedName = formData.name ? formData.name.trim().replace(/\s+/g, ' ') : '';
+    if (trimmedName.length < 2 || trimmedName.length > 50) {
+      setMessage({ text: 'Họ và tên không được chứa toàn khoảng trắng, độ dài từ 2 đến 50 ký tự!', type: 'error' });
+      return;
+    }
+
     if (formData.age) {
       const ageNum = Number(formData.age);
       if (isNaN(ageNum) || ageNum <= 0 || ageNum > 120) {
@@ -109,7 +115,7 @@ export default function Profile() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          name: formData.name,
+          name: trimmedName,
           age: formData.age ? Number(formData.age) : undefined,
           gender: formData.gender,
           height: formData.height ? Number(formData.height) : undefined,
