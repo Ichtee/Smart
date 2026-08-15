@@ -2,7 +2,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import Model from 'react-body-highlighter';
 import Header from '@/components/Header';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { API_URL } from '@/utils/api';
 
 const DEFAULT_ROUTINES = {
@@ -29,6 +28,87 @@ const normalizeMuscleId = (id: string): string => {
   if (s === 'upper back' || s === 'upper-back') return 'upper-back';
   if (s === 'lower back' || s === 'lower-back') return 'lower-back';
   return s;
+};
+
+const MUSCLE_NAMES_VI: Record<string, string> = {
+  chest: 'Ngực (Chest)',
+  'upper-back': 'Lưng trên (Upper Back)',
+  'lower-back': 'Lưng dưới (Lower Back)',
+  lats: 'Cơ xô (Lats)',
+  trapezius: 'Cầu vai (Traps)',
+  'front-deltoids': 'Vai trước/giữa (Delts)',
+  'back-deltoids': 'Vai sau (Rear Delts)',
+  biceps: 'Tay trước (Biceps)',
+  triceps: 'Tay sau (Triceps)',
+  forearm: 'Cẳng tay (Forearms)',
+  quadriceps: 'Đùi trước (Quads)',
+  hamstring: 'Đùi sau (Hamstrings)',
+  adductor: 'Cơ khép (Adductors)',
+  adductors: 'Cơ khép (Adductors)',
+  calves: 'Bắp chân (Calves)',
+  gluteal: 'Mông (Glutes)',
+  abs: 'Bụng (Abs)',
+  obliques: 'Cơ liên sườn (Obliques)',
+  neck: 'Cổ (Neck)'
+};
+
+const getYouTubeEmbedUrl = (url?: string): string => {
+  if (!url) return '';
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}?autoplay=0&rel=0&enablejsapi=1` : '';
+};
+
+const getYouTubeSearchUrl = (exerciseName: string): string => {
+  const query = encodeURIComponent(exerciseName);
+  return `https://www.youtube.com/results?search_query=${query}`;
+};
+
+const formatWorkoutDayTitle = (dayObj: any, lang: string): { day: string; name: string } => {
+  if (!dayObj) return { day: '', name: '' };
+  if (lang !== 'en') return { day: dayObj.day, name: dayObj.name };
+
+  const dayMap: Record<string, string> = {
+    'Thứ 2': 'Mon',
+    'Thứ 3': 'Tue',
+    'Thứ 4': 'Wed',
+    'Thứ 5': 'Thu',
+    'Thứ 6': 'Fri',
+    'Thứ 7': 'Sat',
+    'Chủ nhật': 'Sun'
+  };
+
+  const nameMap: Record<string, string> = {
+    'Nghỉ ngơi': 'Rest Day',
+    'Thân trên A': 'Upper Body A',
+    'Thân dưới A': 'Lower Body A',
+    'Thân trên B': 'Upper Body B',
+    'Thân dưới B': 'Lower Body B',
+    'Tăng cường (Optional)': 'Optional Focus',
+    'Fullbody Plan A': 'Fullbody Plan A',
+    'Fullbody Plan B': 'Fullbody Plan B',
+    'Fullbody Plan C': 'Fullbody Plan C',
+    'PUSH': 'Push',
+    'PULL': 'Pull',
+    'LEGS': 'Legs',
+    'Upper': 'Upper Body',
+    'Lower': 'Lower Body',
+    'Push Day 1': 'Push Day 1',
+    'Pull Day 1': 'Pull Day 1',
+    'Legs Day 1': 'Legs Day 1',
+    'Push Day 2': 'Push Day 2',
+    'Pull Day 2': 'Pull Day 2',
+    'Legs Day 2': 'Legs Day 2',
+    'Mặt trước A': 'Front Body A',
+    'Mặt sau A': 'Back Body A',
+    'Mặt trước B': 'Front Body B',
+    'Mặt sau B': 'Back Body B'
+  };
+
+  return {
+    day: dayMap[dayObj.day] || dayObj.day,
+    name: nameMap[dayObj.name] || dayObj.name
+  };
 };
 
 const DAY_ORDER: Record<string, number> = {
@@ -64,9 +144,10 @@ export default function Workouts() {
     notes?: string;
   }>>({});
 
+  const [selectedDetailExercise, setSelectedDetailExercise] = useState<any | null>(null);
+
   const [streakDays, setStreakDays] = useState<number>(1);
   const [noticeMessage, setNoticeMessage] = useState<string>('');
-  const { t, lang } = useLanguage();
 
   useEffect(() => {
     fetch(`${API_URL}/api/routines`, { cache: 'no-store' })
@@ -89,6 +170,10 @@ export default function Workouts() {
         const mapped = data.map((ex: any) => ({
           id: ex._id,
           muscle: ex.muscle,
+          secondaryMuscles: ex.secondaryMuscles || [],
+          equipment: ex.equipment || 'Tạ đơn / Cáp / Máy',
+          description: ex.description || 'Bài tập giúp cô lập và phát triển nhóm cơ hiệu quả.',
+          videoUrl: ex.videoUrl || '',
           normMuscle: normalizeMuscleId(ex.muscle),
           name: ex.name,
           defaultSets: ex.defaultSets || 3,
@@ -382,13 +467,13 @@ export default function Workouts() {
 
       return Object.keys(countsMap).map(mKey => ({
         id: countsMap[mKey].rawId,
-        label: t(`muscles.${mKey}`) || mKey,
+        label: MUSCLE_NAMES_VI[mKey] || mKey,
         count: countsMap[mKey].count
       }));
     }
 
     return currentTabWorkout.targets || [];
-  }, [currentTabWorkout, t]);
+  }, [currentTabWorkout]);
 
   let highlighterData: any[] = [];
   let modelColors = ['#00E5FF', '#00FF87'];
@@ -420,8 +505,8 @@ export default function Workouts() {
     }
   }
 
-  const formattedTime = currentTime ? currentTime.toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '20:16:36';
-  const formattedDate = currentTime ? currentTime.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Thu, Aug 13, 2026';
+  const formattedTime = currentTime ? currentTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '20:16:36';
+  const formattedDate = currentTime ? currentTime.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Thu, Aug 13, 2026';
 
   const completedCount = activeSelectedExercises.filter(ex => ex.completed).length;
   const progressPercent = (isWorkoutSaved && activeSelectedExercises.length > 0)
@@ -480,7 +565,7 @@ export default function Workouts() {
 
           {/* Active Routine Selection */}
           <div className="flex items-center gap-3">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">Lịch tập:</label>
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">LỊCH TẬP:</label>
             <select
               value={activeRoutineId}
               onChange={(e) => setActiveRoutineId(e.target.value)}
@@ -589,19 +674,19 @@ export default function Workouts() {
         </div>
 
         {/* Main Workouts Layout: Body Highlighter (Left) + Detailed List (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-          {/* Left Panel: Body Map */}
-          <div className="lg:col-span-5 bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col items-center justify-between">
+          {/* Left Panel: Body Map (Sticky & Compact fit height) */}
+          <div className="lg:col-span-5 lg:sticky lg:top-6 h-fit self-start bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col items-center justify-start space-y-2 z-20">
             <div className="flex justify-between items-center w-full mb-6 border-b border-slate-800/80 pb-4">
               <h2 className="text-lg font-bold text-[#00E5FF] flex items-center gap-2">
-                <span>🧘</span> {t('workouts.bodyMap')}
+                <span>🧘</span> Sơ đồ cơ bắp 3D
               </h2>
               <button
                 onClick={() => setModelType(prev => prev === 'anterior' ? 'posterior' : 'anterior')}
                 className="px-4 py-2 bg-[#18233C] hover:bg-[#1E2C4F] rounded-xl text-xs font-bold text-[#00E5FF] border border-cyan-500/30 transition shadow-sm"
               >
-                {modelType === 'anterior' ? t('workouts.rotateBack') : t('workouts.rotateFront')}
+                {modelType === 'anterior' ? 'Mặt sau' : 'Mặt trước'}
               </button>
             </div>
 
@@ -616,7 +701,7 @@ export default function Workouts() {
             </div>
 
             <p className="text-slate-400 text-xs mt-4 text-center bg-[#0B101D] px-4 py-2 rounded-xl border border-slate-800 w-full">
-              {t('workouts.bodyMapHint')}
+              Nhấn vào nhóm cơ trên cơ thể để xem danh sách bài tập tương ứng
             </p>
           </div>
 
@@ -628,7 +713,9 @@ export default function Workouts() {
               {/* Header with Save / Locked Action / Reset */}
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 flex-wrap gap-3">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span>📅</span> Danh sách bài tập - <span className="text-[#00E5FF]">{currentTabWorkout?.day} ({currentTabWorkout?.name})</span>
+                  <span>📅</span> Danh sách bài tập - <span className="text-[#00E5FF]">
+                    {currentTabWorkout?.day} ({currentTabWorkout?.name})
+                  </span>
                 </h2>
 
                 <div className="flex items-center gap-2 flex-wrap">
@@ -682,7 +769,7 @@ export default function Workouts() {
                     <p className="mt-1 leading-relaxed">
                       Bạn đã chọn vượt quá số bài so với mục tiêu đề xuất cho các nhóm cơ:{' '}
                       <strong className="text-white underline">
-                        {exceededTargetMuscles.map((tInfo: any) => `${t(`muscles.${tInfo.id}`) || tInfo.id} (${tInfo.currentCount}/${tInfo.targetCount} bài)`).join(', ')}
+                        {exceededTargetMuscles.map((tInfo: any) => `${MUSCLE_NAMES_VI[tInfo.id] || tInfo.id} (${tInfo.currentCount}/${tInfo.targetCount})`).join(', ')}
                       </strong>.
                     </p>
                   </div>
@@ -691,7 +778,7 @@ export default function Workouts() {
 
               {/* Targets / Muscles Bar */}
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t('workouts.muscleFilter')}</p>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Lọc thư viện bài tập theo nhóm cơ:</p>
                 {effectiveTargets.length > 0 && activeRoutineId !== 'none' ? (
                   <div className="flex flex-wrap gap-2">
                     {effectiveTargets.map((target: any, index: number) => {
@@ -714,7 +801,7 @@ export default function Workouts() {
                                   : 'bg-[#18233C] text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
                             }`}
                         >
-                          <span>{t(`muscles.${target.id}`) || target.id}</span>
+                          <span>{MUSCLE_NAMES_VI[target.id] || target.id}</span>
 
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${selectedMuscle === normTargetId
                               ? 'bg-slate-950 text-[#00E5FF]'
@@ -732,9 +819,9 @@ export default function Workouts() {
                   </div>
                 ) : (
                   sortedSchedule[safeDayIndex]?.name === 'Nghỉ ngơi' ? (
-                    <p className="text-[#00FF87] font-bold text-sm">{t('workouts.restDay')}</p>
+                    <p className="text-[#00FF87] font-bold text-sm">Hôm nay là ngày nghỉ, hãy để cơ thể phục hồi nhé!</p>
                   ) : (
-                    <p className="text-xs text-slate-400">{t('workouts.emptyMuscleSelection')}</p>
+                    <p className="text-xs text-slate-400">Hôm nay không có nhóm cơ nào được lên lịch.</p>
                   )
                 )}
               </div>
@@ -756,8 +843,15 @@ export default function Workouts() {
 
                       <div className="flex-1 space-y-3">
                         <div className="flex items-center justify-between flex-wrap gap-2">
-                          <h3 className="font-extrabold text-white text-base group-hover:text-[#00E5FF] transition-colors flex items-center gap-2">
+                          <h3 
+                            onClick={() => setSelectedDetailExercise(ex)}
+                            className="font-extrabold text-white text-base hover:text-[#00E5FF] cursor-pointer transition-colors flex items-center gap-2"
+                            title="Bấm để xem hướng dẫn & chi tiết bài tập"
+                          >
                             <span>{i + 1}. {ex.name}</span>
+                            <span className="text-xs font-bold text-cyan-400 opacity-80 hover:opacity-100 flex items-center gap-0.5">
+                              ℹ️ Chi tiết
+                            </span>
                             {ex.requiresWarmup && (
                               <span className="px-2 py-0.5 bg-amber-950/80 text-amber-400 border border-amber-500/40 rounded-full text-[10px] font-extrabold" title={ex.warmupNotes || 'Cần khởi động'}>
                                 🔥 Cần Khởi Động
@@ -858,7 +952,7 @@ export default function Workouts() {
                           )}
 
                           <span className="text-emerald-400 font-semibold">
-                            🎯 Cơ chính: {t(`muscles.${ex.normMuscle}`) || ex.muscle}
+                            🎯 Cơ chính: {MUSCLE_NAMES_VI[ex.normMuscle] || ex.muscle}
                           </span>
                         </div>
 
@@ -896,7 +990,7 @@ export default function Workouts() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-slate-400 italic py-4 border-t border-slate-800/80">{t('workouts.emptySelected')}</p>
+                  <p className="text-xs text-slate-400 italic py-4 border-t border-slate-800/80">Chưa có bài tập nào được chọn.</p>
                 )}
               </div>
 
@@ -906,7 +1000,7 @@ export default function Workouts() {
             <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 space-y-4 shadow-2xl">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <span>📚</span> {selectedMuscle ? `${t('workouts.libraryTitle')}: ${t(`muscles.${selectedMuscle}`) || selectedMuscle}` : t('workouts.libraryPlaceholder')}
+                  <span>📚</span> {selectedMuscle ? `Thư viện bài tập: ${MUSCLE_NAMES_VI[normalizeMuscleId(selectedMuscle)] || selectedMuscle}` : 'Thư viện bài tập'}
                 </h3>
                 {isWorkoutSaved && (
                   <span className="text-[11px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
@@ -922,8 +1016,15 @@ export default function Workouts() {
                       const isAlreadySelected = currentSelectedIds.includes(ex.id);
 
                       return (
-                        <div key={ex.id} className="p-4 rounded-2xl bg-[#0E1526] border border-slate-800/80 flex items-center justify-between hover:bg-[#18233C] transition-colors">
-                          <span className="font-bold text-sm text-slate-200">{ex.name}</span>
+                        <div key={ex.id} className="p-4 rounded-2xl bg-[#0E1526] border border-slate-800/80 flex items-center justify-between hover:bg-[#18233C] transition-colors group">
+                          <span 
+                            onClick={() => setSelectedDetailExercise(ex)}
+                            className="font-bold text-sm text-slate-200 group-hover:text-[#00E5FF] cursor-pointer transition-colors flex items-center gap-1.5"
+                            title="Bấm để xem hướng dẫn & chi tiết bài tập"
+                          >
+                            <span>{ex.name}</span>
+                            <span className="text-[10px] font-semibold text-cyan-400 opacity-70 group-hover:opacity-100">ℹ️</span>
+                          </span>
                           <button
                             onClick={() => handleAddExerciseFromLibrary(ex.id)}
                             disabled={isAlreadySelected || isWorkoutSaved}
@@ -938,7 +1039,7 @@ export default function Workouts() {
                       );
                     })
                   ) : (
-                    <p className="text-xs text-slate-400 text-center py-6">{t('workouts.emptyLibrary')} {t(`muscles.${selectedMuscle}`) || selectedMuscle}.</p>
+                    <p className="text-xs text-slate-400 text-center py-6">Chưa có dữ liệu bài tập cho nhóm cơ {MUSCLE_NAMES_VI[normalizeMuscleId(selectedMuscle)] || selectedMuscle}.</p>
                   )}
                 </div>
               ) : (
@@ -953,6 +1054,182 @@ export default function Workouts() {
         </div>
 
       </div>
+
+      {/* Exercise Detail Modal */}
+      {selectedDetailExercise && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setSelectedDetailExercise(null)}></div>
+          <div className="relative bg-[#131B2E] border border-cyan-500/30 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col space-y-5 animate-in fade-in zoom-in duration-200">
+            
+            {/* Header */}
+            <div className="flex justify-between items-start border-b border-slate-800 pb-4">
+              <div>
+                <span className="px-3 py-1 bg-cyan-950 text-[#00E5FF] border border-cyan-500/40 rounded-full text-xs font-black uppercase tracking-wider">
+                  Chi Tiết Bài Tập
+                </span>
+                <h3 className="text-2xl font-black text-white mt-2 flex items-center gap-2">
+                  <span>💪</span> {selectedDetailExercise.name}
+                </h3>
+
+                {/* Muscle & Equipment Badges */}
+                <div className="flex flex-wrap gap-2 text-xs mt-3">
+                  <span className="px-3 py-1 bg-emerald-950/80 text-[#00FF87] border border-emerald-500/40 rounded-xl font-extrabold flex items-center gap-1">
+                    🎯 Cơ chính: {MUSCLE_NAMES_VI[normalizeMuscleId(selectedDetailExercise.muscle)] || selectedDetailExercise.muscle}
+                  </span>
+
+                  {selectedDetailExercise.secondaryMuscles && selectedDetailExercise.secondaryMuscles.length > 0 && (
+                    <span className="px-3 py-1 bg-purple-950/80 text-purple-300 border border-purple-500/40 rounded-xl font-extrabold flex items-center gap-1">
+                      ✨ Cơ phụ: {selectedDetailExercise.secondaryMuscles.map((m: string) => MUSCLE_NAMES_VI[normalizeMuscleId(m)] || m).join(', ')}
+                    </span>
+                  )}
+
+                  {selectedDetailExercise.equipment && (
+                    <span className="px-3 py-1 bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 rounded-xl font-extrabold flex items-center gap-1">
+                      🏋️ Dụng cụ: {selectedDetailExercise.equipment}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedDetailExercise(null)}
+                className="w-9 h-9 rounded-full bg-[#18233C] hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xl font-bold transition border border-slate-700 shrink-0"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="space-y-5 overflow-y-auto custom-scrollbar pr-3 flex-1">
+
+              {/* YouTube Video Demonstration */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-black text-rose-400 uppercase tracking-wider flex items-center gap-2">
+                    <span>▶️</span> Video minh họa bài tập (YouTube)
+                  </h4>
+                  <a
+                    href={getYouTubeSearchUrl(selectedDetailExercise.name)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-xl transition flex items-center gap-1 shadow-md shadow-rose-900/40 shrink-0"
+                  >
+                    <span>Xem thêm ↗</span>
+                  </a>
+                </div>
+
+                {(() => {
+                  const embedUrl = getYouTubeEmbedUrl(selectedDetailExercise.videoUrl);
+                  if (embedUrl) {
+                    return (
+                      <div className="rounded-2xl overflow-hidden border border-rose-500/30 shadow-xl aspect-video bg-black">
+                        <iframe
+                          src={embedUrl}
+                          title={`Video ${selectedDetailExercise.name}`}
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="p-4 bg-[#0B101D] rounded-2xl border border-slate-800 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-500 font-bold flex items-center justify-center text-xl shrink-0">
+                        ▶️
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-white">Video Hướng Dẫn YouTube</h5>
+                        <p className="text-[11px] text-slate-400">Xem clip minh họa kỹ thuật chuẩn form trên YouTube</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Prescribed Training Parameters */}
+              <div className="bg-[#0B101D] p-4 rounded-2xl border border-slate-800/90 space-y-3">
+                <h4 className="text-xs font-black text-[#00E5FF] uppercase tracking-wider flex items-center gap-2">
+                  <span>📊</span> Thông số tập luyện đề xuất
+                </h4>
+                
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800">
+                    <span className="text-slate-400 block font-medium">Số Hiệp (Sets):</span>
+                    <strong className="text-white text-base font-black">{selectedDetailExercise.sets || selectedDetailExercise.defaultSets || 3} Hiệp</strong>
+                  </div>
+                  <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800">
+                    <span className="text-slate-400 block font-medium">Số Lần (Reps):</span>
+                    <strong className="text-[#00E5FF] text-base font-black">{selectedDetailExercise.reps || selectedDetailExercise.defaultReps || '8-12'} Lần</strong>
+                  </div>
+                  <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800">
+                    <span className="text-slate-400 block font-medium">Ngưỡng RIR:</span>
+                    <strong className="text-amber-400 text-sm font-black">⚡ RIR {selectedDetailExercise.rir || '1'}</strong>
+                  </div>
+                  <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800">
+                    <span className="text-slate-400 block font-medium">Thời gian nghỉ:</span>
+                    <strong className="text-cyan-400 text-sm font-black">⏱️ {Math.round((selectedDetailExercise.restTimeSeconds || 180) / 60)} phút</strong>
+                  </div>
+                </div>
+
+                {selectedDetailExercise.warmupNotes && (
+                  <div className="p-3 bg-amber-950/40 border border-amber-500/30 rounded-xl text-xs text-amber-300 font-semibold flex items-start gap-2">
+                    <span>🔥</span>
+                    <div>
+                      <strong className="block text-amber-400 uppercase text-[10px] font-black">Yêu cầu Khởi Động:</strong>
+                      <p className="mt-0.5">{selectedDetailExercise.warmupNotes}</p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedDetailExercise.notes && (
+                  <div className="p-3 bg-cyan-950/40 border border-cyan-500/30 rounded-xl text-xs text-cyan-300 font-semibold flex items-start gap-2">
+                    <span>📌</span>
+                    <div>
+                      <strong className="block text-cyan-400 uppercase text-[10px] font-black">Ghi Chú Kỹ Thuật:</strong>
+                      <p className="mt-0.5">{selectedDetailExercise.notes}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Technical Description & Execution Guide */}
+              <div className="bg-[#0B101D] p-4 rounded-2xl border border-slate-800/90 space-y-2">
+                <h4 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                  <span>📖</span> Hướng dẫn kỹ thuật
+                </h4>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {selectedDetailExercise.description || 'Bài tập này giúp cô lập và phát triển nhóm cơ mục tiêu hiệu quả. Hãy giữ tư thế chuẩn, kiểm soát đà rơi tạ và siết chặt cơ ở đỉnh chuyển động.'}
+                </p>
+              </div>
+
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-3">
+              {!currentSelectedIds.includes(selectedDetailExercise.id) && !isWorkoutSaved && (
+                <button
+                  onClick={() => {
+                    handleAddExerciseFromLibrary(selectedDetailExercise.id);
+                    setSelectedDetailExercise(null);
+                  }}
+                  className="px-4 py-2 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-[#00E5FF]/20 transition"
+                >
+                  + Thêm Bài Tập Này Vào Lịch
+                </button>
+              )}
+
+              <button
+                onClick={() => setSelectedDetailExercise(null)}
+                className="px-5 py-2 bg-[#18233C] hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-700 transition ml-auto"
+              >
+                Đóng
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
