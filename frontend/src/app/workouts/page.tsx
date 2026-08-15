@@ -286,19 +286,38 @@ export default function Workouts() {
     }
   }, [activeRoutineId, sortedSchedule, realTodayString]);
 
+  const userId = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    try {
+      const u = localStorage.getItem('user');
+      if (u) {
+        const parsed = JSON.parse(u);
+        return parsed.id || parsed.username || '';
+      }
+    } catch (e) { }
+    return '';
+  }, []);
+
   const safeDayIndex = sortedSchedule.length && currentDayIndex >= sortedSchedule.length ? 0 : currentDayIndex;
   const currentTabWorkout = sortedSchedule.length ? sortedSchedule[safeDayIndex] : null;
-  const currentDayKey = `${activeRoutineId}_${currentTabWorkout?.day || 'day'}`;
+  const currentDayKey = `${userId ? userId + '_' : ''}${activeRoutineId}_${currentTabWorkout?.day || 'day'}`;
+  const legacyDayKey = `${activeRoutineId}_${currentTabWorkout?.day || 'day'}`;
   const todayDateStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   // Load / Initialize Day Selections per Day Tab
   useEffect(() => {
-    if (!currentTabWorkout) return;
+    if (!currentTabWorkout || isFetching) return;
 
-    const savedSel = localStorage.getItem(`smart_sel_${todayDateStr}_${currentDayKey}`);
-    const savedComp = localStorage.getItem(`smart_comp_${todayDateStr}_${currentDayKey}`);
-    const savedSaved = localStorage.getItem(`smart_saved_${todayDateStr}_${currentDayKey}`);
-    const savedDet = localStorage.getItem(`smart_det_${todayDateStr}_${currentDayKey}`);
+    let savedSel = localStorage.getItem(`smart_sel_${todayDateStr}_${currentDayKey}`);
+    let savedComp = localStorage.getItem(`smart_comp_${todayDateStr}_${currentDayKey}`);
+    let savedSaved = localStorage.getItem(`smart_saved_${todayDateStr}_${currentDayKey}`);
+    let savedDet = localStorage.getItem(`smart_det_${todayDateStr}_${currentDayKey}`);
+
+    // Fallback to legacy key if user-prefixed key is not set yet
+    if (!savedSel) savedSel = localStorage.getItem(`smart_sel_${todayDateStr}_${legacyDayKey}`);
+    if (!savedComp) savedComp = localStorage.getItem(`smart_comp_${todayDateStr}_${legacyDayKey}`);
+    if (!savedSaved) savedSaved = localStorage.getItem(`smart_saved_${todayDateStr}_${legacyDayKey}`);
+    if (!savedDet) savedDet = localStorage.getItem(`smart_det_${todayDateStr}_${legacyDayKey}`);
 
     let selectedIds: string[] = [];
     let detailsMap: Record<string, any> = {};
@@ -364,7 +383,7 @@ export default function Workouts() {
     if (Object.keys(detailsMap).length > 0) {
       setExerciseDetails(prev => ({ ...prev, ...detailsMap }));
     }
-  }, [currentDayKey, allExercises, todayDateStr, currentTabWorkout]);
+  }, [currentDayKey, legacyDayKey, allExercises, todayDateStr, currentTabWorkout, isFetching]);
 
   const currentSelectedIds = daySelections[currentDayKey] || [];
   const currentCompletedIds = dayCompleted[currentDayKey] || [];
