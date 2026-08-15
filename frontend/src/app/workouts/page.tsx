@@ -244,15 +244,28 @@ export default function Workouts() {
     }
 
     if (savedSel) {
-      try { selectedIds = JSON.parse(savedSel); } catch (e) { }
-    } else if (currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
+      try {
+        const rawIds: string[] = JSON.parse(savedSel);
+        // Keep valid IDs that exist in current catalog or template IDs
+        if (allExercises.length > 0) {
+          selectedIds = rawIds.filter(id => 
+            allExercises.some(ex => ex.id === id || ex._id === id || ex._id?.toString() === id || (ex.name && id.includes(ex.name)))
+          );
+        } else {
+          selectedIds = rawIds;
+        }
+      } catch (e) { }
+    }
+
+    if (selectedIds.length === 0 && currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
       // Auto pre-populate exercises from template schedule
       currentTabWorkout.exercises.forEach((tmplEx: any) => {
+        if (!tmplEx.exerciseName) return;
         let matched = allExercises.find(
-          item => item.name.toLowerCase().trim() === tmplEx.exerciseName.toLowerCase().trim()
+          item => item.name && item.name.toLowerCase().trim() === tmplEx.exerciseName.toLowerCase().trim()
         );
 
-        const exId = matched ? matched.id : `template_${tmplEx.exerciseName.replace(/\s+/g, '_')}`;
+        const exId = matched ? (matched.id || matched._id?.toString()) : `template_${tmplEx.exerciseName.replace(/\s+/g, '_')}`;
 
         if (!matched) {
           setAllExercises(prev => {
@@ -271,18 +284,20 @@ export default function Workouts() {
           });
         }
 
-        selectedIds.push(exId);
-        if (!detailsMap[exId]) {
-          detailsMap[exId] = {
-            sets: tmplEx.sets || 3,
-            reps: tmplEx.repsRange || '8-12',
-            rir: tmplEx.rir || '1',
-            restTimeSeconds: tmplEx.restTimeSeconds || 180,
-            isOptional: !!tmplEx.isOptional,
-            requiresWarmup: !!tmplEx.requiresWarmup,
-            warmupNotes: tmplEx.warmupNotes || '',
-            notes: tmplEx.notes || ''
-          };
+        if (exId) {
+          selectedIds.push(exId);
+          if (!detailsMap[exId]) {
+            detailsMap[exId] = {
+              sets: tmplEx.sets || 3,
+              reps: tmplEx.repsRange || '8-12',
+              rir: tmplEx.rir || '1',
+              restTimeSeconds: tmplEx.restTimeSeconds || 180,
+              isOptional: !!tmplEx.isOptional,
+              requiresWarmup: !!tmplEx.requiresWarmup,
+              warmupNotes: tmplEx.warmupNotes || '',
+              notes: tmplEx.notes || ''
+            };
+          }
         }
       });
 
@@ -309,22 +324,25 @@ export default function Workouts() {
 
   // Active exercises list for the current day tab
   const activeSelectedExercises = useMemo(() => {
-    return currentSelectedIds.map(id => {
-      const ex = allExercises.find(item => item.id === id);
-      const detail = exerciseDetails[id] || { sets: ex?.defaultSets || 3, reps: ex?.defaultReps || '10-12' };
-      return {
-        ...ex,
-        sets: detail.sets,
-        reps: detail.reps,
-        rir: detail.rir || '1',
-        restTimeSeconds: detail.restTimeSeconds || 180,
-        isOptional: !!detail.isOptional,
-        requiresWarmup: !!detail.requiresWarmup,
-        warmupNotes: detail.warmupNotes || '',
-        notes: detail.notes || '',
-        completed: currentCompletedIds.includes(id)
-      };
-    }).filter(Boolean);
+    return currentSelectedIds
+      .map(id => {
+        const ex = allExercises.find(item => item.id === id || item._id === id || item._id?.toString() === id);
+        if (!ex || !ex.name) return null;
+        const detail = exerciseDetails[id] || { sets: ex.defaultSets || 3, reps: ex.defaultReps || '10-12' };
+        return {
+          ...ex,
+          sets: detail.sets,
+          reps: detail.reps,
+          rir: detail.rir || '1',
+          restTimeSeconds: detail.restTimeSeconds || 180,
+          isOptional: !!detail.isOptional,
+          requiresWarmup: !!detail.requiresWarmup,
+          warmupNotes: detail.warmupNotes || '',
+          notes: detail.notes || '',
+          completed: currentCompletedIds.includes(id)
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null && Boolean(item.name));
   }, [currentSelectedIds, allExercises, exerciseDetails, currentCompletedIds]);
 
   const updateExerciseSets = (id: string, sets: number) => {
