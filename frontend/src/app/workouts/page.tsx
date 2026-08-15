@@ -226,15 +226,25 @@ export default function Workouts() {
   const handleRoutineChange = (newId: string) => {
     setActiveRoutineId(newId);
     localStorage.setItem('smart_last_active_routine_id', newId);
+    const selectedRoutine = routinesMap[newId];
+    if (selectedRoutine && selectedRoutine.name) {
+      localStorage.setItem('smart_last_active_routine_name', selectedRoutine.name);
+    }
   };
+
+  const activeRoutine = routinesMap[activeRoutineId];
+
+  useEffect(() => {
+    if (activeRoutine && activeRoutine.name) {
+      localStorage.setItem('smart_last_active_routine_name', activeRoutine.name);
+    }
+  }, [activeRoutine]);
 
   const handleSelectDayTab = (index: number) => {
     setCurrentDayIndex(index);
     localStorage.setItem(`smart_last_day_index_${activeRoutineId}`, index.toString());
     setSelectedMuscle(null);
   };
-
-  const activeRoutine = routinesMap[activeRoutineId];
 
   const sortedSchedule = useMemo(() => {
     return (activeRoutine?.schedule || []).slice().sort((a: any, b: any) => {
@@ -504,6 +514,10 @@ export default function Workouts() {
     localStorage.setItem('smart_last_trained_routine_id', activeRoutineId);
     localStorage.setItem('smart_last_trained_day_index', currentDayIndex.toString());
     localStorage.setItem('smart_last_active_routine_id', activeRoutineId);
+    if (activeRoutine && activeRoutine.name) {
+      localStorage.setItem('smart_last_trained_routine_name', activeRoutine.name);
+      localStorage.setItem('smart_last_active_routine_name', activeRoutine.name);
+    }
 
     // Save structured workout log entry into smart_workout_logs
     try {

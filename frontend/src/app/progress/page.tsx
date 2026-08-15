@@ -188,6 +188,15 @@ export default function ProgressPage() {
 
   const caloriePercent = Math.min(100, Math.round((dailyCalories / targetCalories) * 100));
 
+  const activeRoutineName = useMemo(() => {
+    if (typeof window === 'undefined') return 'Lịch tập luyện';
+    return (
+      localStorage.getItem('smart_last_trained_routine_name') ||
+      localStorage.getItem('smart_last_active_routine_name') ||
+      'Lịch tập luyện'
+    );
+  }, []);
+
   // Selected Day Log Entry Details
   const selectedDayLog = useMemo(() => {
     if (!selectedCalendarDate) return null;
@@ -466,7 +475,7 @@ export default function ProgressPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800">
                       <span className="text-slate-400 font-medium text-[11px] block">Lịch tập đã chọn:</span>
-                      <strong className="text-[#00E5FF] font-extrabold text-sm mt-0.5">🏋️ Push - Pull - Leg (PPL)</strong>
+                      <strong className="text-[#00E5FF] font-extrabold text-sm mt-0.5">🏋️ {activeRoutineName}</strong>
                     </div>
                     <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800">
                       <span className="text-slate-400 font-medium text-[11px] block">Buổi tập trong tuần:</span>
