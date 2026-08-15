@@ -16,6 +16,16 @@ export default function UserManagement() {
   // Modal State
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
+  // Success / Failure / Confirmation Popup Modal state
+  const [popup, setPopup] = useState<{
+    show: boolean;
+    type: 'success' | 'error' | 'confirm';
+    title: string;
+    message: string;
+    confirmText?: string;
+    onConfirm?: () => void;
+  } | null>(null);
+
   useEffect(() => {
     const checkAuth = async () => {
       const storedToken = localStorage.getItem('token');
@@ -62,8 +72,19 @@ export default function UserManagement() {
     }
   };
 
-  const handleDelete = async (id: string, role: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa người dùng này vĩnh viễn?')) return;
+  const confirmDeleteUser = (user: any) => {
+    setPopup({
+      show: true,
+      type: 'confirm',
+      title: 'Xác Nhận Xóa Tài Khoản ⚠️',
+      message: `Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản "${user.name || user.email}" khỏi hệ thống không?`,
+      confirmText: 'Xóa tài khoản',
+      onConfirm: () => performDeleteUser(user._id, user.name || user.email)
+    });
+  };
+
+  const performDeleteUser = async (id: string, userName: string) => {
+    setPopup(null);
     if (!token) return;
     try {
       const res = await fetch(`${API_URL}/api/users/${id}`, {
@@ -73,12 +94,28 @@ export default function UserManagement() {
       if (res.ok) {
         setSelectedUser(null);
         fetchUsers(token);
+        setPopup({
+          show: true,
+          type: 'success',
+          title: 'Đã Xóa Tài Khoản! 🗑️',
+          message: `Tài khoản "${userName}" đã được xóa vĩnh viễn khỏi hệ thống.`
+        });
       } else {
         const error = await res.json();
-        alert(error.message || 'Lỗi khi xóa tài khoản');
+        setPopup({
+          show: true,
+          type: 'error',
+          title: 'Xóa Thất Bại ❌',
+          message: error.message || 'Không thể xóa tài khoản này.'
+        });
       }
     } catch (err) {
-      console.error('Failed to delete user', err);
+      setPopup({
+        show: true,
+        type: 'error',
+        title: 'Lỗi Máy Chủ ❌',
+        message: 'Đã xảy ra lỗi khi gửi yêu cầu xóa.'
+      });
     }
   };
 
@@ -97,13 +134,29 @@ export default function UserManagement() {
       });
       if (res.ok) {
         fetchUsers(token);
+        setPopup({
+          show: true,
+          type: 'success',
+          title: 'Cập Nhật Thành Công! 🎉',
+          message: `Trường thông tin "${field}" của tài khoản đã được cập nhật thành công!`
+        });
       } else {
         const error = await res.json();
-        alert(error.message || 'Lỗi khi cập nhật tài khoản');
         fetchUsers(token);
+        setPopup({
+          show: true,
+          type: 'error',
+          title: 'Cập Nhật Thất Bại ❌',
+          message: error.message || 'Không thể cập nhật thông tin tài khoản.'
+        });
       }
     } catch (err) {
-      console.error('Failed to update user', err);
+      setPopup({
+        show: true,
+        type: 'error',
+        title: 'Lỗi Máy Chủ ❌',
+        message: 'Đã xảy ra lỗi khi cập nhật thông tin.'
+      });
     }
   };
 
@@ -202,7 +255,7 @@ export default function UserManagement() {
                       </td>
                       <td className="p-4 text-right whitespace-nowrap flex justify-end gap-4 items-center h-full pt-6">
                         <button 
-                          onClick={() => handleDelete(user._id, user.role)} 
+                          onClick={() => confirmDeleteUser(user)} 
                           className="text-rose-400 hover:text-rose-300 text-sm font-medium"
                         >
                           Xóa
@@ -285,6 +338,76 @@ export default function UserManagement() {
                   <div className="text-white font-medium truncate" title={selectedUser.activityLevel}>{selectedUser.activityLevel || '--'}</div>
                 </div>
               </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Global Success / Error / Confirm Popup Modal */}
+      {popup && popup.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" 
+            onClick={() => popup.type !== 'confirm' && setPopup(null)}
+          ></div>
+          
+          <div className={`relative bg-[#131B2E] border ${
+            popup.type === 'success' 
+              ? 'border-emerald-500/50 shadow-emerald-500/10' 
+              : popup.type === 'error' 
+                ? 'border-rose-500/50 shadow-rose-500/10' 
+                : 'border-amber-500/50 shadow-amber-500/10'
+          } rounded-3xl p-6 sm:p-8 shadow-2xl max-w-md w-full flex flex-col items-center text-center space-y-4 animate-in zoom-in-95 duration-200`}>
+            
+            {/* Icon Badge */}
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-lg border ${
+              popup.type === 'success'
+                ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-emerald-900/40'
+                : popup.type === 'error'
+                  ? 'bg-rose-950/80 text-rose-400 border-rose-500/40 shadow-rose-900/40'
+                  : 'bg-amber-950/80 text-amber-400 border-amber-500/40 shadow-amber-900/40'
+            }`}>
+              {popup.type === 'success' ? '✅' : popup.type === 'error' ? '❌' : '⚠️'}
+            </div>
+
+            {/* Title & Message */}
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-white">{popup.title}</h3>
+              <p className="text-xs text-slate-300 leading-relaxed font-medium">{popup.message}</p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2 w-full flex gap-3">
+              {popup.type === 'confirm' ? (
+                <>
+                  <button
+                    onClick={() => setPopup(null)}
+                    className="flex-1 py-3 bg-[#18233C] hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (popup.onConfirm) popup.onConfirm();
+                    }}
+                    className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-900/40 transition active:scale-95 uppercase tracking-wider"
+                  >
+                    {popup.confirmText || 'Xác nhận'}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setPopup(null)}
+                  className={`w-full py-3 font-black text-xs rounded-xl transition shadow-lg active:scale-95 uppercase tracking-wider ${
+                    popup.type === 'success'
+                      ? 'bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 shadow-cyan-500/20'
+                      : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20'
+                  }`}
+                >
+                  Đồng Ý / Đóng
+                </button>
+              )}
             </div>
 
           </div>

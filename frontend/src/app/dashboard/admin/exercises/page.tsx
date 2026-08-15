@@ -46,6 +46,16 @@ export default function AdminExercises() {
   // Detail Modal state
   const [viewingExercise, setViewingExercise] = useState<any | null>(null);
 
+  // Success / Failure / Confirmation Popup Modal state
+  const [popup, setPopup] = useState<{
+    show: boolean;
+    type: 'success' | 'error' | 'confirm';
+    title: string;
+    message: string;
+    confirmText?: string;
+    onConfirm?: () => void;
+  } | null>(null);
+
   // Form state for all exercise catalog fields
   const [formData, setFormData] = useState({
     name: '',
@@ -66,7 +76,7 @@ export default function AdminExercises() {
   ];
 
   const equipmentOptions = [
-    'Machine', 'Cable', 'Smith Machine', 'Barbell', 'Dumbbell', 'Bodyweight', 'Plate Loaded', 'EZ Bar', 'Kettlebell'
+    'Machine', 'Cable Machine', 'Smith Machine', 'Barbell', 'Dumbbell', 'Bodyweight', 'Assisted Machine', 'Bench'
   ];
 
   useEffect(() => {
@@ -147,8 +157,9 @@ export default function AdminExercises() {
     };
 
     try {
+      let res;
       if (editingId) {
-        await fetch(`${API_URL}/api/exercises/${editingId}`, {
+        res = await fetch(`${API_URL}/api/exercises/${editingId}`, {
           method: 'PUT',
           headers: { 
             'Content-Type': 'application/json',
@@ -157,7 +168,7 @@ export default function AdminExercises() {
           body: JSON.stringify(payload)
         });
       } else {
-        await fetch(`${API_URL}/api/exercises`, {
+        res = await fetch(`${API_URL}/api/exercises`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -166,10 +177,37 @@ export default function AdminExercises() {
           body: JSON.stringify(payload)
         });
       }
-      resetForm();
-      fetchExercises();
-    } catch (err) {
-      console.error('Failed to save exercise', err);
+
+      const data = await res.json();
+
+      if (res.ok) {
+        const isEdit = !!editingId;
+        const currentName = formData.name;
+        resetForm();
+        fetchExercises();
+        setPopup({
+          show: true,
+          type: 'success',
+          title: isEdit ? 'Cập Nhật Thành Công! 🎉' : 'Thêm Bài Tập Thành Công! 🚀',
+          message: isEdit 
+            ? `Dữ liệu bài tập "${currentName}" đã được cập nhật thành công vào cơ sở dữ liệu.` 
+            : `Bài tập mới "${currentName}" đã được thêm thành công vào thư viện hệ thống!`
+        });
+      } else {
+        setPopup({
+          show: true,
+          type: 'error',
+          title: 'Lỗi Thao Tác ❌',
+          message: data.message || 'Không thể lưu bài tập. Vui lòng kiểm tra lại dữ liệu nhập vào!'
+        });
+      }
+    } catch (err: any) {
+      setPopup({
+        show: true,
+        type: 'error',
+        title: 'Lỗi Kết Nối Server ❌',
+        message: 'Đã xảy ra lỗi khi gửi yêu cầu tới máy chủ API.'
+      });
     }
   };
 
@@ -187,17 +225,49 @@ export default function AdminExercises() {
     });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa bài tập này khỏi thư viện hệ thống?')) return;
+  const confirmDelete = (ex: any) => {
+    setPopup({
+      show: true,
+      type: 'confirm',
+      title: 'Xác Nhận Xóa Bài Tập ⚠️',
+      message: `Bạn có chắc chắn muốn xóa bài tập "${ex.name}" khỏi thư viện hệ thống không? Tất cả lịch tập sử dụng bài tập này có thể bị ảnh hưởng.`,
+      confirmText: 'Xóa bài tập',
+      onConfirm: () => performDelete(ex._id, ex.name)
+    });
+  };
+
+  const performDelete = async (id: string, name: string) => {
+    setPopup(null);
     if (!token) return;
     try {
-      await fetch(`${API_URL}/api/exercises/${id}`, {
+      const res = await fetch(`${API_URL}/api/exercises/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      fetchExercises();
+      const data = await res.json();
+      if (res.ok) {
+        fetchExercises();
+        setPopup({
+          show: true,
+          type: 'success',
+          title: 'Đã Xóa Bài Tập! 🗑️',
+          message: `Bài tập "${name}" đã được xóa thành công khỏi hệ thống.`
+        });
+      } else {
+        setPopup({
+          show: true,
+          type: 'error',
+          title: 'Xóa Thất Bại ❌',
+          message: data.message || 'Không thể xóa bài tập này.'
+        });
+      }
     } catch (err) {
-      console.error('Failed to delete exercise', err);
+      setPopup({
+        show: true,
+        type: 'error',
+        title: 'Lỗi Máy Chủ ❌',
+        message: 'Đã xảy ra lỗi kết nối khi gửi yêu cầu xóa.'
+      });
     }
   };
 
@@ -471,7 +541,7 @@ export default function AdminExercises() {
                             ✏️ Sửa
                           </button>
                           <button 
-                            onClick={() => handleDelete(ex._id)} 
+                            onClick={() => confirmDelete(ex)} 
                             className="px-2.5 py-1 bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-500/40 rounded-lg font-bold transition text-[11px]"
                           >
                             🗑️ Xóa
@@ -586,6 +656,76 @@ export default function AdminExercises() {
               >
                 Đóng
               </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Global Success / Error / Confirm Popup Modal */}
+      {popup && popup.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" 
+            onClick={() => popup.type !== 'confirm' && setPopup(null)}
+          ></div>
+          
+          <div className={`relative bg-[#131B2E] border ${
+            popup.type === 'success' 
+              ? 'border-emerald-500/50 shadow-emerald-500/10' 
+              : popup.type === 'error' 
+                ? 'border-rose-500/50 shadow-rose-500/10' 
+                : 'border-amber-500/50 shadow-amber-500/10'
+          } rounded-3xl p-6 sm:p-8 shadow-2xl max-w-md w-full flex flex-col items-center text-center space-y-4 animate-in zoom-in-95 duration-200`}>
+            
+            {/* Icon Badge */}
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-lg border ${
+              popup.type === 'success'
+                ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-emerald-900/40'
+                : popup.type === 'error'
+                  ? 'bg-rose-950/80 text-rose-400 border-rose-500/40 shadow-rose-900/40'
+                  : 'bg-amber-950/80 text-amber-400 border-amber-500/40 shadow-amber-900/40'
+            }`}>
+              {popup.type === 'success' ? '✅' : popup.type === 'error' ? '❌' : '⚠️'}
+            </div>
+
+            {/* Title & Message */}
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-white">{popup.title}</h3>
+              <p className="text-xs text-slate-300 leading-relaxed font-medium">{popup.message}</p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2 w-full flex gap-3">
+              {popup.type === 'confirm' ? (
+                <>
+                  <button
+                    onClick={() => setPopup(null)}
+                    className="flex-1 py-3 bg-[#18233C] hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (popup.onConfirm) popup.onConfirm();
+                    }}
+                    className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-900/40 transition active:scale-95 uppercase tracking-wider"
+                  >
+                    {popup.confirmText || 'Xác nhận'}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setPopup(null)}
+                  className={`w-full py-3 font-black text-xs rounded-xl transition shadow-lg active:scale-95 uppercase tracking-wider ${
+                    popup.type === 'success'
+                      ? 'bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 shadow-cyan-500/20'
+                      : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20'
+                  }`}
+                >
+                  Đồng Ý / Đóng
+                </button>
+              )}
             </div>
 
           </div>
