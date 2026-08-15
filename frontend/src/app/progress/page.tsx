@@ -54,6 +54,7 @@ export default function ProgressPage() {
   // Selected Day Tile State for Detailed View
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [isExerciseListCollapsed, setIsExerciseListCollapsed] = useState<boolean>(false);
+  const [selectedPreviewImage, setSelectedPreviewImage] = useState<string | null>(null);
 
   // Daily Nutrition & Calorie Tracking State
   const [dailyCalories, setDailyCalories] = useState<number>(0);
@@ -62,6 +63,24 @@ export default function ProgressPage() {
   const [dailyFat, setDailyFat] = useState<number>(0);
   const [isEditingCalories, setIsEditingCalories] = useState(false);
   const [tempCalories, setTempCalories] = useState('0');
+
+  // Selected date nutrition data helper state
+  const [selectedDateMeals, setSelectedDateMeals] = useState<Record<string, Array<{ id: string; name: string; calories: number; image?: string }>>>({
+    'Bữa Sáng': [],
+    'Bữa Trưa': [],
+    'Bữa Tối': [],
+    'Ăn Vặt': []
+  });
+  const [selectedDateWater, setSelectedDateWater] = useState<number>(0);
+
+  // Helper for local YYYY-MM-DD date string (prevents UTC timezone shift bug)
+  const getTodayStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -99,57 +118,118 @@ export default function ProgressPage() {
 
     // Read workout streak history & structured logs from localStorage
     try {
-      const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
-      setStreakHistory(history);
+      const todayStr = getTodayStr();
+      setSelectedCalendarDate(todayStr);
 
-      const logs = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
-      setWorkoutLogs(logs);
+      // Auto-relocate any workout logs saved under wrong dates
+      let history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
+      let logs = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
 
-      // Default select today or most recent completed workout day
-      const todayStr = new Date().toISOString().split('T')[0];
-      if (history.includes(todayStr) || logs[todayStr]) {
-        setSelectedCalendarDate(todayStr);
-      } else if (history.length > 0) {
-        setSelectedCalendarDate(history[history.length - 1]);
-      } else {
-        setSelectedCalendarDate(todayStr);
-      }
-    } catch (e) { }
+      const currentToday = new Date();
+      const currentDayOfWeek = currentToday.getDay() === 0 ? 7 : currentToday.getDay();
+      const mondayDate = new Date(currentToday);
+      mondayDate.setDate(currentToday.getDate() - (currentDayOfWeek - 1));
 
-    // Read calories from manual entry or Nutrition page meals for today
-    const todayStr = new Date().toISOString().split('T')[0];
-    const savedCal = localStorage.getItem(`smart_daily_cal_${todayStr}`);
+      const getExactWeekdayDate = (dayOffset: number) => {
+        const d = new Date(mondayDate);
+        d.setDate(mondayDate.getDate() + dayOffset);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      };
 
-    let activeCal = 0;
-    if (savedCal !== null) {
-      const val = parseInt(savedCal, 10);
-      if (!isNaN(val) && val >= 0) {
-        activeCal = val;
-      }
-    } else {
-      try {
-        const savedMeals = localStorage.getItem(`smart_meals_${todayStr}`);
-        if (savedMeals) {
-          const parsedMeals: Record<string, Array<{ calories: number }>> = JSON.parse(savedMeals);
-          activeCal = Object.values(parsedMeals).flat().reduce((sum, item) => sum + (item.calories || 0), 0);
+      let hasLogChanges = false;
+      Object.keys(logs).forEach(dateKey => {
+        const log = logs[dateKey];
+        if (!log || !log.dayName) return;
+
+        let targetOffset: number | null = null;
+        const normDay = log.dayName.toLowerCase();
+        if (normDay.includes('thứ 2') || normDay.includes('hai')) targetOffset = 0;
+        else if (normDay.includes('thứ 3') || normDay.includes('ba')) targetOffset = 1;
+        else if (normDay.includes('thứ 4') || normDay.includes('tư')) targetOffset = 2;
+        else if (normDay.includes('thứ 5') || normDay.includes('năm')) targetOffset = 3;
+        else if (normDay.includes('thứ 6') || normDay.includes('sáu')) targetOffset = 4;
+        else if (normDay.includes('thứ 7') || normDay.includes('bảy')) targetOffset = 5;
+        else if (normDay.includes('chủ nhật') || normDay.includes('cn')) targetOffset = 6;
+
+        if (targetOffset !== null) {
+          const expectedDateStr = getExactWeekdayDate(targetOffset);
+          if (dateKey !== expectedDateStr) {
+            logs[expectedDateStr] = { ...log, date: expectedDateStr };
+            delete logs[dateKey];
+            history = history.filter(d => d !== dateKey);
+            if (!history.includes(expectedDateStr)) history.push(expectedDateStr);
+            hasLogChanges = true;
+          }
         }
+      });
+
+      if (hasLogChanges) {
+        localStorage.setItem('smart_workout_logs', JSON.stringify(logs));
+        localStorage.setItem('smart_streak_history', JSON.stringify(history));
+      }
+
+      setStreakHistory(history);
+      setWorkoutLogs(logs);
+    } catch (e) { }
+  }, [router]);
+
+  // Synchronize calories, macros, meals, workout logs & streak history with real-time event bus
+  useEffect(() => {
+    const syncAllData = () => {
+      const targetDateStr = selectedCalendarDate || getTodayStr();
+
+      try {
+        const savedMeals = localStorage.getItem(`smart_meals_${targetDateStr}`);
+        if (savedMeals) {
+          const parsed = JSON.parse(savedMeals);
+          setSelectedDateMeals(parsed);
+          const allItems = Object.values(parsed).flat() as Array<{ calories: number }>;
+          const activeCal = allItems.reduce((sum, item) => sum + (item.calories || 0), 0);
+          setDailyCalories(activeCal);
+          setTempCalories(activeCal.toString());
+        } else {
+          setSelectedDateMeals({ 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] });
+          const savedCal = localStorage.getItem(`smart_daily_cal_${targetDateStr}`);
+          const activeCal = savedCal ? (parseInt(savedCal, 10) || 0) : 0;
+          setDailyCalories(activeCal);
+          setTempCalories(activeCal.toString());
+        }
+
+        const savedWater = localStorage.getItem(`smart_water_${targetDateStr}`);
+        setSelectedDateWater(savedWater ? (parseInt(savedWater, 10) || 0) : 0);
+
+        setStreakHistory(JSON.parse(localStorage.getItem('smart_streak_history') || '[]'));
+        setWorkoutLogs(JSON.parse(localStorage.getItem('smart_workout_logs') || '{}'));
       } catch (e) { }
-    }
+    };
 
-    setDailyCalories(activeCal);
-    setTempCalories(activeCal.toString());
+    syncAllData();
 
-    // Calculate dynamic macros based on calorie intake (Protein 30%, Carbs 50%, Fat 20%)
-    if (activeCal > 0) {
-      setDailyProtein(Math.round((activeCal * 0.30) / 4));
-      setDailyCarbs(Math.round((activeCal * 0.50) / 4));
-      setDailyFat(Math.round((activeCal * 0.20) / 9));
+    window.addEventListener('storage', syncAllData);
+    window.addEventListener('smart_nutrition_updated', syncAllData);
+    window.addEventListener('smart_workout_updated', syncAllData);
+    window.addEventListener('focus', syncAllData);
+
+    return () => {
+      window.removeEventListener('storage', syncAllData);
+      window.removeEventListener('smart_nutrition_updated', syncAllData);
+      window.removeEventListener('smart_workout_updated', syncAllData);
+      window.removeEventListener('focus', syncAllData);
+    };
+  }, [selectedCalendarDate]);
+
+  // Update dynamic macros whenever dailyCalories changes
+  useEffect(() => {
+    if (dailyCalories > 0) {
+      setDailyProtein(Math.round((dailyCalories * 0.30) / 4));
+      setDailyCarbs(Math.round((dailyCalories * 0.50) / 4));
+      setDailyFat(Math.round((dailyCalories * 0.20) / 9));
     } else {
       setDailyProtein(0);
       setDailyCarbs(0);
       setDailyFat(0);
     }
-  }, [router]);
+  }, [dailyCalories]);
 
   // BMR Calculation (Mifflin-St Jeor Equation)
   const bmr = useMemo(() => {
@@ -172,14 +252,25 @@ export default function ProgressPage() {
     return tdee;
   }, [tdee, userProfile.goal]);
 
-  // Current Month Days Matrix
+  // Current Month Days Matrix with Synchronized Calorie & Photo Data + Day of Week Padding Offset
   const monthDays = useMemo(() => {
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
+    const firstDayOfMonth = new Date(year, month, 1);
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    const days = [];
+    // Get starting day index (0 = Monday / T2, ..., 6 = Sunday / CN)
+    let startDayIndex = firstDayOfMonth.getDay() - 1;
+    if (startDayIndex === -1) startDayIndex = 6;
+
+    const days: any[] = [];
+
+    // Padding empty cells for days before the 1st of the month
+    for (let i = 0; i < startDayIndex; i++) {
+      days.push({ isPadding: true, key: `pad-${i}` });
+    }
+
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const isCompleted = streakHistory.includes(dateStr) || Boolean(workoutLogs[dateStr]);
@@ -187,13 +278,47 @@ export default function ProgressPage() {
       const isPast = day <= now.getDate();
       const logData = workoutLogs[dateStr];
 
-      days.push({ day, dateStr, isCompleted, isToday, isPast, logData });
+      let dayCalories = 0;
+      let photoCount = 0;
+
+      if (typeof window !== 'undefined') {
+        try {
+          const savedMeals = localStorage.getItem(`smart_meals_${dateStr}`);
+          if (savedMeals) {
+            const parsed = JSON.parse(savedMeals);
+            const allItems = Object.values(parsed).flat() as Array<{ calories?: number; image?: string }>;
+            dayCalories = allItems.reduce((sum, item) => sum + (item.calories || 0), 0);
+            photoCount = allItems.filter(item => Boolean(item.image)).length;
+          } else {
+            const savedCal = localStorage.getItem(`smart_daily_cal_${dateStr}`);
+            if (savedCal) dayCalories = parseInt(savedCal, 10) || 0;
+          }
+        } catch (e) { }
+      }
+
+      days.push({
+        isPadding: false,
+        key: dateStr,
+        day,
+        dateStr,
+        isCompleted,
+        isToday,
+        isPast,
+        logData,
+        dayCalories,
+        photoCount,
+        hasMeals: dayCalories > 0
+      });
     }
     return days;
-  }, [streakHistory, workoutLogs]);
+  }, [streakHistory, workoutLogs, selectedCalendarDate, dailyCalories]);
+
+  const actualDaysInMonth = useMemo(() => {
+    return monthDays.filter(d => !d.isPadding).length;
+  }, [monthDays]);
 
   const monthCompletedCount = useMemo(() => {
-    return monthDays.filter(d => d.isCompleted).length;
+    return monthDays.filter(d => !d.isPadding && d.isCompleted).length;
   }, [monthDays]);
 
   const currentMonthName = useMemo(() => {
@@ -216,8 +341,8 @@ export default function ProgressPage() {
       setDailyCarbs(0);
       setDailyFat(0);
     }
-    const todayStr = new Date().toISOString().split('T')[0];
-    localStorage.setItem(`smart_daily_cal_${todayStr}`, val.toString());
+    const targetDateStr = selectedCalendarDate || getTodayStr();
+    localStorage.setItem(`smart_daily_cal_${targetDateStr}`, val.toString());
     setIsEditingCalories(false);
   };
 
@@ -297,10 +422,10 @@ export default function ProgressPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-white">{monthCompletedCount}</span>
-              <span className="text-xs text-slate-400 font-semibold">/ {monthDays.length} ngày</span>
+              <span className="text-xs text-slate-400 font-semibold">/ {actualDaysInMonth} ngày</span>
             </div>
             <p className="text-[11px] text-emerald-400 font-bold">
-              ✓ Đạt {Math.round((monthCompletedCount / monthDays.length) * 100)}% chỉ tiêu tháng
+              ✓ Đạt {Math.round((monthCompletedCount / (actualDaysInMonth || 1)) * 100)}% chỉ tiêu tháng
             </p>
           </div>
 
@@ -324,7 +449,9 @@ export default function ProgressPage() {
           {/* KPI 3: Daily Calorie Progress */}
           <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-5 rounded-3xl space-y-3 shadow-xl">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">CALO HÔM NAY</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                CALO NGÀY {selectedCalendarDate ? selectedCalendarDate.split('-').reverse().join('/') : 'HÔM NAY'}
+              </span>
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[#00FF87] flex items-center justify-center text-lg">
                 🥗
               </div>
@@ -388,13 +515,17 @@ export default function ProgressPage() {
 
               {/* Monthly Day Tiles */}
               <div className="grid grid-cols-7 gap-2">
-                {monthDays.map((item) => {
+                {monthDays.map((item: any) => {
+                  if (item.isPadding) {
+                    return <div key={item.key} className="min-h-[64px] rounded-2xl bg-[#0B101D]/20 border border-slate-900/40 opacity-40" />;
+                  }
+
                   const isSelected = selectedCalendarDate === item.dateStr;
                   return (
                     <button
                       key={item.day}
                       onClick={() => setSelectedCalendarDate(item.dateStr)}
-                      className={`p-2.5 sm:p-4 rounded-2xl flex flex-col items-center justify-between transition-all border cursor-pointer ${
+                      className={`p-2.5 sm:p-3 rounded-2xl flex flex-col items-center justify-between transition-all border cursor-pointer min-h-[64px] ${
                         isSelected
                           ? 'ring-2 ring-[#00E5FF] shadow-[0_0_15px_rgba(0,229,255,0.4)] scale-105 z-10'
                           : ''
@@ -408,10 +539,23 @@ export default function ProgressPage() {
                               : 'bg-[#0B101D]/40 border-slate-800/50 text-slate-600 opacity-60'
                       }`}
                     >
-                      <span className="text-xs sm:text-sm font-extrabold">{item.day}</span>
-                      <span className="text-xs mt-1">
-                        {item.isCompleted ? '✓' : item.isToday ? '🎯' : '•'}
-                      </span>
+                      <div className="flex items-center justify-between w-full text-xs">
+                        <span className="font-extrabold">{item.day}</span>
+                        <div className="flex items-center gap-1">
+                          {item.photoCount > 0 && <span className="text-[10px]" title={`${item.photoCount} ảnh món ăn`}>📷</span>}
+                          <span className="text-xs font-bold">
+                            {item.isCompleted ? '✓' : item.isToday ? '🎯' : ''}
+                          </span>
+                        </div>
+                      </div>
+
+                      {item.hasMeals ? (
+                        <span className="text-[11px] font-black text-[#00FF87] drop-shadow-sm mt-1">
+                          {item.dayCalories}k
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-600 mt-1">-</span>
+                      )}
                     </button>
                   );
                 })}
@@ -421,15 +565,19 @@ export default function ProgressPage() {
               <div className="flex flex-wrap items-center justify-center gap-4 text-xs pt-3 border-t border-slate-800/80 text-slate-400">
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-[#00FF87]" />
-                  <span>Đã tập luyện</span>
+                  <span>Đã tập (✓)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-[#00E5FF]" />
                   <span>Hôm nay</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-slate-800" />
-                  <span>Ngày nghỉ / Chưa tới</span>
+                  <span className="text-xs font-bold text-[#00FF87]">1850k</span>
+                  <span>Lượng Calo đã nạp</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs">📷</span>
+                  <span>Có ảnh món ăn</span>
                 </div>
               </div>
             </div>
@@ -552,11 +700,95 @@ export default function ProgressPage() {
                   </p>
                 </div>
               ) : (
-                <div className="p-6 text-center border border-dashed border-slate-800 rounded-2xl text-slate-400 text-xs space-y-2">
-                  <p className="font-bold text-slate-300">Không có nhật ký tập luyện cho ngày {selectedCalendarDate}.</p>
-                  <p className="text-[11px]">Hãy bấm vào trang Lịch tập luyện để chốt danh sách bài tập và đánh dấu hoàn thành nhé!</p>
-                </div>
+                (() => {
+                  const dayOfWeekName = selectedCalendarDate
+                    ? ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date(selectedCalendarDate).getDay()]
+                    : 'Hôm nay';
+
+                  return (
+                    <div className="p-6 text-center bg-[#0B101D] border border-cyan-500/30 rounded-2xl space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-[#00E5FF] flex items-center justify-center text-2xl mx-auto">
+                        🧘
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-white text-base">
+                          {selectedCalendarDate} ({dayOfWeekName}) là Ngày Nghỉ Ngơi & Phục Hồi (Rest Day)
+                        </h4>
+                        <p className="text-slate-300 text-xs max-w-md mx-auto leading-relaxed mt-1">
+                          Không có bài tập nào được thực hiện cho <strong className="text-[#00E5FF]">{dayOfWeekName} (ngày {selectedCalendarDate})</strong>. Đây là ngày nghỉ xả cơ để các nhóm cơ phục hồi hoàn toàn.
+                        </p>
+                      </div>
+                      <div className="pt-1">
+                        <button
+                          onClick={() => router.push('/workouts')}
+                          className="px-4 py-2 bg-[#18233C] hover:bg-slate-800 text-[#00E5FF] border border-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                        >
+                          🏋️ Xem danh sách lịch tập các ngày
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()
               )}
+
+              {/* Synchronized Daily Nutrition Log Section */}
+              <div className="pt-4 border-t border-slate-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>🥗</span> Nhật ký Dinh dưỡng ngày <span className="text-[#00E5FF]">{selectedCalendarDate}</span>
+                  </h4>
+                  <span className="text-xs font-bold text-[#00E5FF] bg-[#0B101D] px-3 py-1 rounded-xl border border-slate-800">
+                    Tổng: {dailyCalories} / {targetCalories} kcal
+                  </span>
+                </div>
+
+                {Object.values(selectedDateMeals).flat().length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    {[
+                      { name: 'Bữa Sáng', icon: '🍳' },
+                      { name: 'Bữa Trưa', icon: '🍱' },
+                      { name: 'Bữa Tối', icon: '🥩' },
+                      { name: 'Ăn Vặt', icon: '🍎' }
+                    ].map(cat => {
+                      const list = selectedDateMeals[cat.name] || [];
+                      if (list.length === 0) return null;
+                      const catCal = list.reduce((s, i) => s + (i.calories || 0), 0);
+
+                      return (
+                        <div key={cat.name} className="bg-[#0B101D] p-3 rounded-2xl border border-slate-800 space-y-2">
+                          <div className="flex items-center justify-between text-slate-300 font-bold border-b border-slate-800 pb-1.5 text-[11px]">
+                            <span>{cat.icon} {cat.name}</span>
+                            <span className="text-[#00E5FF]">{catCal} kcal</span>
+                          </div>
+                          <div className="space-y-1.5">
+                            {list.map(item => (
+                              <div key={item.id} className="flex items-center justify-between bg-[#131B2E] p-2 rounded-xl text-[11px]">
+                                <div className="flex items-center gap-2">
+                                  {item.image && (
+                                    <img
+                                      src={item.image}
+                                      alt={item.name}
+                                      onClick={() => setSelectedPreviewImage(item.image!)}
+                                      className="w-8 h-8 rounded-lg object-cover cursor-pointer border border-slate-700 hover:border-[#00E5FF] transition-all"
+                                      title="Bấm để xem ảnh"
+                                    />
+                                  )}
+                                  <span className="text-slate-200 font-medium">{item.name}</span>
+                                </div>
+                                <span className="font-bold text-[#00E5FF]">{item.calories} kcal</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center bg-[#0B101D] rounded-2xl border border-slate-800 text-slate-400 text-xs">
+                    Chưa ghi nhận khẩu phần ăn nào cho ngày này trên mục <span className="text-[#00E5FF] font-bold">Nhật ký ăn uống</span>.
+                  </div>
+                )}
+              </div>
             </div>
 
           </div>
@@ -568,7 +800,7 @@ export default function ProgressPage() {
             <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-5 sm:p-6 space-y-5 shadow-2xl">
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span>🥗</span> Calo & Dinh Dưỡng Hôm Nay
+                  <span>🥗</span> Calo & Dinh Dưỡng Ngày <span className="text-[#00E5FF]">{selectedCalendarDate ? selectedCalendarDate.split('-').reverse().join('/') : 'Hôm Nay'}</span>
                 </h2>
 
                 <button
@@ -582,7 +814,9 @@ export default function ProgressPage() {
               {/* Edit Calorie Form */}
               {isEditingCalories && (
                 <div className="p-4 bg-[#0B101D] rounded-2xl border border-cyan-500/30 space-y-3">
-                  <label className="block text-xs font-bold text-slate-300">Cập nhật Calo tiêu thụ hôm nay (kcal):</label>
+                  <label className="block text-xs font-bold text-slate-300">
+                    Cập nhật Calo tiêu thụ ngày {selectedCalendarDate ? selectedCalendarDate.split('-').reverse().join('/') : 'hôm nay'} (kcal):
+                  </label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -710,6 +944,22 @@ export default function ProgressPage() {
         </div>
 
       </div>
+
+      {/* Full Image Preview Modal Lightbox */}
+      {selectedPreviewImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setSelectedPreviewImage(null)}></div>
+          <div className="relative bg-[#131B2E] border border-slate-800 rounded-3xl p-4 max-w-xl w-full shadow-2xl z-10 animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setSelectedPreviewImage(null)}
+              className="absolute top-3 right-3 text-slate-300 hover:text-white text-xl font-bold bg-slate-900/80 rounded-full w-8 h-8 flex items-center justify-center border border-slate-700"
+            >
+              &times;
+            </button>
+            <img src={selectedPreviewImage} alt="Ảnh món ăn đầy đủ" className="w-full h-auto max-h-[75vh] object-contain rounded-2xl" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -312,88 +312,149 @@ export default function Workouts() {
   const currentTabWorkout = sortedSchedule.length ? sortedSchedule[safeDayIndex] : null;
   const currentDayKey = `${userId ? userId + '_' : ''}${activeRoutineId}_${currentTabWorkout?.day || 'day'}`;
   const legacyDayKey = `${activeRoutineId}_${currentTabWorkout?.day || 'day'}`;
-  const todayDateStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayDateStr = useMemo(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
 
-  // Load / Initialize Day Selections per Day Tab
+  // Calculate exact YYYY-MM-DD date for current tab in current week (case-insensitive & flexible)
+  const activeTabDateStr = useMemo(() => {
+    if (!currentTabWorkout || (!currentTabWorkout.day && !currentTabWorkout.name)) return todayDateStr;
+
+    const textToMatch = `${currentTabWorkout.day || ''} ${currentTabWorkout.name || ''}`.toLowerCase().trim();
+
+    let offset: number | undefined = undefined;
+    if (textToMatch.includes('2') || textToMatch.includes('hai')) offset = 0;
+    else if (textToMatch.includes('3') || textToMatch.includes('ba')) offset = 1;
+    else if (textToMatch.includes('4') || textToMatch.includes('tư') || textToMatch.includes('tu')) offset = 2;
+    else if (textToMatch.includes('5') || textToMatch.includes('năm') || textToMatch.includes('nam')) offset = 3;
+    else if (textToMatch.includes('6') || textToMatch.includes('sáu') || textToMatch.includes('sau')) offset = 4;
+    else if (textToMatch.includes('7') || textToMatch.includes('bảy') || textToMatch.includes('bay')) offset = 5;
+    else if (textToMatch.includes('chủ nhật') || textToMatch.includes('cn') || textToMatch.includes('sunday')) offset = 6;
+
+    if (offset === undefined) return todayDateStr;
+
+    const today = new Date();
+    const currentDayOfWeek = today.getDay() === 0 ? 7 : today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (currentDayOfWeek - 1));
+
+    const targetDate = new Date(monday);
+    targetDate.setDate(monday.getDate() + offset);
+
+    const ty = targetDate.getFullYear();
+    const tm = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const td = String(targetDate.getDate()).padStart(2, '0');
+    return `${ty}-${tm}-${td}`;
+  }, [currentTabWorkout, todayDateStr]);
+
+  // Helper to notify other tabs/components of real-time storage changes
+  const notifyStorageChange = (dateStr: string) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('smart_nutrition_updated', { detail: { date: dateStr } }));
+    }
+  };
+
+  // Load / Initialize Day Selections per Day Tab with real-time event synchronization
   useEffect(() => {
-    if (!currentTabWorkout || isFetching) return;
+    const syncWorkoutTab = () => {
+      if (!currentTabWorkout || isFetching) return;
 
-    let savedSel = localStorage.getItem(`smart_sel_${todayDateStr}_${currentDayKey}`);
-    let savedComp = localStorage.getItem(`smart_comp_${todayDateStr}_${currentDayKey}`);
-    let savedSaved = localStorage.getItem(`smart_saved_${todayDateStr}_${currentDayKey}`);
-    let savedDet = localStorage.getItem(`smart_det_${todayDateStr}_${currentDayKey}`);
+      let savedSel = localStorage.getItem(`smart_sel_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_sel_${todayDateStr}_${currentDayKey}`);
+      let savedComp = localStorage.getItem(`smart_comp_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_comp_${todayDateStr}_${currentDayKey}`);
+      let savedSaved = localStorage.getItem(`smart_saved_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_saved_${todayDateStr}_${currentDayKey}`);
+      let savedDet = localStorage.getItem(`smart_det_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_det_${todayDateStr}_${currentDayKey}`);
 
-    // Fallback to legacy key if user-prefixed key is not set yet
-    if (!savedSel) savedSel = localStorage.getItem(`smart_sel_${todayDateStr}_${legacyDayKey}`);
-    if (!savedComp) savedComp = localStorage.getItem(`smart_comp_${todayDateStr}_${legacyDayKey}`);
-    if (!savedSaved) savedSaved = localStorage.getItem(`smart_saved_${todayDateStr}_${legacyDayKey}`);
-    if (!savedDet) savedDet = localStorage.getItem(`smart_det_${todayDateStr}_${legacyDayKey}`);
+      // Fallback to legacy key if user-prefixed key is not set yet
+      if (!savedSel) savedSel = localStorage.getItem(`smart_sel_${activeTabDateStr}_${legacyDayKey}`) || localStorage.getItem(`smart_sel_${todayDateStr}_${legacyDayKey}`);
+      if (!savedComp) savedComp = localStorage.getItem(`smart_comp_${activeTabDateStr}_${legacyDayKey}`) || localStorage.getItem(`smart_comp_${todayDateStr}_${legacyDayKey}`);
+      if (!savedSaved) savedSaved = localStorage.getItem(`smart_saved_${activeTabDateStr}_${legacyDayKey}`) || localStorage.getItem(`smart_saved_${todayDateStr}_${legacyDayKey}`);
+      if (!savedDet) savedDet = localStorage.getItem(`smart_det_${activeTabDateStr}_${legacyDayKey}`) || localStorage.getItem(`smart_det_${todayDateStr}_${legacyDayKey}`);
 
-    let selectedIds: string[] = [];
-    let detailsMap: Record<string, any> = {};
+      let selectedIds: string[] = [];
+      let detailsMap: Record<string, any> = {};
 
-    if (savedDet) {
-      try { detailsMap = JSON.parse(savedDet); } catch (e) { }
-    }
+      if (savedDet) {
+        try { detailsMap = JSON.parse(savedDet); } catch (e) { }
+      }
 
-    const isSavedSession = savedSaved === 'true';
+      const isSavedSession = savedSaved === 'true';
 
-    if (savedSel && isSavedSession) {
-      try {
-        const rawIds: string[] = JSON.parse(savedSel);
-        if (allExercises.length > 0) {
-          selectedIds = rawIds.filter(id => 
-            allExercises.some(ex => ex.id === id || ex._id === id || ex._id?.toString() === id || (ex.name && id.includes(ex.name)))
+      if (savedSel && isSavedSession) {
+        try {
+          const rawIds: string[] = JSON.parse(savedSel);
+          if (allExercises.length > 0) {
+            selectedIds = rawIds.filter(id => 
+              allExercises.some(ex => ex.id === id || ex._id === id || ex._id?.toString() === id || (ex.name && id.includes(ex.name)))
+            );
+          } else {
+            selectedIds = rawIds;
+          }
+        } catch (e) { }
+      }
+
+      if ((!isSavedSession || selectedIds.length === 0) && currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
+        selectedIds = [];
+        detailsMap = {};
+
+        currentTabWorkout.exercises.forEach((tmplEx: any) => {
+          if (!tmplEx.exerciseName) return;
+          let matched = allExercises.find(
+            item => item.name && item.name.toLowerCase().trim() === tmplEx.exerciseName.toLowerCase().trim()
           );
-        } else {
-          selectedIds = rawIds;
-        }
-      } catch (e) { }
-    }
 
-    if ((!isSavedSession || selectedIds.length === 0) && currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
-      selectedIds = [];
-      detailsMap = {};
+          const exId = matched ? (matched.id || matched._id?.toString()) : `template_${tmplEx.exerciseName.replace(/\s+/g, '_')}`;
 
-      currentTabWorkout.exercises.forEach((tmplEx: any) => {
-        if (!tmplEx.exerciseName) return;
-        let matched = allExercises.find(
-          item => item.name && item.name.toLowerCase().trim() === tmplEx.exerciseName.toLowerCase().trim()
-        );
+          if (exId) {
+            selectedIds.push(exId);
+            detailsMap[exId] = {
+              sets: tmplEx.sets || 3,
+              reps: tmplEx.repsRange || '8-12',
+              rir: tmplEx.rir || '1',
+              restTimeSeconds: tmplEx.restTimeSeconds || 180,
+              isOptional: !!tmplEx.isOptional,
+              requiresWarmup: !!tmplEx.requiresWarmup,
+              warmupNotes: tmplEx.warmupNotes || '',
+              notes: tmplEx.notes || ''
+            };
+          }
+        });
 
-        const exId = matched ? (matched.id || matched._id?.toString()) : `template_${tmplEx.exerciseName.replace(/\s+/g, '_')}`;
+        localStorage.setItem(`smart_sel_${todayDateStr}_${currentDayKey}`, JSON.stringify(selectedIds));
+        localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(detailsMap));
+      }
 
-        if (exId) {
-          selectedIds.push(exId);
-          detailsMap[exId] = {
-            sets: tmplEx.sets || 3,
-            reps: tmplEx.repsRange || '8-12',
-            rir: tmplEx.rir || '1',
-            restTimeSeconds: tmplEx.restTimeSeconds || 180,
-            isOptional: !!tmplEx.isOptional,
-            requiresWarmup: !!tmplEx.requiresWarmup,
-            warmupNotes: tmplEx.warmupNotes || '',
-            notes: tmplEx.notes || ''
-          };
-        }
-      });
+      let completedIds: string[] = [];
+      if (savedComp) {
+        try { completedIds = JSON.parse(savedComp); } catch (e) { }
+      }
 
-      localStorage.setItem(`smart_sel_${todayDateStr}_${currentDayKey}`, JSON.stringify(selectedIds));
-      localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(detailsMap));
-    }
+      setDaySelections(prev => ({ ...prev, [currentDayKey]: selectedIds }));
+      setDayCompleted(prev => ({ ...prev, [currentDayKey]: completedIds }));
+      setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: savedSaved === 'true' }));
+      if (Object.keys(detailsMap).length > 0) {
+        setExerciseDetails(prev => ({ ...prev, ...detailsMap }));
+      }
+    };
 
-    let completedIds: string[] = [];
-    if (savedComp) {
-      try { completedIds = JSON.parse(savedComp); } catch (e) { }
-    }
+    syncWorkoutTab();
 
-    setDaySelections(prev => ({ ...prev, [currentDayKey]: selectedIds }));
-    setDayCompleted(prev => ({ ...prev, [currentDayKey]: completedIds }));
-    setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: savedSaved === 'true' }));
-    if (Object.keys(detailsMap).length > 0) {
-      setExerciseDetails(prev => ({ ...prev, ...detailsMap }));
-    }
-  }, [currentDayKey, legacyDayKey, allExercises, todayDateStr, currentTabWorkout, isFetching]);
+    window.addEventListener('storage', syncWorkoutTab);
+    window.addEventListener('smart_nutrition_updated', syncWorkoutTab);
+    window.addEventListener('smart_workout_updated', syncWorkoutTab);
+    window.addEventListener('focus', syncWorkoutTab);
+
+    return () => {
+      window.removeEventListener('storage', syncWorkoutTab);
+      window.removeEventListener('smart_nutrition_updated', syncWorkoutTab);
+      window.removeEventListener('smart_workout_updated', syncWorkoutTab);
+      window.removeEventListener('focus', syncWorkoutTab);
+    };
+  }, [currentDayKey, legacyDayKey, allExercises, todayDateStr, activeTabDateStr, currentTabWorkout, isFetching]);
 
   const currentSelectedIds = daySelections[currentDayKey] || [];
   const currentCompletedIds = dayCompleted[currentDayKey] || [];
@@ -508,7 +569,7 @@ export default function Workouts() {
     }
 
     setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: true }));
-    localStorage.setItem(`smart_saved_${todayDateStr}_${currentDayKey}`, 'true');
+    localStorage.setItem(`smart_saved_${activeTabDateStr}_${currentDayKey}`, 'true');
 
     // Save as the last trained routine & day tab (họ đã chốt và tập)
     localStorage.setItem('smart_last_trained_routine_id', activeRoutineId);
@@ -519,7 +580,7 @@ export default function Workouts() {
       localStorage.setItem('smart_last_active_routine_name', activeRoutine.name);
     }
 
-    // Save structured workout log entry into smart_workout_logs
+    // Save structured workout log entry into smart_workout_logs for target date
     try {
       const logsMap = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
       const selectedExerciseList = activeSelectedExercises.map(ex => ({
@@ -531,8 +592,8 @@ export default function Workouts() {
         normMuscle: ex.normMuscle
       }));
 
-      logsMap[todayDateStr] = {
-        date: todayDateStr,
+      logsMap[activeTabDateStr] = {
+        date: activeTabDateStr,
         routineId: activeRoutineId,
         routineName: activeRoutine?.name || 'Lịch tập tự do',
         dayName: currentTabWorkout ? `${currentTabWorkout.day}: ${currentTabWorkout.name}` : 'Buổi tập',
@@ -542,11 +603,12 @@ export default function Workouts() {
       localStorage.setItem('smart_workout_logs', JSON.stringify(logsMap));
 
       const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
-      if (!history.includes(todayDateStr)) {
-        const newHistory = [...history, todayDateStr];
+      if (!history.includes(activeTabDateStr)) {
+        const newHistory = [...history, activeTabDateStr];
         localStorage.setItem('smart_streak_history', JSON.stringify(newHistory));
         setStreakDays(newHistory.length);
       }
+      notifyStorageChange(activeTabDateStr);
     } catch (e) { }
 
     setNoticeMessage('Đã chốt lịch tập thành công! Bạn có thể bắt đầu tích chọn hoàn thành các bài tập.');
@@ -555,7 +617,7 @@ export default function Workouts() {
 
   const handleUnlockWorkout = () => {
     setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: false }));
-    localStorage.setItem(`smart_saved_${todayDateStr}_${currentDayKey}`, 'false');
+    localStorage.setItem(`smart_saved_${activeTabDateStr}_${currentDayKey}`, 'false');
   };
 
   const toggleCompleteExercise = (id: string) => {
@@ -573,17 +635,17 @@ export default function Workouts() {
     const newComp = isAlreadyComp ? currentCompletedIds.filter(i => i !== id) : [...currentCompletedIds, id];
 
     setDayCompleted(prev => ({ ...prev, [currentDayKey]: newComp }));
-    localStorage.setItem(`smart_comp_${todayDateStr}_${currentDayKey}`, JSON.stringify(newComp));
+    localStorage.setItem(`smart_comp_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(newComp));
 
     if (newComp.length > 0) {
       const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
-      if (!history.includes(todayDateStr)) {
-        const newHistory = [...history, todayDateStr];
+      if (!history.includes(activeTabDateStr)) {
+        const newHistory = [...history, activeTabDateStr];
         localStorage.setItem('smart_streak_history', JSON.stringify(newHistory));
         setStreakDays(newHistory.length);
       }
 
-      // Save rich workout log entry to smart_workout_logs
+      // Save rich workout log entry to smart_workout_logs for target date
       try {
         const logsMap = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
         const completedExercises = activeSelectedExercises
@@ -597,8 +659,8 @@ export default function Workouts() {
             normMuscle: ex.normMuscle
           }));
 
-        logsMap[todayDateStr] = {
-          date: todayDateStr,
+        logsMap[activeTabDateStr] = {
+          date: activeTabDateStr,
           routineId: activeRoutineId,
           routineName: activeRoutine?.name || 'Lịch tập tự do',
           dayName: currentTabWorkout ? `${currentTabWorkout.day}: ${currentTabWorkout.name}` : 'Buổi tập',
@@ -606,12 +668,14 @@ export default function Workouts() {
           updatedAt: new Date().toISOString()
         };
         localStorage.setItem('smart_workout_logs', JSON.stringify(logsMap));
+        notifyStorageChange(activeTabDateStr);
       } catch (e) { }
     } else {
       try {
         const logsMap = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
-        delete logsMap[todayDateStr];
+        delete logsMap[activeTabDateStr];
         localStorage.setItem('smart_workout_logs', JSON.stringify(logsMap));
+        notifyStorageChange(activeTabDateStr);
       } catch (e) { }
     }
   };
