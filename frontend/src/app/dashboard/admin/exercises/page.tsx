@@ -138,7 +138,17 @@ export default function AdminExercises() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
+    const activeToken = token || localStorage.getItem('token');
+
+    if (!activeToken) {
+      setPopup({
+        show: true,
+        type: 'error',
+        title: 'Chưa Đăng Nhập ⛔',
+        message: 'Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!'
+      });
+      return;
+    }
 
     // Process secondary muscles comma separated list
     const secMusclesArray = formData.secondaryMuscles
@@ -163,7 +173,7 @@ export default function AdminExercises() {
           method: 'PUT',
           headers: { 
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${activeToken}`
           },
           body: JSON.stringify(payload)
         });
@@ -172,7 +182,7 @@ export default function AdminExercises() {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${activeToken}`
           },
           body: JSON.stringify(payload)
         });
@@ -238,11 +248,21 @@ export default function AdminExercises() {
 
   const performDelete = async (id: string, name: string) => {
     setPopup(null);
-    if (!token) return;
+    const activeToken = token || localStorage.getItem('token');
+    if (!activeToken) {
+      setPopup({
+        show: true,
+        type: 'error',
+        title: 'Chưa Đăng Nhập ⛔',
+        message: 'Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!'
+      });
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/exercises/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${activeToken}` }
       });
       const data = await res.json();
       if (res.ok) {
@@ -664,9 +684,9 @@ export default function AdminExercises() {
 
       {/* Global Success / Error / Confirm Popup Modal */}
       {popup && popup.show && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" 
+            className="fixed inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" 
             onClick={() => popup.type !== 'confirm' && setPopup(null)}
           ></div>
           
