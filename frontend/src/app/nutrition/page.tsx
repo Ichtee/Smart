@@ -31,6 +31,10 @@ export default function Nutrition() {
     'Ăn Vặt': []
   });
 
+  // Date Selector State (defaults to today YYYY-MM-DD)
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+
   // Modal State for adding food & photo upload
   const [activeMealCategory, setActiveMealCategory] = useState<string | null>(null);
   const [foodName, setFoodName] = useState('');
@@ -40,17 +44,27 @@ export default function Nutrition() {
   const [imageUploadError, setImageUploadError] = useState('');
   const [selectedPreviewImage, setSelectedPreviewImage] = useState<string | null>(null);
 
+  // Load meals & water for selectedDate
   useEffect(() => {
-    // Load local storage states
     try {
-      const todayDateStr = new Date().toISOString().split('T')[0];
-      const savedWater = localStorage.getItem(`smart_water_${todayDateStr}`);
-      if (savedWater) setWaterGlasses(parseInt(savedWater) || 0);
+      const savedWater = localStorage.getItem(`smart_water_${selectedDate}`);
+      setWaterGlasses(savedWater ? parseInt(savedWater, 10) || 0 : 0);
 
-      const savedMeals = localStorage.getItem(`smart_meals_${todayDateStr}`);
-      if (savedMeals) setMeals(JSON.parse(savedMeals));
+      const savedMeals = localStorage.getItem(`smart_meals_${selectedDate}`);
+      if (savedMeals) {
+        setMeals(JSON.parse(savedMeals));
+      } else {
+        setMeals({
+          'Bữa Sáng': [],
+          'Bữa Trưa': [],
+          'Bữa Tối': [],
+          'Ăn Vặt': []
+        });
+      }
     } catch (e) { }
+  }, [selectedDate]);
 
+  useEffect(() => {
     const fetchProfile = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -123,12 +137,18 @@ export default function Nutrition() {
     fetchProfile();
   }, [router]);
 
-  // Update Water Glasses with persistence
+  // Date navigation helpers
+  const changeDateByDays = (days: number) => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + days);
+    setSelectedDate(d.toISOString().split('T')[0]);
+  };
+
+  // Update Water Glasses with persistence for selectedDate
   const updateWater = (delta: number) => {
     const newVal = Math.max(0, waterGlasses + delta);
     setWaterGlasses(newVal);
-    const todayDateStr = new Date().toISOString().split('T')[0];
-    localStorage.setItem(`smart_water_${todayDateStr}`, newVal.toString());
+    localStorage.setItem(`smart_water_${selectedDate}`, newVal.toString());
   };
 
   // Handle Image Upload reading STRICTLY from process.env without any hardcoded secret
@@ -166,7 +186,7 @@ export default function Nutrition() {
     }
   };
 
-  // Add Food Item to Meal
+  // Add Food Item to Meal for selectedDate
   const handleAddFood = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedFoodName = foodName.trim().replace(/\s+/g, ' ');
@@ -196,8 +216,7 @@ export default function Nutrition() {
     };
 
     setMeals(updatedMeals);
-    const todayDateStr = new Date().toISOString().split('T')[0];
-    localStorage.setItem(`smart_meals_${todayDateStr}`, JSON.stringify(updatedMeals));
+    localStorage.setItem(`smart_meals_${selectedDate}`, JSON.stringify(updatedMeals));
 
     // Reset Form & Modal
     setFoodName('');
@@ -207,15 +226,14 @@ export default function Nutrition() {
     setActiveMealCategory(null);
   };
 
-  // Remove Food Item
+  // Remove Food Item for selectedDate
   const handleRemoveFood = (category: string, itemId: string) => {
     const updatedMeals = {
       ...meals,
       [category]: (meals[category] || []).filter(item => item.id !== itemId)
     };
     setMeals(updatedMeals);
-    const todayDateStr = new Date().toISOString().split('T')[0];
-    localStorage.setItem(`smart_meals_${todayDateStr}`, JSON.stringify(updatedMeals));
+    localStorage.setItem(`smart_meals_${selectedDate}`, JSON.stringify(updatedMeals));
   };
 
   // Calculate Total Consumed Calories
@@ -245,6 +263,45 @@ export default function Nutrition() {
               <span className="text-[#00E5FF]">🥗</span> Nhật ký ăn uống & Dinh dưỡng
             </h1>
             <p className="text-slate-400 text-xs font-semibold mt-1">Theo dõi và ghi chép chi tiết lượng Calo và Nước nạp vào cơ thể.</p>
+          </div>
+
+          {/* Date Picker Navigation Bar */}
+          <div className="flex items-center gap-2 bg-[#131B2E] border border-slate-800 p-2 rounded-2xl shadow-lg self-start md:self-auto">
+            <button
+              onClick={() => changeDateByDays(-1)}
+              className="px-3 py-1.5 bg-[#0B101D] hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold transition-all"
+              title="Xem ngày trước"
+            >
+              ◀
+            </button>
+            <div className="flex items-center gap-2 px-2">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
+                className="bg-[#0B101D] text-[#00E5FF] text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-800 focus:outline-none focus:border-[#00E5FF] cursor-pointer"
+              />
+              {selectedDate === todayStr && (
+                <span className="bg-[#00E5FF]/20 text-[#00E5FF] text-[10px] font-black px-2 py-0.5 rounded-md border border-[#00E5FF]/30">
+                  Hôm nay
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => changeDateByDays(1)}
+              className="px-3 py-1.5 bg-[#0B101D] hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold transition-all"
+              title="Xem ngày sau"
+            >
+              ▶
+            </button>
+            {selectedDate !== todayStr && (
+              <button
+                onClick={() => setSelectedDate(todayStr)}
+                className="px-2.5 py-1.5 bg-[#00E5FF] text-slate-950 rounded-xl text-xs font-extrabold hover:bg-cyan-300 transition-all shadow-md shadow-[#00E5FF]/20"
+              >
+                Về hôm nay
+              </button>
+            )}
           </div>
         </div>
 
