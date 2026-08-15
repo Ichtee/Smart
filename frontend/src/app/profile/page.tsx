@@ -220,6 +220,7 @@ export default function Profile() {
                     <input
                       type="text"
                       name="name"
+                      maxLength={50}
                       value={formData.name}
                       onChange={handleChange}
                       className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
@@ -278,6 +279,7 @@ export default function Profile() {
                       max="120"
                       value={formData.age}
                       onChange={handleChange}
+                      onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                       placeholder="VD: 25"
                       className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
                     />
@@ -291,6 +293,7 @@ export default function Profile() {
                       max="300"
                       value={formData.height}
                       onChange={handleChange}
+                      onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                       placeholder="VD: 170"
                       className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
                     />
@@ -304,6 +307,7 @@ export default function Profile() {
                       max="500"
                       value={formData.weight}
                       onChange={handleChange}
+                      onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                       placeholder="VD: 65"
                       className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
                     />
