@@ -8,7 +8,6 @@ interface MealItem {
   id: string;
   name: string;
   calories: number;
-  image?: string;
 }
 
 export default function Nutrition() {
@@ -31,14 +30,10 @@ export default function Nutrition() {
     'Ăn Vặt': []
   });
 
-  // Modal State for adding food & ImgBB upload
+  // Modal State for adding food
   const [activeMealCategory, setActiveMealCategory] = useState<string | null>(null);
   const [foodName, setFoodName] = useState('');
   const [foodCalories, setFoodCalories] = useState('');
-  const [foodImage, setFoodImage] = useState('');
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [imageUploadError, setImageUploadError] = useState('');
-  const [selectedPreviewImage, setSelectedPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     // Load local storage states
@@ -131,42 +126,6 @@ export default function Nutrition() {
     localStorage.setItem(`smart_water_${todayDateStr}`, newVal.toString());
   };
 
-  // Handle Image Upload to ImgBB
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadingImage(true);
-    setImageUploadError('');
-
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
-
-      // Read strictly from environment variable
-      const apiKey = process.env.NEXT_PUBLIC_IMGBB_API_KEY;
-      if (!apiKey) {
-        throw new Error('Chưa cấu hình NEXT_PUBLIC_IMGBB_API_KEY trong .env.local hoặc Vercel!');
-      }
-
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (data.success && data.data?.url) {
-        setFoodImage(data.data.url);
-      } else {
-        throw new Error(data.error?.message || 'Upload ảnh thất bại');
-      }
-    } catch (err: any) {
-      setImageUploadError(err.message || 'Không thể tải ảnh lên ImgBB');
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
   // Add Food Item to Meal
   const handleAddFood = (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,8 +146,7 @@ export default function Nutrition() {
     const newItem: MealItem = {
       id: Date.now().toString(),
       name: trimmedFoodName,
-      calories: calVal,
-      image: foodImage || undefined
+      calories: calVal
     };
 
     const updatedMeals = {
@@ -203,8 +161,6 @@ export default function Nutrition() {
     // Reset Form & Modal
     setFoodName('');
     setFoodCalories('');
-    setFoodImage('');
-    setImageUploadError('');
     setActiveMealCategory(null);
   };
 
@@ -335,6 +291,7 @@ export default function Nutrition() {
                       type="number"
                       value={mlPerGlass}
                       onChange={(e) => setMlPerGlass(Number(e.target.value) || 0)}
+                      onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                       className="w-14 bg-transparent text-[#00E5FF] font-black text-center text-xs focus:outline-none"
                     />
                     <span className="text-[10px] text-slate-400 font-bold">ml/cốc</span>
@@ -362,10 +319,10 @@ export default function Nutrition() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { name: 'Bữa Sáng', icon: '🍳', defaultFoods: ['Trứng ốp la (150 kcal)', 'Bánh mì (220 kcal)'] },
-              { name: 'Bữa Trưa', icon: '🍱', defaultFoods: ['Cơm trắng (200 kcal)', 'Ức gà áp chảo (250 kcal)'] },
-              { name: 'Bữa Tối', icon: '🥩', defaultFoods: ['Thịt bò bít tết (350 kcal)', 'Salad rau củ (100 kcal)'] },
-              { name: 'Ăn Vặt', icon: '🍎', defaultFoods: ['Táo tây (80 kcal)', 'Hạt hạnh nhân (160 kcal)'] }
+              { name: 'Bữa Sáng', icon: '🍳' },
+              { name: 'Bữa Trưa', icon: '🍱' },
+              { name: 'Bữa Tối', icon: '🥩' },
+              { name: 'Ăn Vặt', icon: '🍎' }
             ].map((mealConfig) => {
               const categoryName = mealConfig.name;
               const itemList = meals[categoryName] || [];
@@ -397,18 +354,7 @@ export default function Nutrition() {
                     {itemList.length > 0 ? (
                       itemList.map(item => (
                         <div key={item.id} className="flex items-center justify-between bg-[#131B2E] p-3 rounded-xl border border-slate-800/60 text-xs">
-                          <div className="flex items-center gap-3">
-                            {item.image && (
-                              <img
-                                src={item.image}
-                                alt={item.name}
-                                onClick={() => setSelectedPreviewImage(item.image!)}
-                                className="w-10 h-10 rounded-lg object-cover cursor-pointer border border-slate-700 hover:border-[#00E5FF] hover:scale-105 transition-all shadow-sm"
-                                title="Bấm để xem ảnh phóng to"
-                              />
-                            )}
-                            <span className="font-semibold text-slate-200">{item.name}</span>
-                          </div>
+                          <span className="font-semibold text-slate-200">{item.name}</span>
                           <div className="flex items-center gap-3">
                             <span className="text-[#00E5FF] font-bold">{item.calories} kcal</span>
                             <button
@@ -474,53 +420,6 @@ export default function Nutrition() {
                 />
               </div>
 
-              {/* Photo Upload via ImgBB */}
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Hình ảnh món ăn (tùy chọn)</label>
-                {foodImage ? (
-                  <div className="relative rounded-2xl overflow-hidden border border-slate-700 group">
-                    <img src={foodImage} alt="Ảnh bữa ăn" className="w-full h-36 object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setFoodImage('')}
-                      className="absolute top-2 right-2 bg-rose-500/80 hover:bg-rose-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-md transition-all"
-                      title="Xóa ảnh"
-                    >
-                      &times;
-                    </button>
-                    <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] text-emerald-400 font-bold flex items-center gap-1 border border-emerald-500/30">
-                      <span>✓</span> Đã tải lên ImgBB
-                    </div>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-[#00E5FF]/60 rounded-2xl p-4 cursor-pointer bg-[#0B101D] transition-colors group">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={handleImageSelect}
-                      disabled={uploadingImage}
-                      className="hidden"
-                    />
-                    {uploadingImage ? (
-                      <div className="flex items-center gap-2 text-xs font-bold text-[#00E5FF]">
-                        <div className="w-4 h-4 border-2 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
-                        Đang tải ảnh lên ImgBB...
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center text-slate-400 group-hover:text-[#00E5FF] transition-colors">
-                        <span className="text-2xl mb-1">📷</span>
-                        <span className="text-xs font-bold">Chụp / Chọn ảnh món ăn</span>
-                        <span className="text-[10px] text-slate-500 mt-0.5">Lưu dưới dạng Link ImgBB (Tiết kiệm Database)</span>
-                      </div>
-                    )}
-                  </label>
-                )}
-                {imageUploadError && (
-                  <p className="text-rose-400 text-xs mt-1 font-semibold">{imageUploadError}</p>
-                )}
-              </div>
-
               {/* Quick suggestions */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Gợi ý nhanh:</label>
@@ -554,29 +453,12 @@ export default function Nutrition() {
                 </button>
                 <button
                   type="submit"
-                  disabled={uploadingImage}
-                  className="flex-1 py-3 bg-[#00E5FF] text-slate-950 font-black rounded-xl hover:bg-cyan-300 text-xs shadow-lg shadow-[#00E5FF]/20 disabled:opacity-50"
+                  className="flex-1 py-3 bg-[#00E5FF] text-slate-950 font-black rounded-xl hover:bg-cyan-300 text-xs shadow-lg shadow-[#00E5FF]/20"
                 >
                   Lưu món ăn
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Full Image Preview Modal Lightbox */}
-      {selectedPreviewImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setSelectedPreviewImage(null)}></div>
-          <div className="relative bg-[#131B2E] border border-slate-800 rounded-3xl p-4 max-w-xl w-full shadow-2xl z-10 animate-in fade-in zoom-in-95 duration-200">
-            <button
-              onClick={() => setSelectedPreviewImage(null)}
-              className="absolute top-3 right-3 text-slate-300 hover:text-white text-xl font-bold bg-slate-900/80 rounded-full w-8 h-8 flex items-center justify-center border border-slate-700"
-            >
-              &times;
-            </button>
-            <img src={selectedPreviewImage} alt="Ảnh món ăn đầy đủ" className="w-full h-auto max-h-[75vh] object-contain rounded-2xl" />
           </div>
         </div>
       )}
