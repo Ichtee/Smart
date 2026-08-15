@@ -71,8 +71,34 @@ export default function Profile() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setMessage({ text: '', type: '' });
+
+    // Business Logic Validations
+    if (formData.age) {
+      const ageNum = Number(formData.age);
+      if (isNaN(ageNum) || ageNum <= 0 || ageNum > 120) {
+        setMessage({ text: 'Tuổi phải là số dương hợp lệ (từ 1 đến 120 tuổi)!', type: 'error' });
+        return;
+      }
+    }
+
+    if (formData.height) {
+      const heightNum = Number(formData.height);
+      if (isNaN(heightNum) || heightNum < 30 || heightNum > 300) {
+        setMessage({ text: 'Chiều cao phải là số dương hợp lệ (từ 30cm đến 300cm)!', type: 'error' });
+        return;
+      }
+    }
+
+    if (formData.weight) {
+      const weightNum = Number(formData.weight);
+      if (isNaN(weightNum) || weightNum < 10 || weightNum > 500) {
+        setMessage({ text: 'Cân nặng phải là số dương hợp lệ (từ 10kg đến 500kg)!', type: 'error' });
+        return;
+      }
+    }
+
+    setSaving(true);
 
     try {
       const token = localStorage.getItem('token');
@@ -106,7 +132,8 @@ export default function Profile() {
 
         setMessage({ text: 'Cập nhật hồ sơ thành công!', type: 'success' });
       } else {
-        setMessage({ text: 'Cập nhật thất bại. Vui lòng thử lại.', type: 'error' });
+        const errData = await res.json().catch(() => ({}));
+        setMessage({ text: errData.message || 'Cập nhật thất bại. Vui lòng kiểm tra dữ liệu nhập.', type: 'error' });
       }
     } catch (err) {
       setMessage({ text: 'Đã xảy ra lỗi kết nối.', type: 'error' });
@@ -241,6 +268,8 @@ export default function Profile() {
                     <input
                       type="number"
                       name="age"
+                      min="1"
+                      max="120"
                       value={formData.age}
                       onChange={handleChange}
                       placeholder="VD: 25"
@@ -252,6 +281,8 @@ export default function Profile() {
                     <input
                       type="number"
                       name="height"
+                      min="30"
+                      max="300"
                       value={formData.height}
                       onChange={handleChange}
                       placeholder="VD: 170"
@@ -263,6 +294,8 @@ export default function Profile() {
                     <input
                       type="number"
                       name="weight"
+                      min="10"
+                      max="500"
                       value={formData.weight}
                       onChange={handleChange}
                       placeholder="VD: 65"

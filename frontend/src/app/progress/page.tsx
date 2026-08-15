@@ -179,11 +179,13 @@ export default function ProgressPage() {
 
   const handleSaveCalories = () => {
     const val = parseInt(tempCalories, 10);
-    if (!isNaN(val) && val >= 0) {
-      setDailyCalories(val);
-      const todayStr = new Date().toISOString().split('T')[0];
-      localStorage.setItem(`smart_daily_cal_${todayStr}`, val.toString());
+    if (isNaN(val) || val < 0 || val > 20000) {
+      alert('Số Calo nạp vào phải là số không âm (từ 0 đến 20,000 kcal)!');
+      return;
     }
+    setDailyCalories(val);
+    const todayStr = new Date().toISOString().split('T')[0];
+    localStorage.setItem(`smart_daily_cal_${todayStr}`, val.toString());
     setIsEditingCalories(false);
   };
 

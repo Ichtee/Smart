@@ -423,7 +423,7 @@ export default function Workouts() {
   }, [currentSelectedIds, allExercises, exerciseDetails, currentCompletedIds]);
 
   const updateExerciseSets = (id: string, sets: number) => {
-    const newSets = Math.max(1, sets);
+    const newSets = Math.max(1, Math.min(50, sets));
     setExerciseDetails(prev => {
       const updated = {
         ...prev,
@@ -439,7 +439,7 @@ export default function Workouts() {
       const currentReps = prev[id]?.reps || '10-12';
       const numMatch = currentReps.match(/\d+/);
       const baseNum = numMatch ? parseInt(numMatch[0]) : 10;
-      const newNum = Math.max(1, baseNum + delta);
+      const newNum = Math.max(1, Math.min(100, baseNum + delta));
       const updated = {
         ...prev,
         [id]: { ...(prev[id] || { sets: 3, reps: '10-12' }), reps: `${newNum}` }

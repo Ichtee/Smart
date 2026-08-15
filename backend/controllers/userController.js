@@ -281,10 +281,33 @@ const updateProfile = async (req, res) => {
 
     if (user) {
       user.name = req.body.name || user.name;
-      if (req.body.age !== undefined) user.age = req.body.age;
+      
+      if (req.body.age !== undefined && req.body.age !== null && req.body.age !== '') {
+        const ageNum = Number(req.body.age);
+        if (isNaN(ageNum) || ageNum <= 0 || ageNum > 120) {
+          return res.status(400).json({ message: 'Tuổi phải là số dương hợp lệ (từ 1 đến 120 tuổi).' });
+        }
+        user.age = ageNum;
+      }
+
       if (req.body.gender !== undefined) user.gender = req.body.gender;
-      if (req.body.height !== undefined) user.height = req.body.height;
-      if (req.body.weight !== undefined) user.weight = req.body.weight;
+
+      if (req.body.height !== undefined && req.body.height !== null && req.body.height !== '') {
+        const heightNum = Number(req.body.height);
+        if (isNaN(heightNum) || heightNum < 30 || heightNum > 300) {
+          return res.status(400).json({ message: 'Chiều cao phải là số dương hợp lệ (từ 30cm đến 300cm).' });
+        }
+        user.height = heightNum;
+      }
+
+      if (req.body.weight !== undefined && req.body.weight !== null && req.body.weight !== '') {
+        const weightNum = Number(req.body.weight);
+        if (isNaN(weightNum) || weightNum < 10 || weightNum > 500) {
+          return res.status(400).json({ message: 'Cân nặng phải là số dương hợp lệ (từ 10kg đến 500kg).' });
+        }
+        user.weight = weightNum;
+      }
+
       if (req.body.goal !== undefined) user.goal = req.body.goal;
       if (req.body.activityLevel !== undefined) user.activityLevel = req.body.activityLevel;
 

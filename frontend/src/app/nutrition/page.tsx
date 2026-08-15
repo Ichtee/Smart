@@ -131,10 +131,16 @@ export default function Nutrition() {
     e.preventDefault();
     if (!activeMealCategory || !foodName.trim() || !foodCalories) return;
 
+    const calVal = parseInt(foodCalories, 10);
+    if (isNaN(calVal) || calVal <= 0 || calVal > 10000) {
+      alert('Lượng Calo phải là số dương hợp lệ (từ 1 đến 10,000 kcal)!');
+      return;
+    }
+
     const newItem: MealItem = {
       id: Date.now().toString(),
       name: foodName.trim(),
-      calories: parseInt(foodCalories) || 0
+      calories: calVal
     };
 
     const updatedMeals = {

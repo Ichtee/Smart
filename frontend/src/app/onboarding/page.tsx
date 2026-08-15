@@ -68,6 +68,25 @@ export default function Onboarding() {
   };
 
   const handleNext = () => {
+    if (step === 1) {
+      const a = Number(formData.age);
+      if (isNaN(a) || a <= 0 || a > 120) {
+        alert('Tuổi phải là số dương hợp lệ (từ 1 đến 120)!');
+        return;
+      }
+    }
+    if (step === 2) {
+      const h = Number(formData.height);
+      const w = Number(formData.weight);
+      if (isNaN(h) || h < 30 || h > 300) {
+        alert('Chiều cao phải từ 30cm đến 300cm!');
+        return;
+      }
+      if (isNaN(w) || w < 10 || w > 500) {
+        alert('Cân nặng phải từ 10kg đến 500kg!');
+        return;
+      }
+    }
     setStep(prev => Math.min(prev + 1, 4));
   };
 
