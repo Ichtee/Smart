@@ -468,30 +468,44 @@ export default function Workouts() {
     }
   };
 
-  // Derive muscle target counts directly from prescribed exercises of current template day
+  // Derive muscle target counts directly from template & active selected exercises
   const effectiveTargets = useMemo(() => {
     if (!currentTabWorkout) return [];
 
-    if (currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
-      const countsMap: Record<string, { count: number; rawId: string }> = {};
+    const countsMap: Record<string, { count: number; rawId: string }> = {};
 
+    if (currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
       currentTabWorkout.exercises.forEach((tmplEx: any) => {
-        const muscleKey = normalizeMuscleId(tmplEx.muscle || 'chest');
+        if (!tmplEx.exerciseName) return;
+        const matched = allExercises.find(e => e.name && e.name.toLowerCase().trim() === tmplEx.exerciseName.toLowerCase().trim());
+        const muscleRaw = matched ? matched.muscle : (tmplEx.muscle || 'chest');
+        const muscleKey = normalizeMuscleId(muscleRaw);
         if (!countsMap[muscleKey]) {
-          countsMap[muscleKey] = { count: 0, rawId: tmplEx.muscle || 'chest' };
+          countsMap[muscleKey] = { count: 0, rawId: muscleRaw };
         }
         countsMap[muscleKey].count += 1;
       });
-
-      return Object.keys(countsMap).map(mKey => ({
-        id: countsMap[mKey].rawId,
-        label: MUSCLE_NAMES_VI[mKey] || mKey,
-        count: countsMap[mKey].count
-      }));
+    } else if (currentTabWorkout.targets && Array.isArray(currentTabWorkout.targets)) {
+      currentTabWorkout.targets.forEach((tgt: any) => {
+        const muscleKey = normalizeMuscleId(tgt.id);
+        countsMap[muscleKey] = { count: tgt.count || 1, rawId: tgt.id };
+      });
     }
 
-    return currentTabWorkout.targets || [];
-  }, [currentTabWorkout]);
+    // Also include any muscle from active selected exercises
+    activeSelectedExercises.forEach(ex => {
+      const muscleKey = ex.normMuscle || normalizeMuscleId(ex.muscle);
+      if (!countsMap[muscleKey]) {
+        countsMap[muscleKey] = { count: 1, rawId: ex.muscle };
+      }
+    });
+
+    return Object.keys(countsMap).map(mKey => ({
+      id: countsMap[mKey].rawId,
+      label: MUSCLE_NAMES_VI[mKey] || mKey,
+      count: countsMap[mKey].count
+    }));
+  }, [currentTabWorkout, allExercises, activeSelectedExercises]);
 
   let highlighterData: any[] = [];
   let modelColors = ['#00E5FF', '#00FF87'];
