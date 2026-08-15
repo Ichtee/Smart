@@ -244,10 +244,11 @@ export default function Workouts() {
       try { detailsMap = JSON.parse(savedDet); } catch (e) { }
     }
 
-    if (savedSel) {
+    const isSavedSession = savedSaved === 'true';
+
+    if (savedSel && isSavedSession) {
       try {
         const rawIds: string[] = JSON.parse(savedSel);
-        // Keep valid IDs that exist in current catalog or template IDs
         if (allExercises.length > 0) {
           selectedIds = rawIds.filter(id => 
             allExercises.some(ex => ex.id === id || ex._id === id || ex._id?.toString() === id || (ex.name && id.includes(ex.name)))
@@ -258,8 +259,10 @@ export default function Workouts() {
       } catch (e) { }
     }
 
-    if (selectedIds.length === 0 && currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
-      // Auto pre-populate exercises from template schedule
+    if ((!isSavedSession || selectedIds.length === 0) && currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
+      selectedIds = [];
+      detailsMap = {};
+
       currentTabWorkout.exercises.forEach((tmplEx: any) => {
         if (!tmplEx.exerciseName) return;
         let matched = allExercises.find(
@@ -287,18 +290,16 @@ export default function Workouts() {
 
         if (exId) {
           selectedIds.push(exId);
-          if (!detailsMap[exId]) {
-            detailsMap[exId] = {
-              sets: tmplEx.sets || 3,
-              reps: tmplEx.repsRange || '8-12',
-              rir: tmplEx.rir || '1',
-              restTimeSeconds: tmplEx.restTimeSeconds || 180,
-              isOptional: !!tmplEx.isOptional,
-              requiresWarmup: !!tmplEx.requiresWarmup,
-              warmupNotes: tmplEx.warmupNotes || '',
-              notes: tmplEx.notes || ''
-            };
-          }
+          detailsMap[exId] = {
+            sets: tmplEx.sets || 3,
+            reps: tmplEx.repsRange || '8-12',
+            rir: tmplEx.rir || '1',
+            restTimeSeconds: tmplEx.restTimeSeconds || 180,
+            isOptional: !!tmplEx.isOptional,
+            requiresWarmup: !!tmplEx.requiresWarmup,
+            warmupNotes: tmplEx.warmupNotes || '',
+            notes: tmplEx.notes || ''
+          };
         }
       });
 
