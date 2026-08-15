@@ -5,6 +5,28 @@ import Header from '@/components/Header';
 import { useRouter } from 'next/navigation';
 import { API_URL } from '@/utils/api';
 
+const MUSCLE_NAMES_VI: Record<string, string> = {
+  chest: 'Ngực (Chest)',
+  'upper-back': 'Lưng trên (Upper Back)',
+  'lower-back': 'Lưng dưới (Lower Back)',
+  lats: 'Cơ xô (Lats)',
+  trapezius: 'Cầu vai (Traps)',
+  'front-deltoids': 'Vai trước/giữa (Delts)',
+  'back-deltoids': 'Vai sau (Rear Delts)',
+  biceps: 'Tay trước (Biceps)',
+  triceps: 'Tay sau (Triceps)',
+  forearm: 'Cẳng tay (Forearms)',
+  quadriceps: 'Đùi trước (Quads)',
+  hamstring: 'Đùi sau (Hamstrings)',
+  adductor: 'Cơ khép (Adductors)',
+  adductors: 'Cơ khép (Adductors)',
+  calves: 'Bắp chân (Calves)',
+  gluteal: 'Mông (Glutes)',
+  abs: 'Bụng (Abs)',
+  obliques: 'Cơ liên sườn (Obliques)',
+  neck: 'Cổ (Neck)'
+};
+
 export default function ProgressPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -19,8 +41,18 @@ export default function ProgressPage() {
     goal: 'Tăng cơ'
   });
 
-  // Workout History State
+  // Workout History & Logs State
   const [streakHistory, setStreakHistory] = useState<string[]>([]);
+  const [workoutLogs, setWorkoutLogs] = useState<Record<string, {
+    date: string;
+    routineId?: string;
+    routineName: string;
+    dayName: string;
+    exercises: Array<{ name: string; sets: number; reps: string; muscle?: string }>;
+  }>>({});
+
+  // Selected Day Tile State for Detailed View
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
 
   // Daily Nutrition & Calorie Tracking State
   const [dailyCalories, setDailyCalories] = useState<number>(1850);
@@ -64,10 +96,23 @@ export default function ProgressPage() {
 
     fetchData();
 
-    // Read workout streak history from localStorage
+    // Read workout streak history & structured logs from localStorage
     try {
-      const history = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
+      const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
       setStreakHistory(history);
+
+      const logs = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
+      setWorkoutLogs(logs);
+
+      // Default select today or most recent completed workout day
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (history.includes(todayStr) || logs[todayStr]) {
+        setSelectedCalendarDate(todayStr);
+      } else if (history.length > 0) {
+        setSelectedCalendarDate(history[history.length - 1]);
+      } else {
+        setSelectedCalendarDate(todayStr);
+      }
     } catch (e) { }
 
     // Read saved daily calories if present
@@ -113,13 +158,15 @@ export default function ProgressPage() {
     const days = [];
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const isCompleted = streakHistory.includes(dateStr);
+      const isCompleted = streakHistory.includes(dateStr) || Boolean(workoutLogs[dateStr]);
       const isToday = day === now.getDate();
       const isPast = day <= now.getDate();
-      days.push({ day, dateStr, isCompleted, isToday, isPast });
+      const logData = workoutLogs[dateStr];
+
+      days.push({ day, dateStr, isCompleted, isToday, isPast, logData });
     }
     return days;
-  }, [streakHistory]);
+  }, [streakHistory, workoutLogs]);
 
   const monthCompletedCount = useMemo(() => {
     return monthDays.filter(d => d.isCompleted).length;
@@ -140,6 +187,12 @@ export default function ProgressPage() {
   };
 
   const caloriePercent = Math.min(100, Math.round((dailyCalories / targetCalories) * 100));
+
+  // Selected Day Log Entry Details
+  const selectedDayLog = useMemo(() => {
+    if (!selectedCalendarDate) return null;
+    return workoutLogs[selectedCalendarDate] || null;
+  }, [selectedCalendarDate, workoutLogs]);
 
   if (loading) {
     return (
@@ -173,16 +226,16 @@ export default function ProgressPage() {
               <span>📈</span> Báo Cáo Tiến Độ & Thống Kê
             </h1>
             <p className="text-xs text-slate-400 font-medium mt-1">
-              Theo dõi lịch tập luyện trong tháng, tổng Calo tiêu thụ hàng ngày và phân tích năng lượng chuyển hóa.
+              Theo dõi lịch tập luyện trong tháng, danh sách bài tập đã thực hiện và chỉ số dinh dưỡng Calo.
             </p>
           </div>
 
           <div className="flex items-center gap-3 self-start md:self-auto">
             <button
               onClick={() => router.push('/workouts')}
-              className="px-4 py-2.5 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-[#00E5FF]/20 transition active:scale-95"
+              className="px-4 py-2.5 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-[#00E5FF]/20 transition active:scale-95 flex items-center gap-1.5"
             >
-              🏋️ Vào tập ngay
+              <span>🏋️</span> Vào tập luyện
             </button>
           </div>
         </div>
@@ -260,70 +313,161 @@ export default function ProgressPage() {
 
         </div>
 
-        {/* Main Section Grid: Monthly Calendar Matrix (Left) + Daily Calorie Breakdown (Right) */}
+        {/* Main Section Grid: Monthly Calendar Matrix (Left) + Daily Calorie & Detail Log (Right) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
 
-          {/* Left Column: Monthly Workout Attendance Matrix */}
-          <div className="lg:col-span-7 bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-5 sm:p-6 space-y-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4 flex-wrap gap-2">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <span>🗓️</span> Lịch Tập Luyện Trong Tháng ({currentMonthName})
-              </h2>
+          {/* Left Column: Monthly Workout Attendance Matrix & Selected Day Details */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Calendar Card */}
+            <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-5 sm:p-6 space-y-5 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4 flex-wrap gap-2">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>🗓️</span> Lịch Tập Luyện Trong Tháng ({currentMonthName})
+                </h2>
 
-              <span className="text-xs text-[#00FF87] bg-emerald-950/80 px-3 py-1 rounded-xl border border-emerald-500/40 font-bold">
-                {monthCompletedCount} buổi hoàn thành
-              </span>
-            </div>
+                <span className="text-xs text-[#00FF87] bg-emerald-950/80 px-3 py-1 rounded-xl border border-emerald-500/40 font-bold">
+                  {monthCompletedCount} buổi hoàn thành
+                </span>
+              </div>
 
-            {/* Calendar Grid Header */}
-            <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-slate-400 uppercase">
-              <span>T2</span>
-              <span>T3</span>
-              <span>T4</span>
-              <span>T5</span>
-              <span>T6</span>
-              <span>T7</span>
-              <span>CN</span>
-            </div>
+              {/* Calendar Grid Header */}
+              <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-slate-400 uppercase">
+                <span>T2</span>
+                <span>T3</span>
+                <span>T4</span>
+                <span>T5</span>
+                <span>T6</span>
+                <span>T7</span>
+                <span>CN</span>
+              </div>
 
-            {/* Monthly Day Tiles */}
-            <div className="grid grid-cols-7 gap-2">
-              {monthDays.map((item) => (
-                <div
-                  key={item.day}
-                  className={`p-3 sm:p-4 rounded-2xl flex flex-col items-center justify-between transition-all border ${
-                    item.isCompleted
-                      ? 'bg-[#00FF87]/10 border-[#00FF87]/60 text-[#00FF87] shadow-lg shadow-[#00FF87]/20 scale-105'
-                      : item.isToday
-                        ? 'bg-[#00E5FF]/10 border-[#00E5FF] text-[#00E5FF]'
-                        : item.isPast
-                          ? 'bg-[#0B101D] border-slate-800 text-slate-400'
-                          : 'bg-[#0B101D]/40 border-slate-800/50 text-slate-600 opacity-60'
-                  }`}
-                >
-                  <span className="text-xs sm:text-sm font-extrabold">{item.day}</span>
-                  <span className="text-xs mt-1">
-                    {item.isCompleted ? '✓' : item.isToday ? '🎯' : '•'}
-                  </span>
+              {/* Monthly Day Tiles */}
+              <div className="grid grid-cols-7 gap-2">
+                {monthDays.map((item) => {
+                  const isSelected = selectedCalendarDate === item.dateStr;
+                  return (
+                    <button
+                      key={item.day}
+                      onClick={() => setSelectedCalendarDate(item.dateStr)}
+                      className={`p-2.5 sm:p-4 rounded-2xl flex flex-col items-center justify-between transition-all border cursor-pointer ${
+                        isSelected
+                          ? 'ring-2 ring-[#00E5FF] shadow-[0_0_15px_rgba(0,229,255,0.4)] scale-105 z-10'
+                          : ''
+                      } ${
+                        item.isCompleted
+                          ? 'bg-[#00FF87]/10 border-[#00FF87]/60 text-[#00FF87]'
+                          : item.isToday
+                            ? 'bg-[#00E5FF]/10 border-[#00E5FF] text-[#00E5FF]'
+                            : item.isPast
+                              ? 'bg-[#0B101D] border-slate-800 text-slate-400'
+                              : 'bg-[#0B101D]/40 border-slate-800/50 text-slate-600 opacity-60'
+                      }`}
+                    >
+                      <span className="text-xs sm:text-sm font-extrabold">{item.day}</span>
+                      <span className="text-xs mt-1">
+                        {item.isCompleted ? '✓' : item.isToday ? '🎯' : '•'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Legend Footer */}
+              <div className="flex flex-wrap items-center justify-center gap-4 text-xs pt-3 border-t border-slate-800/80 text-slate-400">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-[#00FF87]" />
+                  <span>Đã tập luyện</span>
                 </div>
-              ))}
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-[#00E5FF]" />
+                  <span>Hôm nay</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-slate-800" />
+                  <span>Ngày nghỉ / Chưa tới</span>
+                </div>
+              </div>
             </div>
 
-            {/* Legend Footer */}
-            <div className="flex flex-wrap items-center justify-center gap-4 text-xs pt-3 border-t border-slate-800/80 text-slate-400">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-[#00FF87]" />
-                <span>Đã tập luyện</span>
+            {/* Selected Calendar Day Log Detail Card (TẬP GÌ, THUỘC LỊCH TẬP NÀO) */}
+            <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>📋</span> Chi tiết buổi tập ngày: <span className="text-[#00E5FF] font-black">{selectedCalendarDate}</span>
+                </h3>
+
+                {streakHistory.includes(selectedCalendarDate || '') && (
+                  <span className="px-3 py-1 bg-emerald-950/80 text-[#00FF87] border border-emerald-500/40 text-xs font-bold rounded-xl">
+                    ✓ Đã hoàn thành
+                  </span>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-[#00E5FF]" />
-                <span>Hôm nay</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-slate-800" />
-                <span>Ngày nghỉ / Chưa tới</span>
-              </div>
+
+              {selectedDayLog ? (
+                <div className="space-y-4">
+                  {/* Routine & Day Schedule Badge */}
+                  <div className="p-4 bg-[#0B101D] rounded-2xl border border-slate-800 space-y-1.5">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">LỊCH TẬP ĐÃ CHỌN (ROUTINE & SỬ DỤNG):</span>
+                    <div className="flex items-center gap-2 text-sm font-extrabold text-white">
+                      <span className="text-[#00E5FF]">🏋️ {selectedDayLog.routineName}</span>
+                      <span className="text-slate-600">•</span>
+                      <span className="text-[#00FF87]">{selectedDayLog.dayName}</span>
+                    </div>
+                  </div>
+
+                  {/* Exercises Done List */}
+                  <div className="space-y-2.5">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">DANH SÁCH BÀI TẬP ĐÃ THỰC HIỆN ({selectedDayLog.exercises?.length || 0} BÀI):</span>
+
+                    {selectedDayLog.exercises && selectedDayLog.exercises.length > 0 ? (
+                      <div className="space-y-2">
+                        {selectedDayLog.exercises.map((ex, idx) => (
+                          <div key={idx} className="p-3.5 bg-[#0E1526] border border-slate-800/90 rounded-2xl flex items-center justify-between gap-3 text-xs">
+                            <div className="space-y-1 min-w-0">
+                              <span className="font-extrabold text-white text-sm block truncate">
+                                {idx + 1}. {ex.name}
+                              </span>
+                              {ex.muscle && (
+                                <span className="text-emerald-400 font-semibold block text-[11px]">
+                                  🎯 Nhóm cơ: {MUSCLE_NAMES_VI[ex.muscle.toLowerCase()] || ex.muscle}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="bg-[#0B101D] px-3 py-1 rounded-xl border border-slate-800 text-slate-200 font-bold">
+                                Hiệp: <strong className="text-[#00E5FF]">{ex.sets}</strong>
+                              </span>
+                              <span className="bg-[#0B101D] px-3 py-1 rounded-xl border border-slate-800 text-slate-200 font-bold">
+                                Lần: <strong className="text-[#00FF87]">{ex.reps}</strong>
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 italic py-2">Chưa ghi nhận danh sách chi tiết các bài tập.</p>
+                    )}
+                  </div>
+                </div>
+              ) : streakHistory.includes(selectedCalendarDate || '') ? (
+                <div className="p-4 bg-[#0B101D] rounded-2xl border border-slate-800 space-y-2 text-xs">
+                  <div className="flex items-center gap-2 text-[#00FF87] font-bold">
+                    <span>✓</span> Ngày này bạn đã ghi nhận hoàn thành buổi tập!
+                  </div>
+                  <p className="text-slate-400">
+                    Lịch tập mặc định: Push - Pull - Leg (Theo lịch tập luyện được chọn ở trang Workouts).
+                  </p>
+                </div>
+              ) : (
+                <div className="p-6 text-center border border-dashed border-slate-800 rounded-2xl text-slate-400 text-xs space-y-2">
+                  <p className="font-bold text-slate-300">Không có nhật ký tập luyện cho ngày {selectedCalendarDate}.</p>
+                  <p className="text-[11px]">Hãy bấm vào trang Lịch tập luyện để chốt danh sách bài tập và đánh dấu hoàn thành nhé!</p>
+                </div>
+              )}
             </div>
+
           </div>
 
           {/* Right Column: Daily Calorie & Macro Tracker */}

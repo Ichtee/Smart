@@ -489,6 +489,37 @@ export default function Workouts() {
         localStorage.setItem('smart_streak_history', JSON.stringify(newHistory));
         setStreakDays(newHistory.length);
       }
+
+      // Save rich workout log entry to smart_workout_logs
+      try {
+        const logsMap = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
+        const completedExercises = activeSelectedExercises
+          .filter(ex => newComp.includes(ex.id))
+          .map(ex => ({
+            id: ex.id,
+            name: ex.name,
+            sets: ex.sets,
+            reps: ex.reps,
+            muscle: ex.muscle,
+            normMuscle: ex.normMuscle
+          }));
+
+        logsMap[todayDateStr] = {
+          date: todayDateStr,
+          routineId: activeRoutineId,
+          routineName: activeRoutine?.name || 'Lịch tập tự do',
+          dayName: currentTabWorkout ? `${currentTabWorkout.day} (${currentTabWorkout.name})` : 'Buổi tập',
+          exercises: completedExercises,
+          updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem('smart_workout_logs', JSON.stringify(logsMap));
+      } catch (e) { }
+    } else {
+      try {
+        const logsMap = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
+        delete logsMap[todayDateStr];
+        localStorage.setItem('smart_workout_logs', JSON.stringify(logsMap));
+      } catch (e) { }
     }
   };
 
