@@ -365,11 +365,36 @@ export default function Workouts() {
     }
   };
 
+  // Derive muscle target counts directly from prescribed exercises of current template day
+  const effectiveTargets = useMemo(() => {
+    if (!currentTabWorkout) return [];
+
+    if (currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
+      const countsMap: Record<string, { count: number; rawId: string }> = {};
+
+      currentTabWorkout.exercises.forEach((tmplEx: any) => {
+        const muscleKey = normalizeMuscleId(tmplEx.muscle || 'chest');
+        if (!countsMap[muscleKey]) {
+          countsMap[muscleKey] = { count: 0, rawId: tmplEx.muscle || 'chest' };
+        }
+        countsMap[muscleKey].count += 1;
+      });
+
+      return Object.keys(countsMap).map(mKey => ({
+        id: countsMap[mKey].rawId,
+        label: t(`muscles.${mKey}`) || mKey,
+        count: countsMap[mKey].count
+      }));
+    }
+
+    return currentTabWorkout.targets || [];
+  }, [currentTabWorkout, t]);
+
   let highlighterData: any[] = [];
   let modelColors = ['#00E5FF', '#00FF87'];
 
-  if (currentTabWorkout && currentTabWorkout.targets && currentTabWorkout.targets.length > 0) {
-    const rawMuscles: string[] = currentTabWorkout.targets.map((t: any) => normalizeMuscleId(t.id));
+  if (effectiveTargets.length > 0) {
+    const rawMuscles: string[] = effectiveTargets.map((t: any) => normalizeMuscleId(t.id));
     const allMuscles = Array.from(new Set(rawMuscles)).filter((m: string) => VALID_MODEL_MUSCLES.has(m));
     const safeSelected = selectedMuscle ? normalizeMuscleId(selectedMuscle) : null;
 
@@ -381,7 +406,7 @@ export default function Workouts() {
       modelColors = ['#00E5FF', '#00FF87'];
     } else {
       highlighterData = [
-        { name: currentTabWorkout.name, muscles: allMuscles }
+        { name: currentTabWorkout?.name || 'Workout', muscles: allMuscles }
       ];
       modelColors = ['#00E5FF'];
     }
@@ -404,7 +429,7 @@ export default function Workouts() {
     : 0;
 
   // Calculate Exceeded Muscle Target Warnings
-  const exceededTargetMuscles = (currentTabWorkout?.targets || []).map((target: any) => {
+  const exceededTargetMuscles = effectiveTargets.map((target: any) => {
     const normTargetId = normalizeMuscleId(target.id);
     const targetCount = target.count || 2;
     const currentCount = activeSelectedExercises.filter(ex => ex.normMuscle === normTargetId).length;
@@ -667,9 +692,9 @@ export default function Workouts() {
               {/* Targets / Muscles Bar */}
               <div>
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t('workouts.muscleFilter')}</p>
-                {currentTabWorkout && currentTabWorkout.targets && currentTabWorkout.targets.length > 0 && activeRoutineId !== 'none' ? (
+                {effectiveTargets.length > 0 && activeRoutineId !== 'none' ? (
                   <div className="flex flex-wrap gap-2">
-                    {currentTabWorkout.targets.map((target: any, index: number) => {
+                    {effectiveTargets.map((target: any, index: number) => {
                       const normTargetId = normalizeMuscleId(target.id);
                       const targetCount = target.count || 2;
                       const currentCount = activeSelectedExercises.filter(ex => ex.normMuscle === normTargetId).length;
