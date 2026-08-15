@@ -17,7 +17,7 @@ const getRoutines = async (req, res) => {
 // @access  Public (should be Admin later)
 const createRoutine = async (req, res) => {
   try {
-    const { id, name, schedule } = req.body;
+    const { id, name, type, description, frequencyDaysPerWeek, generalNotes, schedule } = req.body;
     
     const routineExists = await Routine.findOne({ id });
     if (routineExists) {
@@ -27,6 +27,10 @@ const createRoutine = async (req, res) => {
     const routine = await Routine.create({
       id,
       name,
+      type,
+      description,
+      frequencyDaysPerWeek,
+      generalNotes,
       schedule
     });
 
@@ -48,9 +52,13 @@ const updateRoutine = async (req, res) => {
     }
 
     // Explicitly pick only allowed fields to prevent mass assignment
-    const { name, schedule } = req.body;
+    const { name, type, description, frequencyDaysPerWeek, generalNotes, schedule } = req.body;
     const updateData = {};
     if (name !== undefined) updateData.name = name;
+    if (type !== undefined) updateData.type = type;
+    if (description !== undefined) updateData.description = description;
+    if (frequencyDaysPerWeek !== undefined) updateData.frequencyDaysPerWeek = frequencyDaysPerWeek;
+    if (generalNotes !== undefined) updateData.generalNotes = generalNotes;
     if (schedule !== undefined) updateData.schedule = schedule;
 
     const updatedRoutine = await Routine.findOneAndUpdate(

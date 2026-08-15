@@ -17,6 +17,14 @@ const exerciseSchema = new mongoose.Schema({
   defaultReps: {
     type: String,
     default: '10-12'
+  },
+  equipment: {
+    type: String,
+    default: ''
+  },
+  description: {
+    type: String,
+    default: ''
   }
 }, { timestamps: true });
 

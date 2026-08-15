@@ -53,7 +53,16 @@ export default function Workouts() {
   const [daySelections, setDaySelections] = useState<Record<string, string[]>>({});
   const [dayCompleted, setDayCompleted] = useState<Record<string, string[]>>({});
   const [daySavedStatus, setDaySavedStatus] = useState<Record<string, boolean>>({});
-  const [exerciseDetails, setExerciseDetails] = useState<Record<string, { sets: number; reps: string }>>({});
+  const [exerciseDetails, setExerciseDetails] = useState<Record<string, {
+    sets: number;
+    reps: string;
+    rir?: string;
+    restTimeSeconds?: number;
+    isOptional?: boolean;
+    requiresWarmup?: boolean;
+    warmupNotes?: string;
+    notes?: string;
+  }>>({});
 
   const [streakDays, setStreakDays] = useState<number>(1);
   const [noticeMessage, setNoticeMessage] = useState<string>('');
@@ -68,6 +77,9 @@ export default function Workouts() {
           newMap[r.id] = r;
         });
         setRoutinesMap(newMap);
+        if (data.length > 0) {
+          setActiveRoutineId(prev => (newMap[prev] ? prev : data[0].id));
+        }
       })
       .catch(err => console.error('Failed to fetch routines', err));
 
@@ -132,15 +144,65 @@ export default function Workouts() {
 
   // Load / Initialize Day Selections per Day Tab
   useEffect(() => {
-    if (!currentTabWorkout || allExercises.length === 0) return;
+    if (!currentTabWorkout) return;
 
     const savedSel = localStorage.getItem(`smart_sel_${todayDateStr}_${currentDayKey}`);
     const savedComp = localStorage.getItem(`smart_comp_${todayDateStr}_${currentDayKey}`);
     const savedSaved = localStorage.getItem(`smart_saved_${todayDateStr}_${currentDayKey}`);
+    const savedDet = localStorage.getItem(`smart_det_${todayDateStr}_${currentDayKey}`);
 
     let selectedIds: string[] = [];
+    let detailsMap: Record<string, any> = {};
+
+    if (savedDet) {
+      try { detailsMap = JSON.parse(savedDet); } catch (e) { }
+    }
+
     if (savedSel) {
       try { selectedIds = JSON.parse(savedSel); } catch (e) { }
+    } else if (currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
+      // Auto pre-populate exercises from template schedule
+      currentTabWorkout.exercises.forEach((tmplEx: any) => {
+        let matched = allExercises.find(
+          item => item.name.toLowerCase().trim() === tmplEx.exerciseName.toLowerCase().trim()
+        );
+
+        const exId = matched ? matched.id : `template_${tmplEx.exerciseName.replace(/\s+/g, '_')}`;
+
+        if (!matched) {
+          setAllExercises(prev => {
+            if (prev.some(item => item.id === exId)) return prev;
+            return [
+              ...prev,
+              {
+                id: exId,
+                name: tmplEx.exerciseName,
+                muscle: tmplEx.muscle || 'chest',
+                normMuscle: normalizeMuscleId(tmplEx.muscle || 'chest'),
+                defaultSets: tmplEx.sets || 3,
+                defaultReps: tmplEx.repsRange || '8-12',
+              }
+            ];
+          });
+        }
+
+        selectedIds.push(exId);
+        if (!detailsMap[exId]) {
+          detailsMap[exId] = {
+            sets: tmplEx.sets || 3,
+            reps: tmplEx.repsRange || '8-12',
+            rir: tmplEx.rir || '1',
+            restTimeSeconds: tmplEx.restTimeSeconds || 180,
+            isOptional: !!tmplEx.isOptional,
+            requiresWarmup: !!tmplEx.requiresWarmup,
+            warmupNotes: tmplEx.warmupNotes || '',
+            notes: tmplEx.notes || ''
+          };
+        }
+      });
+
+      localStorage.setItem(`smart_sel_${todayDateStr}_${currentDayKey}`, JSON.stringify(selectedIds));
+      localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(detailsMap));
     }
 
     let completedIds: string[] = [];
@@ -151,6 +213,9 @@ export default function Workouts() {
     setDaySelections(prev => ({ ...prev, [currentDayKey]: selectedIds }));
     setDayCompleted(prev => ({ ...prev, [currentDayKey]: completedIds }));
     setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: savedSaved === 'true' }));
+    if (Object.keys(detailsMap).length > 0) {
+      setExerciseDetails(prev => ({ ...prev, ...detailsMap }));
+    }
   }, [currentDayKey, allExercises, todayDateStr, currentTabWorkout]);
 
   const currentSelectedIds = daySelections[currentDayKey] || [];
@@ -166,16 +231,27 @@ export default function Workouts() {
         ...ex,
         sets: detail.sets,
         reps: detail.reps,
+        rir: detail.rir || '1',
+        restTimeSeconds: detail.restTimeSeconds || 180,
+        isOptional: !!detail.isOptional,
+        requiresWarmup: !!detail.requiresWarmup,
+        warmupNotes: detail.warmupNotes || '',
+        notes: detail.notes || '',
         completed: currentCompletedIds.includes(id)
       };
     }).filter(Boolean);
   }, [currentSelectedIds, allExercises, exerciseDetails, currentCompletedIds]);
 
   const updateExerciseSets = (id: string, sets: number) => {
-    setExerciseDetails(prev => ({
-      ...prev,
-      [id]: { ...(prev[id] || { sets: 3, reps: '10-12' }), sets: Math.max(1, sets) }
-    }));
+    const newSets = Math.max(1, sets);
+    setExerciseDetails(prev => {
+      const updated = {
+        ...prev,
+        [id]: { ...(prev[id] || { sets: 3, reps: '10-12' }), sets: newSets }
+      };
+      localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const adjustExerciseReps = (id: string, delta: number) => {
@@ -184,10 +260,12 @@ export default function Workouts() {
       const numMatch = currentReps.match(/\d+/);
       const baseNum = numMatch ? parseInt(numMatch[0]) : 10;
       const newNum = Math.max(1, baseNum + delta);
-      return {
+      const updated = {
         ...prev,
         [id]: { ...(prev[id] || { sets: 3, reps: '10-12' }), reps: `${newNum}` }
       };
+      localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(updated));
+      return updated;
     });
   };
 
@@ -203,6 +281,40 @@ export default function Workouts() {
     const newSel = currentSelectedIds.filter(id => id !== exId);
     setDaySelections(prev => ({ ...prev, [currentDayKey]: newSel }));
     localStorage.setItem(`smart_sel_${todayDateStr}_${currentDayKey}`, JSON.stringify(newSel));
+  };
+
+  const handleResetToTemplate = () => {
+    if (isWorkoutSaved) return;
+    if (!currentTabWorkout?.exercises || currentTabWorkout.exercises.length === 0) return;
+
+    const selectedIds: string[] = [];
+    const detailsMap: Record<string, any> = {};
+
+    currentTabWorkout.exercises.forEach((tmplEx: any) => {
+      let matched = allExercises.find(
+        item => item.name.toLowerCase().trim() === tmplEx.exerciseName.toLowerCase().trim()
+      );
+      const exId = matched ? matched.id : `template_${tmplEx.exerciseName.replace(/\s+/g, '_')}`;
+
+      selectedIds.push(exId);
+      detailsMap[exId] = {
+        sets: tmplEx.sets || 3,
+        reps: tmplEx.repsRange || '8-12',
+        rir: tmplEx.rir || '1',
+        restTimeSeconds: tmplEx.restTimeSeconds || 180,
+        isOptional: !!tmplEx.isOptional,
+        requiresWarmup: !!tmplEx.requiresWarmup,
+        warmupNotes: tmplEx.warmupNotes || '',
+        notes: tmplEx.notes || ''
+      };
+    });
+
+    setDaySelections(prev => ({ ...prev, [currentDayKey]: selectedIds }));
+    setExerciseDetails(prev => ({ ...prev, ...detailsMap }));
+    localStorage.setItem(`smart_sel_${todayDateStr}_${currentDayKey}`, JSON.stringify(selectedIds));
+    localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(detailsMap));
+    setNoticeMessage('Đã khôi phục danh sách bài tập về lịch gốc (KA) mặc định!');
+    setTimeout(() => setNoticeMessage(''), 4000);
   };
 
   const handleSaveWorkout = () => {
@@ -488,32 +600,44 @@ export default function Workouts() {
 
             <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-6">
 
-              {/* Header with Save / Locked Action */}
+              {/* Header with Save / Locked Action / Reset */}
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 flex-wrap gap-3">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <span>📅</span> Danh sách bài tập - <span className="text-[#00E5FF]">{currentTabWorkout?.day} ({currentTabWorkout?.name})</span>
                 </h2>
 
-                {isWorkoutSaved ? (
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 bg-emerald-950/80 border border-emerald-500/40 text-[#00FF87] text-xs font-extrabold rounded-xl shadow-md">
-                      🔒 ĐÃ CHỐT LỊCH
-                    </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {!isWorkoutSaved && currentTabWorkout?.exercises && currentTabWorkout.exercises.length > 0 && (
                     <button
-                      onClick={handleUnlockWorkout}
-                      className="px-3 py-1 bg-[#18233C] hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-700 transition"
+                      onClick={handleResetToTemplate}
+                      title="Khôi phục danh sách bài tập về lịch gốc mặc định"
+                      className="px-3 py-2 bg-[#18233C] hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-700 transition"
                     >
-                      ✏️ Sửa lại
+                      🔄 Khôi phục lịch gốc (KA)
                     </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleSaveWorkout}
-                    className="px-4 py-2 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-[#00E5FF]/20 transition active:scale-95"
-                  >
-                    💾 LƯU & BẮT ĐẦU TẬP
-                  </button>
-                )}
+                  )}
+
+                  {isWorkoutSaved ? (
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 bg-emerald-950/80 border border-emerald-500/40 text-[#00FF87] text-xs font-extrabold rounded-xl shadow-md">
+                        🔒 ĐÃ CHỐT LỊCH
+                      </span>
+                      <button
+                        onClick={handleUnlockWorkout}
+                        className="px-3 py-1 bg-[#18233C] hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-700 transition"
+                      >
+                        ✏️ Sửa lại
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleSaveWorkout}
+                      className="px-4 py-2 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-[#00E5FF]/20 transition active:scale-95"
+                    >
+                      💾 LƯU & BẮT ĐẦU TẬP
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Inline Notice Message Banner */}
@@ -597,7 +721,7 @@ export default function Workouts() {
                     Các bài đã chọn ({activeSelectedExercises.length})
                   </p>
                   <span className="text-xs text-slate-400 font-semibold">
-                    {isWorkoutSaved ? 'Tích chọn để đánh dấu hoàn thành' : 'Chỉnh số Hiệp/Lần rồi bấm LƯU ở trên'}
+                    {isWorkoutSaved ? 'Tích chọn để đánh dấu hoàn thành' : 'Chỉnh sửa theo ý bạn rồi bấm LƯU để bắt đầu'}
                   </span>
                 </div>
 
@@ -606,9 +730,19 @@ export default function Workouts() {
                     <div key={ex.id} className="p-5 rounded-2xl bg-[#0E1526] border border-slate-800/90 hover:border-cyan-500/40 transition-all flex items-center justify-between gap-4 shadow-lg group">
 
                       <div className="flex-1 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-extrabold text-white text-base group-hover:text-[#00E5FF] transition-colors">
-                            {i + 1}. {ex.name}
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <h3 className="font-extrabold text-white text-base group-hover:text-[#00E5FF] transition-colors flex items-center gap-2">
+                            <span>{i + 1}. {ex.name}</span>
+                            {ex.requiresWarmup && (
+                              <span className="px-2 py-0.5 bg-amber-950/80 text-amber-400 border border-amber-500/40 rounded-full text-[10px] font-extrabold" title={ex.warmupNotes || 'Cần khởi động'}>
+                                🔥 Cần Khởi Động
+                              </span>
+                            )}
+                            {ex.isOptional && (
+                              <span className="px-2 py-0.5 bg-purple-950/80 text-purple-300 border border-purple-500/40 rounded-full text-[10px] font-extrabold">
+                                💡 Tùy Chọn
+                              </span>
+                            )}
                           </h3>
                           {!isWorkoutSaved && (
                             <button
@@ -621,11 +755,7 @@ export default function Workouts() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3 text-xs">
-                          <span className="px-2 py-0.5 rounded bg-cyan-950/60 text-[#00E5FF] border border-cyan-800/50 font-black text-[10px]">
-                            EXERCISE
-                          </span>
-
-                          {/* Sets adjustment buttons & direct numeric input */}
+                          {/* Sets adjustment */}
                           {!isWorkoutSaved ? (
                             <div className="flex items-center gap-2 bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800">
                               <span className="text-slate-400 font-semibold">Hiệp:</span>
@@ -655,27 +785,29 @@ export default function Workouts() {
                             </span>
                           )}
 
-                          {/* Reps adjustment buttons & direct numeric input */}
+                          {/* Reps adjustment */}
                           {!isWorkoutSaved ? (
                             <div className="flex items-center gap-2 bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800">
-                              <span className="text-slate-400 font-semibold">Lần:</span>
+                              <span className="text-slate-400 font-semibold">Lần (Reps):</span>
                               <button
                                 onClick={() => adjustExerciseReps(ex.id, -1)}
                                 className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-sm border border-slate-700"
                               >-</button>
                               <input
                                 type="text"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
                                 value={ex.reps}
                                 onChange={(e) => {
-                                  const cleanVal = e.target.value.replace(/[^0-9]/g, '');
-                                  setExerciseDetails(prev => ({
-                                    ...prev,
-                                    [ex.id]: { ...(prev[ex.id] || { sets: ex.sets, reps: '10' }), reps: cleanVal }
-                                  }));
+                                  const val = e.target.value;
+                                  setExerciseDetails(prev => {
+                                    const updated = {
+                                      ...prev,
+                                      [ex.id]: { ...(prev[ex.id] || { sets: ex.sets, reps: ex.reps }), reps: val }
+                                    };
+                                    localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(updated));
+                                    return updated;
+                                  });
                                 }}
-                                className="w-10 bg-transparent text-[#00E5FF] font-black text-center focus:outline-none focus:border-b focus:border-[#00E5FF]"
+                                className="w-14 bg-transparent text-[#00E5FF] font-black text-center focus:outline-none focus:border-b focus:border-[#00E5FF]"
                               />
                               <button
                                 onClick={() => adjustExerciseReps(ex.id, 1)}
@@ -688,10 +820,34 @@ export default function Workouts() {
                             </span>
                           )}
 
+                          {ex.rir && (
+                            <span className="bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800 text-amber-400 font-bold">
+                              ⚡ RIR: <strong className="text-white">{ex.rir}</strong>
+                            </span>
+                          )}
+
+                          {ex.restTimeSeconds && (
+                            <span className="bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800 text-cyan-400 font-bold">
+                              ⏱️ Nghỉ: <strong className="text-white">{Math.round(ex.restTimeSeconds / 60)} phút</strong>
+                            </span>
+                          )}
+
                           <span className="text-emerald-400 font-semibold">
                             🎯 Cơ chính: {t(`muscles.${ex.normMuscle}`) || ex.muscle}
                           </span>
                         </div>
+
+                        {/* Warmup or technique notes */}
+                        {(ex.warmupNotes || ex.notes) && (
+                          <div className="text-[11px] text-slate-300 bg-[#0B101D] p-2.5 rounded-xl border border-slate-800/80 space-y-1">
+                            {ex.warmupNotes && (
+                              <p className="text-amber-300 font-semibold">🔥 Khởi động: {ex.warmupNotes}</p>
+                            )}
+                            {ex.notes && (
+                              <p className="text-cyan-300 font-medium">📌 Ghi chú: {ex.notes}</p>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Interactive Checkbox */}
