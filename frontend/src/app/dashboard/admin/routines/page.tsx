@@ -720,29 +720,15 @@ export default function RoutineManagement() {
                             className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500 w-1/3"
                             required
                           >
-                            <option value="" disabled>-- Chọn Thứ / Ngày --</option>
-                            <optgroup label="Theo Thứ">
-                              <option value="Thứ 2">Thứ 2</option>
-                              <option value="Thứ 3">Thứ 3</option>
-                              <option value="Thứ 4">Thứ 4</option>
-                              <option value="Thứ 5">Thứ 5</option>
-                              <option value="Thứ 6">Thứ 6</option>
-                              <option value="Thứ 7">Thứ 7</option>
-                              <option value="Chủ nhật">Chủ nhật</option>
-                            </optgroup>
-                            <optgroup label="Theo Ngày / Buổi">
-                              <option value="Ngày 1">Ngày 1</option>
-                              <option value="Ngày 2">Ngày 2</option>
-                              <option value="Ngày 3">Ngày 3</option>
-                              <option value="Ngày 4">Ngày 4</option>
-                              <option value="Ngày 5">Ngày 5</option>
-                              <option value="Ngày 6">Ngày 6</option>
-                              <option value="Ngày 7">Ngày 7</option>
-                              <option value="Buổi A">Buổi A</option>
-                              <option value="Buổi B">Buổi B</option>
-                              <option value="Nghỉ">Nghỉ</option>
-                            </optgroup>
-                            {dayObj.day && (
+                            <option value="" disabled>-- Chọn Thứ --</option>
+                            <option value="Thứ 2">Thứ 2</option>
+                            <option value="Thứ 3">Thứ 3</option>
+                            <option value="Thứ 4">Thứ 4</option>
+                            <option value="Thứ 5">Thứ 5</option>
+                            <option value="Thứ 6">Thứ 6</option>
+                            <option value="Thứ 7">Thứ 7</option>
+                            <option value="Chủ nhật">Chủ nhật</option>
+                            {dayObj.day && !['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'].includes(dayObj.day) && (
                               <option value={dayObj.day}>{dayObj.day}</option>
                             )}
                           </select>
