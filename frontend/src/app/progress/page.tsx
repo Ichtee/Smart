@@ -56,12 +56,12 @@ export default function ProgressPage() {
   const [isExerciseListCollapsed, setIsExerciseListCollapsed] = useState<boolean>(false);
 
   // Daily Nutrition & Calorie Tracking State
-  const [dailyCalories, setDailyCalories] = useState<number>(1850);
-  const [dailyProtein, setDailyProtein] = useState<number>(120);
-  const [dailyCarbs, setDailyCarbs] = useState<number>(210);
-  const [dailyFat, setDailyFat] = useState<number>(55);
+  const [dailyCalories, setDailyCalories] = useState<number>(0);
+  const [dailyProtein, setDailyProtein] = useState<number>(0);
+  const [dailyCarbs, setDailyCarbs] = useState<number>(0);
+  const [dailyFat, setDailyFat] = useState<number>(0);
   const [isEditingCalories, setIsEditingCalories] = useState(false);
-  const [tempCalories, setTempCalories] = useState('1850');
+  const [tempCalories, setTempCalories] = useState('0');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -116,15 +116,38 @@ export default function ProgressPage() {
       }
     } catch (e) { }
 
-    // Read saved daily calories if present
+    // Read calories from manual entry or Nutrition page meals for today
     const todayStr = new Date().toISOString().split('T')[0];
     const savedCal = localStorage.getItem(`smart_daily_cal_${todayStr}`);
-    if (savedCal) {
+
+    let activeCal = 0;
+    if (savedCal !== null) {
       const val = parseInt(savedCal, 10);
-      if (!isNaN(val)) {
-        setDailyCalories(val);
-        setTempCalories(val.toString());
+      if (!isNaN(val) && val >= 0) {
+        activeCal = val;
       }
+    } else {
+      try {
+        const savedMeals = localStorage.getItem(`smart_meals_${todayStr}`);
+        if (savedMeals) {
+          const parsedMeals: Record<string, Array<{ calories: number }>> = JSON.parse(savedMeals);
+          activeCal = Object.values(parsedMeals).flat().reduce((sum, item) => sum + (item.calories || 0), 0);
+        }
+      } catch (e) { }
+    }
+
+    setDailyCalories(activeCal);
+    setTempCalories(activeCal.toString());
+
+    // Calculate dynamic macros based on calorie intake (Protein 30%, Carbs 50%, Fat 20%)
+    if (activeCal > 0) {
+      setDailyProtein(Math.round((activeCal * 0.30) / 4));
+      setDailyCarbs(Math.round((activeCal * 0.50) / 4));
+      setDailyFat(Math.round((activeCal * 0.20) / 9));
+    } else {
+      setDailyProtein(0);
+      setDailyCarbs(0);
+      setDailyFat(0);
     }
   }, [router]);
 
@@ -184,6 +207,15 @@ export default function ProgressPage() {
       return;
     }
     setDailyCalories(val);
+    if (val > 0) {
+      setDailyProtein(Math.round((val * 0.30) / 4));
+      setDailyCarbs(Math.round((val * 0.50) / 4));
+      setDailyFat(Math.round((val * 0.20) / 9));
+    } else {
+      setDailyProtein(0);
+      setDailyCarbs(0);
+      setDailyFat(0);
+    }
     const todayStr = new Date().toISOString().split('T')[0];
     localStorage.setItem(`smart_daily_cal_${todayStr}`, val.toString());
     setIsEditingCalories(false);
