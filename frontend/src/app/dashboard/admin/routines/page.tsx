@@ -99,6 +99,140 @@ function SearchableExerciseSelect({
   );
 }
 
+function QuickAddExerciseBar({
+  onSelect,
+  exercises,
+  musclesMap
+}: {
+  onSelect: (exName: string) => void;
+  exercises: any[];
+  musclesMap: Record<string, string>;
+}) {
+  const [search, setSearch] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filtered = exercises.filter(ex => {
+    if (!search.trim()) return false;
+    const q = search.toLowerCase();
+    const nameMatch = ex.name ? ex.name.toLowerCase().includes(q) : false;
+    const muscleMatch = (musclesMap[ex.muscle] || ex.muscle || '').toLowerCase().includes(q);
+    const equipMatch = (ex.equipment || '').toLowerCase().includes(q);
+    return nameMatch || muscleMatch || equipMatch;
+  });
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <div className="relative">
+        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#00E5FF] text-xs">🔍</span>
+        <input
+          type="text"
+          placeholder="🔍 Tìm nhanh bài tập để thêm (ví dụ: Squat, Bench, Cable, Dumbbell...)..."
+          value={search}
+          onFocus={() => setIsOpen(true)}
+          onChange={e => {
+            setSearch(e.target.value);
+            setIsOpen(true);
+          }}
+          className="w-full pl-9 pr-32 py-2.5 bg-[#0B101D] border border-cyan-500/50 focus:border-[#00E5FF] rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none shadow-lg transition-all"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            className="absolute inset-y-0 right-28 flex items-center pr-2 text-slate-400 hover:text-white text-xs font-bold"
+          >
+            ✕
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="absolute inset-y-1.5 right-1.5 px-3 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black text-xs rounded-lg transition-colors flex items-center gap-1 shadow-md"
+        >
+          <span>📚</span> Xem Thư Viện
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#0E1526] border border-cyan-500/60 rounded-2xl p-3 shadow-2xl z-[999] space-y-2 animate-in fade-in duration-150 max-h-64 overflow-y-auto custom-scrollbar">
+          {!search.trim() ? (
+            <div className="space-y-1">
+              <p className="text-[11px] font-bold text-slate-400 px-2 py-1 uppercase tracking-wider flex justify-between items-center">
+                <span>Tất cả bài tập trong Thư viện ({exercises.length}):</span>
+                <span className="text-[10px] text-cyan-400">Bấm để thêm bài vào ngày tập</span>
+              </p>
+              {exercises.map(ex => (
+                <div
+                  key={ex._id || ex.id || ex.name}
+                  onClick={() => {
+                    onSelect(ex.name);
+                    setSearch('');
+                    setIsOpen(false);
+                  }}
+                  className="p-2 rounded-xl text-xs hover:bg-[#18233C] text-slate-200 cursor-pointer flex items-center justify-between gap-2 transition-colors group"
+                >
+                  <span className="font-medium group-hover:text-[#00FF87] transition-colors">{ex.name}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded-full border border-cyan-500/30">
+                      {musclesMap[ex.muscle] || ex.muscle}
+                    </span>
+                    <span className="text-[10px] text-emerald-400 bg-emerald-950 px-2.5 py-0.5 rounded-lg border border-emerald-500/40 font-bold group-hover:scale-105 transition-transform">
+                      + Thêm
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filtered.length > 0 ? (
+            <div className="space-y-1">
+              <p className="text-[11px] font-bold text-[#00FF87] px-2 py-1 uppercase tracking-wider flex justify-between items-center">
+                <span>Kết quả tìm kiếm ({filtered.length}):</span>
+                <span className="text-[10px] text-cyan-400">Bấm để thêm bài vào ngày tập</span>
+              </p>
+              {filtered.map(ex => (
+                <div
+                  key={ex._id || ex.id || ex.name}
+                  onClick={() => {
+                    onSelect(ex.name);
+                    setSearch('');
+                    setIsOpen(false);
+                  }}
+                  className="p-2 rounded-xl text-xs hover:bg-[#18233C] text-slate-200 cursor-pointer flex items-center justify-between gap-2 transition-colors group"
+                >
+                  <span className="font-medium group-hover:text-[#00FF87] transition-colors">{ex.name}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded-full border border-cyan-500/30">
+                      {musclesMap[ex.muscle] || ex.muscle}
+                    </span>
+                    <span className="text-[10px] text-emerald-400 bg-emerald-950 px-2.5 py-0.5 rounded-lg border border-emerald-500/40 font-bold group-hover:scale-105 transition-transform">
+                      + Thêm
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 text-center text-xs text-slate-400">
+              Không tìm thấy bài tập nào khớp từ khóa "{search}".
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function RoutineManagement() {
   const router = useRouter();
   const [routines, setRoutines] = useState<any[]>([]);
@@ -373,16 +507,22 @@ export default function RoutineManagement() {
     setFormData({ ...formData, schedule: newSchedule });
   };
 
-  const addExerciseToDay = (dayIndex: number) => {
+  const addExerciseToDay = (dayIndex: number, specifiedExName?: string) => {
     const newSchedule = [...formData.schedule];
     if (!newSchedule[dayIndex].exercises) {
       newSchedule[dayIndex].exercises = [];
     }
-    const defaultEx = exercises[0] ? exercises[0].name : '';
-    const defaultMuscle = exercises[0] ? exercises[0].muscle : 'chest';
+    let selectedName = specifiedExName;
+    let foundEx = specifiedExName ? exercises.find(e => e.name === specifiedExName) : null;
+    
+    if (!selectedName && exercises.length > 0) {
+      selectedName = exercises[0].name;
+      foundEx = exercises[0];
+    }
+
     newSchedule[dayIndex].exercises.push({
-      exerciseName: defaultEx,
-      muscle: defaultMuscle,
+      exerciseName: selectedName || '',
+      muscle: foundEx ? foundEx.muscle : 'chest',
       sets: 3,
       repsRange: '8-12',
       rir: '1',
@@ -661,9 +801,18 @@ export default function RoutineManagement() {
 
                       {/* Prescribed Exercises from Catalog */}
                       <div className="pl-4 border-l-2 border-emerald-500/30 space-y-3 pt-2">
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center flex-wrap gap-2">
                           <p className="text-xs font-bold text-[#00FF87] uppercase tracking-wider">Danh Sách Bài Tập Mẫu (Kèm chỉ định từ Thư viện)</p>
                           <span className="text-[10px] text-slate-400">Đã đồng bộ với Thư viện bài tập</span>
+                        </div>
+
+                        {/* Quick Search & Add Exercise Input Bar */}
+                        <div className="py-1">
+                          <QuickAddExerciseBar
+                            onSelect={(selectedExName) => addExerciseToDay(dayIndex, selectedExName)}
+                            exercises={exercises}
+                            musclesMap={musclesMap}
+                          />
                         </div>
 
                         {dayObj.exercises?.map((exObj: any, exIndex: number) => (
