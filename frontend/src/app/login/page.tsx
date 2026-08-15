@@ -21,13 +21,23 @@ export default function Login() {
     setResendStatus('idle');
     setResendMessage('');
 
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername) {
+      setError('Vui lòng nhập Tên đăng nhập hoặc Email.');
+      return;
+    }
+    if (!password) {
+      setError('Vui lòng nhập Mật khẩu.');
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/users/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: trimmedUsername, password }),
       });
       const data = await res.json();
       

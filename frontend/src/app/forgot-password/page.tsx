@@ -10,13 +10,22 @@ export default function ForgotPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus('loading');
+    setStatus('idle');
     setMessage('');
+
+    const trimmedEmail = email.trim();
+    if (/\s/.test(trimmedEmail) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setStatus('error');
+      setMessage('Email không được chứa dấu cách và phải đúng định dạng (VD: user@example.com).');
+      return;
+    }
+
+    setStatus('loading');
     try {
       const res = await fetch(`${API_URL}/api/users/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: trimmedEmail.toLowerCase() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Something went wrong');

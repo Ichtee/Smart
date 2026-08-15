@@ -24,14 +24,19 @@ export default function ResetPassword({ params }: { params: { token: string } })
       return;
     }
 
+    if (password !== password.trim()) {
+      setStatus('error');
+      setMessage('Mật khẩu không được chứa khoảng trắng ở đầu hoặc cuối.');
+      return;
+    }
     if (password !== confirm) {
       setStatus('error');
       setMessage('Mật khẩu xác nhận không khớp');
       return;
     }
-    if (password.length < 8) {
+    if (password.length < 8 || password.length > 100) {
       setStatus('error');
-      setMessage('Mật khẩu phải có ít nhất 8 ký tự');
+      setMessage('Mật khẩu phải từ 8 đến 100 ký tự');
       return;
     }
 

@@ -129,7 +129,13 @@ export default function Nutrition() {
   // Add Food Item to Meal
   const handleAddFood = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeMealCategory || !foodName.trim() || !foodCalories) return;
+    const trimmedFoodName = foodName.trim().replace(/\s+/g, ' ');
+    if (!activeMealCategory || !trimmedFoodName || !foodCalories) return;
+
+    if (trimmedFoodName.length < 2 || trimmedFoodName.length > 60) {
+      alert('Tên món ăn không được chứa toàn khoảng trắng, độ dài từ 2 đến 60 ký tự!');
+      return;
+    }
 
     const calVal = parseInt(foodCalories, 10);
     if (isNaN(calVal) || calVal <= 0 || calVal > 10000) {
@@ -139,7 +145,7 @@ export default function Nutrition() {
 
     const newItem: MealItem = {
       id: Date.now().toString(),
-      name: foodName.trim(),
+      name: trimmedFoodName,
       calories: calVal
     };
 
@@ -390,6 +396,7 @@ export default function Nutrition() {
                 <input
                   type="text"
                   required
+                  maxLength={60}
                   value={foodName}
                   onChange={(e) => setFoodName(e.target.value)}
                   placeholder="VD: Phở bò, Ức gà, Cơm tấm..."
@@ -403,8 +410,10 @@ export default function Nutrition() {
                   type="number"
                   required
                   min="1"
+                  max="10000"
                   value={foodCalories}
                   onChange={(e) => setFoodCalories(e.target.value)}
+                  onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                   placeholder="VD: 350"
                   className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
                 />
