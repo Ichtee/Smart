@@ -1,11 +1,14 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { API_URL } from '@/utils/api';
 
 export default function ResetPassword({ params }: { params: { token: string } }) {
   const router = useRouter();
+  const routeParams = useParams();
+  const activeToken = (routeParams?.token as string) || params?.token || '';
+
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -14,6 +17,12 @@ export default function ResetPassword({ params }: { params: { token: string } })
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
+
+    if (!activeToken) {
+      setStatus('error');
+      setMessage('Mã đặt lại mật khẩu (Token) bị thiếu hoặc không hợp lệ.');
+      return;
+    }
 
     if (password !== confirm) {
       setStatus('error');
@@ -28,13 +37,13 @@ export default function ResetPassword({ params }: { params: { token: string } })
 
     setStatus('loading');
     try {
-      const res = await fetch(`${API_URL}/api/users/reset-password/${params.token}`, {
+      const res = await fetch(`${API_URL}/api/users/reset-password/${activeToken}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password, token: activeToken }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Something went wrong');
+      if (!res.ok) throw new Error(data.message || 'Lỗi khi đặt lại mật khẩu');
       setStatus('success');
       setMessage(data.message);
       // Redirect to login after 2 seconds
