@@ -25,7 +25,14 @@ const exerciseSchema = new mongoose.Schema({
   description: {
     type: String,
     default: ''
-  }
+  },
+  videoUrl: {
+    type: String,
+    default: ''
+  },
+  secondaryMuscles: [{
+    type: String
+  }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Exercise', exerciseSchema);

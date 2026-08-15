@@ -16,8 +16,8 @@ router.get('/', async (req, res) => {
 // POST new exercise
 router.post('/', protect, admin, async (req, res) => {
   try {
-    const { name, muscle, defaultSets, defaultReps } = req.body;
-    const exercise = new Exercise({ name, muscle, defaultSets, defaultReps });
+    const { name, muscle, defaultSets, defaultReps, equipment, description, videoUrl, secondaryMuscles } = req.body;
+    const exercise = new Exercise({ name, muscle, defaultSets, defaultReps, equipment, description, videoUrl, secondaryMuscles });
     const saved = await exercise.save();
     res.status(201).json(saved);
   } catch (err) {
@@ -28,10 +28,10 @@ router.post('/', protect, admin, async (req, res) => {
 // PUT update exercise
 router.put('/:id', protect, admin, async (req, res) => {
   try {
-    const { name, muscle, defaultSets, defaultReps } = req.body;
+    const { name, muscle, defaultSets, defaultReps, equipment, description, videoUrl, secondaryMuscles } = req.body;
     const exercise = await Exercise.findByIdAndUpdate(
       req.params.id,
-      { name, muscle, defaultSets, defaultReps },
+      { name, muscle, defaultSets, defaultReps, equipment, description, videoUrl, secondaryMuscles },
       { new: true, runValidators: true }
     );
     if (!exercise) return res.status(404).json({ message: 'Không tìm thấy bài tập' });
