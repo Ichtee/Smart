@@ -2,18 +2,14 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useLanguage } from '@/contexts/LanguageContext';
+import GoogleTranslate from './GoogleTranslate';
 
 export default function Header() {
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userName, setUserName] = useState('Người dùng');
-  
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const langDropdownRef = useRef<HTMLDivElement>(null);
-  const { lang, setLang, t } = useLanguage();
 
   useEffect(() => {
     try {
@@ -27,9 +23,6 @@ export default function Header() {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
-      }
-      if (langDropdownRef.current && !langDropdownRef.current.contains(event.target as Node)) {
-        setIsLangDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -53,39 +46,15 @@ export default function Header() {
           </Link>
           
           <nav className="hidden md:flex items-center gap-6 text-xs text-slate-400 font-bold uppercase tracking-wider">
-            <Link href="/workouts" className="hover:text-[#00E5FF] transition">{t('header.workouts')}</Link>
-            <Link href="/nutrition" className="hover:text-[#00E5FF] transition">{t('header.nutrition')}</Link>
+            <Link href="/workouts" className="hover:text-[#00E5FF] transition">Lịch tập luyện</Link>
+            <Link href="/nutrition" className="hover:text-[#00E5FF] transition">Nhật ký ăn uống</Link>
           </nav>
         </div>
 
         {/* Desktop Controls */}
         <div className="hidden md:flex items-center gap-4">
-          {/* Language Switcher */}
-          <div className="relative" ref={langDropdownRef}>
-            <button 
-              onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-              className="flex items-center gap-2 px-3 py-2 bg-[#131B2E] hover:bg-[#18233C] rounded-xl text-xs transition border border-slate-800 text-slate-300 font-bold"
-            >
-              {lang === 'vi' ? '🇻🇳 VI' : '🇺🇸 EN'}
-            </button>
-            
-            {isLangDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-36 bg-[#131B2E] border border-slate-800 rounded-xl shadow-2xl py-2 z-50 overflow-hidden">
-                <button 
-                  onClick={() => { setLang('vi'); setIsLangDropdownOpen(false); }}
-                  className={`w-full text-left px-4 py-2 text-xs font-bold transition ${lang === 'vi' ? 'bg-[#18233C] text-[#00E5FF]' : 'text-slate-300 hover:bg-[#18233C] hover:text-[#00E5FF]'}`}
-                >
-                  🇻🇳 Tiếng Việt
-                </button>
-                <button 
-                  onClick={() => { setLang('en'); setIsLangDropdownOpen(false); }}
-                  className={`w-full text-left px-4 py-2 text-xs font-bold transition ${lang === 'en' ? 'bg-[#18233C] text-[#00E5FF]' : 'text-slate-300 hover:bg-[#18233C] hover:text-[#00E5FF]'}`}
-                >
-                  🇺🇸 English
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Google Translate Auto Translator */}
+          <GoogleTranslate />
 
           {/* Profile Dropdown */}
           <div className="relative" ref={dropdownRef}>
@@ -96,7 +65,7 @@ export default function Header() {
               <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-[#00E5FF] flex items-center justify-center font-black text-xs uppercase border border-cyan-500/30">
                 {userName.charAt(0)}
               </div>
-              <span className="text-slate-300">{t('header.hello')} <strong className="text-[#00E5FF] font-bold">{userName}</strong></span>
+              <span className="text-slate-300">Chào, <strong className="text-[#00E5FF] font-bold">{userName}</strong></span>
               <svg className={`w-4 h-4 text-slate-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
               </svg>
@@ -109,7 +78,7 @@ export default function Header() {
                   className="block px-4 py-2 text-xs font-bold text-slate-300 hover:bg-[#18233C] hover:text-[#00E5FF] transition"
                   onClick={() => setIsDropdownOpen(false)}
                 >
-                  {t('header.profile')}
+                  Hồ sơ cá nhân
                 </Link>
                 <div className="h-px bg-slate-800 my-1" />
                 <button 
@@ -119,22 +88,16 @@ export default function Header() {
                   }}
                   className="w-full text-left px-4 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/10 transition"
                 >
-                  {t('header.logout')}
+                  Đăng xuất
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Mobile Hamburger Toggle Button */}
+        {/* Mobile Controls */}
         <div className="flex md:hidden items-center gap-3">
-          {/* Language Switcher Quick Badge */}
-          <button 
-            onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
-            className="px-2.5 py-1.5 bg-[#131B2E] border border-slate-800 rounded-xl text-xs font-bold text-slate-300"
-          >
-            {lang === 'vi' ? '🇻🇳' : '🇺🇸'}
-          </button>
+          <GoogleTranslate />
 
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -161,7 +124,7 @@ export default function Header() {
               {userName.charAt(0)}
             </div>
             <div>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">{t('header.hello')}</p>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Chào,</p>
               <p className="text-sm font-extrabold text-white">{userName}</p>
             </div>
           </div>
@@ -172,7 +135,7 @@ export default function Header() {
               onClick={() => setIsMobileMenuOpen(false)}
               className="px-4 py-2.5 rounded-xl hover:bg-[#18233C] text-slate-200 hover:text-[#00E5FF] transition flex items-center gap-2"
             >
-              <span>🏋️</span> {t('header.workouts')}
+              <span>🏋️</span> Lịch tập luyện
             </Link>
             
             <Link 
@@ -180,7 +143,7 @@ export default function Header() {
               onClick={() => setIsMobileMenuOpen(false)}
               className="px-4 py-2.5 rounded-xl hover:bg-[#18233C] text-slate-200 hover:text-[#00E5FF] transition flex items-center gap-2"
             >
-              <span>🥗</span> {t('header.nutrition')}
+              <span>🥗</span> Nhật ký ăn uống
             </Link>
 
             <Link 
@@ -188,7 +151,7 @@ export default function Header() {
               onClick={() => setIsMobileMenuOpen(false)}
               className="px-4 py-2.5 rounded-xl hover:bg-[#18233C] text-slate-200 hover:text-[#00E5FF] transition flex items-center gap-2"
             >
-              <span>👤</span> {t('header.profile')}
+              <span>👤</span> Hồ sơ cá nhân
             </Link>
 
             <button 
@@ -198,7 +161,7 @@ export default function Header() {
               }}
               className="w-full text-left px-4 py-2.5 rounded-xl text-rose-400 hover:bg-rose-500/10 transition flex items-center gap-2"
             >
-              <span>🚪</span> {t('header.logout')}
+              <span>🚪</span> Đăng xuất
             </button>
           </nav>
         </div>

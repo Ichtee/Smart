@@ -32,20 +32,27 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
 
   // Helper function to get translation by dot notation (e.g. 'header.workouts')
   const t = (key: string): string => {
-    if (!isMounted) return ''; // Prevent hydration mismatch
-
     const keys = key.split('.');
-    let result: any = translations[lang];
+    let result: any = translations[lang] || translations['vi'];
     
     for (const k of keys) {
       if (result && typeof result === 'object' && k in result) {
         result = result[k];
       } else {
-        return key; // Fallback to key if not found
+        // Fallback to Vietnamese translation if missing in target lang
+        let fallbackResult: any = translations['vi'];
+        for (const fk of keys) {
+          if (fallbackResult && typeof fallbackResult === 'object' && fk in fallbackResult) {
+            fallbackResult = fallbackResult[fk];
+          } else {
+            return key;
+          }
+        }
+        return typeof fallbackResult === 'string' ? fallbackResult : key;
       }
     }
     
-    return result as string;
+    return typeof result === 'string' ? result : key;
   };
 
   return (
