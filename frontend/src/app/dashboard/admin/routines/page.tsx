@@ -247,6 +247,44 @@ export default function RoutineManagement() {
     setFormData({ ...formData, schedule: newSchedule });
   };
 
+  const addExerciseToDay = (dayIndex: number) => {
+    const newSchedule = [...formData.schedule];
+    if (!newSchedule[dayIndex].exercises) {
+      newSchedule[dayIndex].exercises = [];
+    }
+    const defaultEx = exercises[0] ? exercises[0].name : '';
+    const defaultMuscle = exercises[0] ? exercises[0].muscle : 'chest';
+    newSchedule[dayIndex].exercises.push({
+      exerciseName: defaultEx,
+      muscle: defaultMuscle,
+      sets: 3,
+      repsRange: '8-12',
+      rir: '1',
+      restTimeSeconds: 180
+    });
+    setFormData({ ...formData, schedule: newSchedule });
+  };
+
+  const removeExerciseFromDay = (dayIndex: number, exIndex: number) => {
+    const newSchedule = [...formData.schedule];
+    newSchedule[dayIndex].exercises.splice(exIndex, 1);
+    setFormData({ ...formData, schedule: newSchedule });
+  };
+
+  const updateExerciseInDay = (dayIndex: number, exIndex: number, field: string, value: any) => {
+    const newSchedule = [...formData.schedule];
+    if (field === 'exerciseName') {
+      const foundEx = exercises.find(e => e.name === value);
+      newSchedule[dayIndex].exercises[exIndex].exerciseName = value;
+      if (foundEx) {
+        newSchedule[dayIndex].exercises[exIndex].muscle = foundEx.muscle;
+      }
+    } else {
+      newSchedule[dayIndex].exercises[exIndex][field] = value;
+    }
+    setFormData({ ...formData, schedule: newSchedule });
+  };
+
   const filteredRoutines = routines.filter(r => {
     const term = searchTerm.toLowerCase();
     return r.name?.toLowerCase().includes(term) || r.id?.toLowerCase().includes(term);
@@ -416,15 +454,29 @@ export default function RoutineManagement() {
                             className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500 w-1/3"
                             required
                           >
-                            <option value="" disabled>-- Chọn Thứ --</option>
-                            <option value="Thứ 2">Thứ 2</option>
-                            <option value="Thứ 3">Thứ 3</option>
-                            <option value="Thứ 4">Thứ 4</option>
-                            <option value="Thứ 5">Thứ 5</option>
-                            <option value="Thứ 6">Thứ 6</option>
-                            <option value="Thứ 7">Thứ 7</option>
-                            <option value="Chủ nhật">Chủ nhật</option>
-                            {!['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'].includes(dayObj.day) && dayObj.day && (
+                            <option value="" disabled>-- Chọn Thứ / Ngày --</option>
+                            <optgroup label="Theo Thứ">
+                              <option value="Thứ 2">Thứ 2</option>
+                              <option value="Thứ 3">Thứ 3</option>
+                              <option value="Thứ 4">Thứ 4</option>
+                              <option value="Thứ 5">Thứ 5</option>
+                              <option value="Thứ 6">Thứ 6</option>
+                              <option value="Thứ 7">Thứ 7</option>
+                              <option value="Chủ nhật">Chủ nhật</option>
+                            </optgroup>
+                            <optgroup label="Theo Ngày / Buổi">
+                              <option value="Ngày 1">Ngày 1</option>
+                              <option value="Ngày 2">Ngày 2</option>
+                              <option value="Ngày 3">Ngày 3</option>
+                              <option value="Ngày 4">Ngày 4</option>
+                              <option value="Ngày 5">Ngày 5</option>
+                              <option value="Ngày 6">Ngày 6</option>
+                              <option value="Ngày 7">Ngày 7</option>
+                              <option value="Buổi A">Buổi A</option>
+                              <option value="Buổi B">Buổi B</option>
+                              <option value="Nghỉ">Nghỉ</option>
+                            </optgroup>
+                            {dayObj.day && (
                               <option value={dayObj.day}>{dayObj.day}</option>
                             )}
                           </select>
@@ -446,8 +498,10 @@ export default function RoutineManagement() {
                         </button>
                       </div>
 
-                      <div className="pl-4 border-l-2 border-white/5 space-y-3">
-                        {dayObj.targets.map((target: any, targetIndex: number) => (
+                      {/* Muscle Targets */}
+                      <div className="pl-4 border-l-2 border-cyan-500/30 space-y-3">
+                        <p className="text-xs font-bold text-[#00E5FF] uppercase tracking-wider">Target Nhóm Cơ (Chỉ tiêu)</p>
+                        {dayObj.targets?.map((target: any, targetIndex: number) => (
                           <div key={targetIndex} className="flex gap-3 items-center bg-zinc-900 p-2 rounded-xl border border-white/5">
                             <select 
                               value={target.id}
@@ -465,7 +519,7 @@ export default function RoutineManagement() {
                             </select>
                             
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-zinc-500">Sets</span>
+                              <span className="text-xs text-zinc-500">Số bài</span>
                               <input 
                                 type="number" 
                                 min="1"
@@ -480,7 +534,7 @@ export default function RoutineManagement() {
                               type="button"
                               onClick={() => removeTarget(dayIndex, targetIndex)}
                               className="text-zinc-600 hover:text-rose-400 p-2"
-                              title="Xóa bài tập này"
+                              title="Xóa target này"
                             >
                               &times;
                             </button>
@@ -492,7 +546,80 @@ export default function RoutineManagement() {
                           onClick={() => addTarget(dayIndex)}
                           className="text-xs px-3 py-1.5 border border-dashed border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white rounded-lg transition-colors w-full"
                         >
-                          + Thêm Bài Tập
+                          + Thêm Target Nhóm Cơ
+                        </button>
+                      </div>
+
+                      {/* Prescribed Exercises from Catalog */}
+                      <div className="pl-4 border-l-2 border-emerald-500/30 space-y-3 pt-2">
+                        <div className="flex justify-between items-center">
+                          <p className="text-xs font-bold text-[#00FF87] uppercase tracking-wider">Danh Sách Bài Tập Mẫu (Kèm chỉ định từ Thư viện)</p>
+                          <span className="text-[10px] text-slate-400">Đã đồng bộ với Thư viện bài tập</span>
+                        </div>
+
+                        {dayObj.exercises?.map((exObj: any, exIndex: number) => (
+                          <div key={exIndex} className="p-3 bg-zinc-900 rounded-xl border border-white/5 space-y-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <select
+                                value={exObj.exerciseName}
+                                onChange={(e) => updateExerciseInDay(dayIndex, exIndex, 'exerciseName', e.target.value)}
+                                className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#00FF87] flex-1 min-w-[200px]"
+                              >
+                                <option value="" disabled>-- Chọn bài tập từ Thư viện --</option>
+                                {exercises.map((ex: any) => (
+                                  <option key={ex._id || ex.id || ex.name} value={ex.name}>
+                                    {ex.name} ({musclesMap[ex.muscle] || ex.muscle})
+                                  </option>
+                                ))}
+                                {!exercises.some((e: any) => e.name === exObj.exerciseName) && exObj.exerciseName && (
+                                  <option value={exObj.exerciseName}>{exObj.exerciseName}</option>
+                                )}
+                              </select>
+
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="text-slate-400">Hiệp:</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={exObj.sets || 3}
+                                  onChange={(e) => updateExerciseInDay(dayIndex, exIndex, 'sets', parseInt(e.target.value) || 1)}
+                                  className="w-12 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-center text-white font-bold"
+                                />
+
+                                <span className="text-slate-400">Reps:</span>
+                                <input
+                                  type="text"
+                                  value={exObj.repsRange || '8-12'}
+                                  onChange={(e) => updateExerciseInDay(dayIndex, exIndex, 'repsRange', e.target.value)}
+                                  className="w-16 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-center text-white font-bold"
+                                />
+
+                                <span className="text-amber-400 font-semibold">RIR:</span>
+                                <input
+                                  type="text"
+                                  value={exObj.rir || '1'}
+                                  onChange={(e) => updateExerciseInDay(dayIndex, exIndex, 'rir', e.target.value)}
+                                  className="w-12 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-center text-white font-bold"
+                                />
+
+                                <button
+                                  type="button"
+                                  onClick={() => removeExerciseFromDay(dayIndex, exIndex)}
+                                  className="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs font-bold"
+                                >
+                                  Xóa
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          onClick={() => addExerciseToDay(dayIndex)}
+                          className="text-xs px-3 py-1.5 border border-dashed border-emerald-500/40 text-emerald-400 hover:border-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors w-full font-bold"
+                        >
+                          + Thêm Bài Tập Chỉ Định Từ Thư Viện
                         </button>
                       </div>
 
