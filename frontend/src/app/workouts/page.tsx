@@ -121,13 +121,36 @@ const DAY_ORDER: Record<string, number> = {
   'Chủ nhật': 7,
 };
 
+function LiveClock() {
+  const [time, setTime] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setTime(new Date());
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formattedTime = time ? time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '20:16:36';
+  const formattedDate = time ? time.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Thu, Aug 13, 2026';
+
+  return (
+    <div suppressHydrationWarning className="hidden sm:flex items-center gap-3 bg-[#0B101D] px-4 py-2.5 rounded-2xl border border-slate-800/80 shadow-inner">
+      <div className="flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+        <span className="w-2 h-2 rounded-full bg-[#00FF87] animate-ping" />
+        <span className="text-[10px] font-bold text-[#00FF87] uppercase tracking-wider">LIVE</span>
+      </div>
+      <span className="text-xl sm:text-2xl font-mono font-black text-[#00E5FF] tracking-tight">{formattedTime}</span>
+      <span className="text-xs text-slate-400 font-medium border-l border-slate-800 pl-3">{formattedDate}</span>
+    </div>
+  );
+}
+
 export default function Workouts() {
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [modelType, setModelType] = useState<'anterior' | 'posterior'>('anterior');
   const [activeRoutineId, setActiveRoutineId] = useState<string>('ppl');
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0);
   const [routinesMap, setRoutinesMap] = useState<Record<string, any>>(DEFAULT_ROUTINES);
-  const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   const [showMobileBodyModel, setShowMobileBodyModel] = useState<boolean>(false);
   const [isFetching, setIsFetching] = useState<boolean>(true);
@@ -277,10 +300,6 @@ export default function Workouts() {
     };
 
     fetchStreak();
-
-    setCurrentTime(new Date());
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
   }, []);
 
   const handleRoutineChange = (newId: string) => {
@@ -562,14 +581,12 @@ export default function Workouts() {
     window.addEventListener('storage', syncWorkoutTab);
     window.addEventListener('smart_nutrition_updated', syncWorkoutTab);
     window.addEventListener('smart_workout_updated', syncWorkoutTab);
-    window.addEventListener('focus', syncWorkoutTab);
 
     return () => {
       isCancelled = true;
       window.removeEventListener('storage', syncWorkoutTab);
       window.removeEventListener('smart_nutrition_updated', syncWorkoutTab);
       window.removeEventListener('smart_workout_updated', syncWorkoutTab);
-      window.removeEventListener('focus', syncWorkoutTab);
     };
   }, [currentDayKey, legacyDayKey, allExercises, todayDateStr, activeTabDateStr, currentTabWorkout, isFetching]);
 
@@ -879,38 +896,38 @@ export default function Workouts() {
     });
   }, [allExercises, selectedMuscle, librarySearchTerm]);
 
-  let highlighterData: any[] = [];
-  let modelColors = ['#00E5FF', '#00FF87'];
+  const { highlighterData, modelColors } = useMemo(() => {
+    let data: any[] = [];
+    let colors = ['#00E5FF', '#00FF87'];
 
-  if (effectiveTargets.length > 0) {
-    const rawMuscles: string[] = effectiveTargets.map((t: any) => normalizeMuscleId(t.id));
-    const allMuscles = Array.from(new Set(rawMuscles)).filter((m: string) => VALID_MODEL_MUSCLES.has(m));
-    const safeSelected = selectedMuscle ? normalizeMuscleId(selectedMuscle) : null;
+    if (effectiveTargets.length > 0) {
+      const rawMuscles: string[] = effectiveTargets.map((t: any) => normalizeMuscleId(t.id));
+      const allMuscles = Array.from(new Set(rawMuscles)).filter((m: string) => VALID_MODEL_MUSCLES.has(m));
+      const safeSelected = selectedMuscle ? normalizeMuscleId(selectedMuscle) : null;
 
-    if (safeSelected && VALID_MODEL_MUSCLES.has(safeSelected)) {
-      highlighterData = [
-        { name: 'All', muscles: allMuscles },
-        { name: 'Selected', muscles: [safeSelected] }
-      ];
-      modelColors = ['#00E5FF', '#00FF87'];
-    } else {
-      highlighterData = [
-        { name: currentTabWorkout?.name || 'Workout', muscles: allMuscles }
-      ];
-      modelColors = ['#00E5FF'];
+      if (safeSelected && VALID_MODEL_MUSCLES.has(safeSelected)) {
+        data = [
+          { name: 'All', muscles: allMuscles },
+          { name: 'Selected', muscles: [safeSelected] }
+        ];
+        colors = ['#00E5FF', '#00FF87'];
+      } else {
+        data = [
+          { name: currentTabWorkout?.name || 'Workout', muscles: allMuscles }
+        ];
+        colors = ['#00E5FF'];
+      }
+    } else if (selectedMuscle) {
+      const safeSelected = normalizeMuscleId(selectedMuscle);
+      if (VALID_MODEL_MUSCLES.has(safeSelected)) {
+        data = [
+          { name: 'Selected', muscles: [safeSelected] }
+        ];
+        colors = ['#00FF87'];
+      }
     }
-  } else if (selectedMuscle) {
-    const safeSelected = normalizeMuscleId(selectedMuscle);
-    if (VALID_MODEL_MUSCLES.has(safeSelected)) {
-      highlighterData = [
-        { name: 'Selected', muscles: [safeSelected] }
-      ];
-      modelColors = ['#00FF87'];
-    }
-  }
-
-  const formattedTime = currentTime ? currentTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '20:16:36';
-  const formattedDate = currentTime ? currentTime.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Thu, Aug 13, 2026';
+    return { highlighterData: data, modelColors: colors };
+  }, [effectiveTargets, selectedMuscle, currentTabWorkout?.name]);
 
   const completedCount = activeSelectedExercises.filter(ex => ex.completed).length;
   const progressPercent = (isWorkoutSaved && activeSelectedExercises.length > 0)
@@ -934,14 +951,14 @@ export default function Workouts() {
   return (
     <div suppressHydrationWarning className="min-h-screen bg-[#0B0F19] text-white p-3 sm:p-6 md:p-8 relative overflow-x-hidden font-sans">
       {/* Smart Ambient Glow Effects */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none" />
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[100px] pointer-events-none transform-gpu" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[100px] pointer-events-none transform-gpu" />
 
       <div className="max-w-7xl mx-auto relative z-10 space-y-4 sm:space-y-6">
         <Header />
 
         {/* Top Control Bar: Brand / Live Time / Routine Selector */}
-        <div className="p-4 sm:p-6 bg-[#131B2E]/90 backdrop-blur-2xl border border-slate-800/80 rounded-2xl sm:rounded-3xl shadow-2xl shadow-black/80 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+        <div className="p-4 sm:p-6 bg-[#131B2E] border border-slate-800/80 rounded-2xl sm:rounded-3xl shadow-2xl shadow-black/80 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
 
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-[#00E5FF] to-[#00FF87] p-0.5 shadow-lg shadow-[#00E5FF]/20 flex items-center justify-center shrink-0">
@@ -958,20 +975,12 @@ export default function Workouts() {
           </div>
 
           {/* Live Time Clock Widget */}
-          <div suppressHydrationWarning className="hidden sm:flex items-center gap-3 bg-[#0B101D] px-4 py-2.5 rounded-2xl border border-slate-800/80 shadow-inner">
-            <div className="flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-1 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-[#00FF87] animate-ping" />
-              <span className="text-[10px] font-bold text-[#00FF87] uppercase tracking-wider">LIVE</span>
-            </div>
-            <span className="text-xl sm:text-2xl font-mono font-black text-[#00E5FF] tracking-tight">{formattedTime}</span>
-            <span className="text-xs text-slate-400 font-medium border-l border-slate-800 pl-3">{formattedDate}</span>
-          </div>
+          <LiveClock />
 
           {/* Active Routine Selection Dropdown */}
           <div className="w-full md:w-auto flex flex-col sm:flex-row sm:items-center gap-2 bg-[#0B101D] p-3 sm:p-0 rounded-2xl border border-slate-800/80 md:border-none md:bg-transparent">
             <label className="text-[11px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
               <span>LỊCH TẬP ĐANG CHỌN:</span>
-              <span className="sm:hidden text-[#00E5FF] text-[10px] font-mono">{formattedTime}</span>
             </label>
             <select
               value={activeRoutineId}
