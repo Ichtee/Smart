@@ -210,10 +210,6 @@ export default function Workouts() {
         }
       }
 
-      if (userActiveDayIdx !== null) {
-        setCurrentDayIndex(userActiveDayIdx);
-      }
-
       const mapped = exercisesData.map((ex: any) => ({
         id: ex._id,
         muscle: ex.muscle,
@@ -325,31 +321,7 @@ export default function Workouts() {
   }, [sortedSchedule, realTodayString]);
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (!token && sortedSchedule.length > 0) {
-      // Priority 1: Check if there's a last trained day index for this routine for unauthenticated users
-      const lastTrainedRoutineId = localStorage.getItem('smart_last_trained_routine_id');
-      const lastTrainedDayIdxStr = localStorage.getItem('smart_last_trained_day_index');
-
-      if (lastTrainedRoutineId === activeRoutineId && lastTrainedDayIdxStr !== null) {
-        const trainedIdx = parseInt(lastTrainedDayIdxStr, 10);
-        if (!isNaN(trainedIdx) && trainedIdx >= 0 && trainedIdx < sortedSchedule.length) {
-          setCurrentDayIndex(trainedIdx);
-          return;
-        }
-      }
-
-      // Priority 2: Routine-specific saved day index
-      const savedDayIdxStr = localStorage.getItem(`smart_last_day_index_${activeRoutineId}`);
-      if (savedDayIdxStr !== null) {
-        const savedIdx = parseInt(savedDayIdxStr, 10);
-        if (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < sortedSchedule.length) {
-          setCurrentDayIndex(savedIdx);
-          return;
-        }
-      }
-
-      // Priority 3: Real today day of week match
+    if (sortedSchedule.length > 0) {
       const matchIndex = sortedSchedule.findIndex((s: any) => s.day === realTodayString);
       if (matchIndex !== -1) {
         setCurrentDayIndex(matchIndex);
