@@ -13,6 +13,28 @@ export default function Header() {
 
   useEffect(() => {
     try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (
+            key.startsWith('smart_sel_') ||
+            key.startsWith('smart_comp_') ||
+            key.startsWith('smart_saved_') ||
+            key.startsWith('smart_det_') ||
+            key.startsWith('smart_meals_') ||
+            key.startsWith('smart_water_') ||
+            key.startsWith('smart_daily_cal_') ||
+            key === 'smart_workout_logs' ||
+            key === 'smart_streak_history'
+          )) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+      }
+
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const user = JSON.parse(userStr);
@@ -30,8 +52,7 @@ export default function Header() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.clear();
     router.push('/login');
   };
 

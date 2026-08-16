@@ -103,7 +103,7 @@ export default function Nutrition() {
           });
           if (res.ok) {
             const apiLog = await res.json();
-            if (apiLog && (apiLog.waterGlasses > 0 || (apiLog.meals && Object.values(apiLog.meals).some((m: any) => m && m.length > 0)))) {
+            if (apiLog) {
               targetWater = apiLog.waterGlasses || 0;
               targetMl = apiLog.mlPerGlass || 250;
               targetMeals = {
@@ -118,7 +118,7 @@ export default function Nutrition() {
         } catch (e) { }
       }
 
-      if (!loadedFromApi) {
+      if (!token && !loadedFromApi) {
         try {
           let savedWater = localStorage.getItem(`smart_water_${selectedDate}`);
           let savedMeals = localStorage.getItem(`smart_meals_${selectedDate}`);

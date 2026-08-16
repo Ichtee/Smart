@@ -230,8 +230,11 @@ export default function Workouts() {
         }
       } catch (e) { }
       try {
-        const history = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
-        setStreakDays(Math.max(1, history.length));
+        const token = localStorage.getItem('token');
+        if (!token) {
+          const history = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
+          setStreakDays(Math.max(1, history.length));
+        }
       } catch (e) { }
     };
 
@@ -452,7 +455,7 @@ export default function Workouts() {
           });
           if (res.ok) {
             const apiLog = await res.json();
-            if (apiLog && (apiLog.isSaved || (apiLog.selectedIds && apiLog.selectedIds.length > 0))) {
+            if (apiLog) {
               selectedIds = apiLog.selectedIds || [];
               completedIds = apiLog.completedIds || [];
               detailsMap = apiLog.detailsMap || {};
@@ -463,8 +466,8 @@ export default function Workouts() {
         } catch (e) { }
       }
 
-      // 2. Fallback to localStorage if API had no saved session
-      if (!loadedFromApi) {
+      // 2. Fallback to localStorage ONLY if user is NOT logged in
+      if (!token && !loadedFromApi) {
         let savedSel = localStorage.getItem(`smart_sel_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_sel_${todayDateStr}_${currentDayKey}`);
         let savedComp = localStorage.getItem(`smart_comp_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_comp_${todayDateStr}_${currentDayKey}`);
         let savedSaved = localStorage.getItem(`smart_saved_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_saved_${todayDateStr}_${currentDayKey}`);
