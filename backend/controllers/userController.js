@@ -191,6 +191,9 @@ const loginUser = async (req, res) => {
         goal: user.goal,
         activityLevel: user.activityLevel,
         role: user.role,
+        lastActiveRoutineId: user.lastActiveRoutineId || 'ppl',
+        lastActiveRoutineName: user.lastActiveRoutineName || '',
+        lastActiveDayIndex: user.lastActiveDayIndex || 0,
         token: generateToken(user._id),
       });
     } else {
@@ -342,6 +345,9 @@ const updateProfile = async (req, res) => {
 
       if (req.body.goal !== undefined) user.goal = req.body.goal;
       if (req.body.activityLevel !== undefined) user.activityLevel = req.body.activityLevel;
+      if (req.body.lastActiveRoutineId !== undefined) user.lastActiveRoutineId = req.body.lastActiveRoutineId;
+      if (req.body.lastActiveRoutineName !== undefined) user.lastActiveRoutineName = req.body.lastActiveRoutineName;
+      if (req.body.lastActiveDayIndex !== undefined) user.lastActiveDayIndex = req.body.lastActiveDayIndex;
 
       if (req.body.password) {
         const salt = await bcrypt.genSalt(10);
@@ -362,6 +368,9 @@ const updateProfile = async (req, res) => {
         goal: updatedUser.goal,
         activityLevel: updatedUser.activityLevel,
         role: updatedUser.role,
+        lastActiveRoutineId: updatedUser.lastActiveRoutineId,
+        lastActiveRoutineName: updatedUser.lastActiveRoutineName,
+        lastActiveDayIndex: updatedUser.lastActiveDayIndex,
         token: generateToken(updatedUser._id),
       });
     } else {

@@ -176,17 +176,42 @@ export default function Workouts() {
       });
       setRoutinesMap(newMap);
 
-      // Restore last selected active routine if present
-      // Restore last trained routine (chốt & tập gần nhất) if present
-      const lastTrainedRoutineId = localStorage.getItem('smart_last_trained_routine_id');
-      const savedRoutineId = localStorage.getItem('smart_last_active_routine_id');
+      let userActiveRoutineId = '';
+      let userActiveDayIdx: number | null = null;
 
-      if (lastTrainedRoutineId && newMap[lastTrainedRoutineId]) {
-        setActiveRoutineId(lastTrainedRoutineId);
-      } else if (savedRoutineId && newMap[savedRoutineId]) {
-        setActiveRoutineId(savedRoutineId);
-      } else if (routinesData.length > 0) {
-        setActiveRoutineId(routinesData[0].id);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (token) {
+        try {
+          const profileRes = await fetch(`${API_URL}/api/users/profile`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (profileRes.ok) {
+            const userProfile = await profileRes.json();
+            if (userProfile.lastActiveRoutineId) userActiveRoutineId = userProfile.lastActiveRoutineId;
+            if (userProfile.lastActiveDayIndex !== undefined && userProfile.lastActiveDayIndex !== null) {
+              userActiveDayIdx = userProfile.lastActiveDayIndex;
+            }
+          }
+        } catch (e) { }
+      }
+
+      if (userActiveRoutineId && newMap[userActiveRoutineId]) {
+        setActiveRoutineId(userActiveRoutineId);
+      } else {
+        const lastTrainedRoutineId = localStorage.getItem('smart_last_trained_routine_id');
+        const savedRoutineId = localStorage.getItem('smart_last_active_routine_id');
+
+        if (lastTrainedRoutineId && newMap[lastTrainedRoutineId]) {
+          setActiveRoutineId(lastTrainedRoutineId);
+        } else if (savedRoutineId && newMap[savedRoutineId]) {
+          setActiveRoutineId(savedRoutineId);
+        } else if (routinesData.length > 0) {
+          setActiveRoutineId(routinesData[0].id);
+        }
+      }
+
+      if (userActiveDayIdx !== null) {
+        setCurrentDayIndex(userActiveDayIdx);
       }
 
       const mapped = exercisesData.map((ex: any) => ({
@@ -207,6 +232,23 @@ export default function Workouts() {
       console.error('Failed to fetch routines/exercises:', err);
       setFetchError(true);
       setIsFetching(false);
+    }
+  };
+
+  const pushUserProfileUpdate = async (data: Record<string, any>) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      await fetch(`${API_URL}/api/users/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+    } catch (e) {
+      console.error('Failed to update active routine profile:', e);
     }
   };
 
@@ -247,24 +289,22 @@ export default function Workouts() {
 
   const handleRoutineChange = (newId: string) => {
     setActiveRoutineId(newId);
-    localStorage.setItem('smart_last_active_routine_id', newId);
     const selectedRoutine = routinesMap[newId];
     if (selectedRoutine && selectedRoutine.name) {
-      localStorage.setItem('smart_last_active_routine_name', selectedRoutine.name);
+      pushUserProfileUpdate({
+        lastActiveRoutineId: newId,
+        lastActiveRoutineName: selectedRoutine.name
+      });
+    } else {
+      pushUserProfileUpdate({ lastActiveRoutineId: newId });
     }
   };
 
   const activeRoutine = routinesMap[activeRoutineId];
 
-  useEffect(() => {
-    if (activeRoutine && activeRoutine.name) {
-      localStorage.setItem('smart_last_active_routine_name', activeRoutine.name);
-    }
-  }, [activeRoutine]);
-
   const handleSelectDayTab = (index: number) => {
     setCurrentDayIndex(index);
-    localStorage.setItem(`smart_last_day_index_${activeRoutineId}`, index.toString());
+    pushUserProfileUpdate({ lastActiveDayIndex: index });
     setSelectedMuscle(null);
   };
 
@@ -285,8 +325,9 @@ export default function Workouts() {
   }, [sortedSchedule, realTodayString]);
 
   useEffect(() => {
-    if (sortedSchedule.length > 0) {
-      // Priority 1: Check if there's a last trained day index for this routine
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token && sortedSchedule.length > 0) {
+      // Priority 1: Check if there's a last trained day index for this routine for unauthenticated users
       const lastTrainedRoutineId = localStorage.getItem('smart_last_trained_routine_id');
       const lastTrainedDayIdxStr = localStorage.getItem('smart_last_trained_day_index');
 
@@ -675,14 +716,12 @@ export default function Workouts() {
     setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: true }));
     localStorage.setItem(`smart_saved_${activeTabDateStr}_${currentDayKey}`, 'true');
 
-    // Save as the last trained routine & day tab (họ đã chốt và tập)
-    localStorage.setItem('smart_last_trained_routine_id', activeRoutineId);
-    localStorage.setItem('smart_last_trained_day_index', currentDayIndex.toString());
-    localStorage.setItem('smart_last_active_routine_id', activeRoutineId);
-    if (activeRoutine && activeRoutine.name) {
-      localStorage.setItem('smart_last_trained_routine_name', activeRoutine.name);
-      localStorage.setItem('smart_last_active_routine_name', activeRoutine.name);
-    }
+    // Save as the last trained routine & day tab to MongoDB User Profile
+    pushUserProfileUpdate({
+      lastActiveRoutineId: activeRoutineId,
+      lastActiveRoutineName: activeRoutine?.name || '',
+      lastActiveDayIndex: currentDayIndex
+    });
 
     // Save structured workout log entry into smart_workout_logs for target date
     try {
@@ -744,9 +783,12 @@ export default function Workouts() {
       return;
     }
 
-    // Save as the last trained routine & day tab
-    localStorage.setItem('smart_last_trained_routine_id', activeRoutineId);
-    localStorage.setItem('smart_last_trained_day_index', currentDayIndex.toString());
+    // Save as the last trained routine & day tab to User Profile
+    pushUserProfileUpdate({
+      lastActiveRoutineId: activeRoutineId,
+      lastActiveRoutineName: activeRoutine?.name || '',
+      lastActiveDayIndex: currentDayIndex
+    });
 
     const isAlreadyComp = currentCompletedIds.includes(id);
     const newComp = isAlreadyComp ? currentCompletedIds.filter(i => i !== id) : [...currentCompletedIds, id];

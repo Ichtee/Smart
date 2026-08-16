@@ -38,7 +38,8 @@ export default function ProgressPage() {
     gender: 'Nam',
     height: 170,
     weight: 65,
-    goal: 'Tăng cơ'
+    goal: 'Tăng cơ',
+    lastActiveRoutineName: 'Lịch tập luyện'
   });
 
   // Workout History & Logs State
@@ -104,7 +105,8 @@ export default function ProgressPage() {
             gender: data.gender || 'Nam',
             height: Number(data.height) || 170,
             weight: Number(data.weight) || 65,
-            goal: data.goal || 'Tăng cơ'
+            goal: data.goal || 'Tăng cơ',
+            lastActiveRoutineName: data.lastActiveRoutineName || 'Lịch tập luyện'
           });
         }
 
@@ -357,13 +359,8 @@ export default function ProgressPage() {
   const caloriePercent = Math.min(100, Math.round((dailyCalories / targetCalories) * 100));
 
   const activeRoutineName = useMemo(() => {
-    if (typeof window === 'undefined') return 'Lịch tập luyện';
-    return (
-      localStorage.getItem('smart_last_trained_routine_name') ||
-      localStorage.getItem('smart_last_active_routine_name') ||
-      'Lịch tập luyện'
-    );
-  }, []);
+    return userProfile.lastActiveRoutineName || 'Lịch tập luyện';
+  }, [userProfile.lastActiveRoutineName]);
 
   // Selected Day Log Entry Details
   const selectedDayLog = useMemo(() => {
