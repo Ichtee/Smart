@@ -214,34 +214,34 @@ export default function Profile() {
                   <span className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-black">1</span>
                   Thông tin tài khoản
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-3 sm:gap-6">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Họ và tên</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Họ và tên</label>
                     <input
                       type="text"
                       name="name"
                       maxLength={50}
                       value={formData.name}
                       onChange={handleChange}
-                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tên đăng nhập (Username)</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tên đăng nhập</label>
                     <input
                       type="text"
                       value={formData.username}
-                      className="w-full bg-[#0B101D]/50 border border-slate-800/50 rounded-xl px-4 py-3 text-sm text-slate-500 cursor-not-allowed"
+                      className="w-full bg-[#0B101D]/50 border border-slate-800/50 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-500 cursor-not-allowed"
                       disabled
                     />
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email</label>
+                  <div className="col-span-2">
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email</label>
                     <input
                       type="email"
                       value={formData.email}
-                      className="w-full bg-[#0B101D]/50 border border-slate-800/50 rounded-xl px-4 py-3 text-sm text-slate-500 cursor-not-allowed"
+                      className="w-full bg-[#0B101D]/50 border border-slate-800/50 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-500 cursor-not-allowed"
                       disabled
                     />
                   </div>
@@ -255,14 +255,14 @@ export default function Profile() {
                   <span className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-sm font-black">2</span>
                   Chỉ số hình thể
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-3 sm:gap-6">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Giới tính</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Giới tính</label>
                     <select
                       name="gender"
                       value={formData.gender}
                       onChange={handleChange}
-                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
                     >
                       <option value="">Chưa cập nhật</option>
                       <option value="Nam">Nam</option>
@@ -271,7 +271,7 @@ export default function Profile() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tuổi</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tuổi</label>
                     <input
                       type="number"
                       name="age"
@@ -281,11 +281,11 @@ export default function Profile() {
                       onChange={handleChange}
                       onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                       placeholder="VD: 25"
-                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Chiều cao (cm)</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Chiều cao (cm)</label>
                     <input
                       type="number"
                       name="height"
@@ -295,11 +295,11 @@ export default function Profile() {
                       onChange={handleChange}
                       onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                       placeholder="VD: 170"
-                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Cân nặng (kg)</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Cân nặng (kg)</label>
                     <input
                       type="number"
                       name="weight"
@@ -309,16 +309,16 @@ export default function Profile() {
                       onChange={handleChange}
                       onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                       placeholder="VD: 65"
-                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
                     />
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mục tiêu tập luyện</label>
+                  <div className="col-span-2">
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mục tiêu tập luyện</label>
                     <select
                       name="goal"
                       value={formData.goal}
                       onChange={handleChange}
-                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
                     >
                       <option value="">Chưa cập nhật</option>
                       <option value="Tăng cơ">Tăng cơ (Muscle Gain)</option>

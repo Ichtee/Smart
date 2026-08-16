@@ -409,24 +409,24 @@ export default function ProgressPage() {
   return (
     <div suppressHydrationWarning className="min-h-screen bg-[#0B0F19] text-white p-3 sm:p-6 md:p-8 relative overflow-x-hidden font-sans">
       {/* Ambient Neon Glow Effects */}
-      <div className="hidden md:block absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none transform-gpu" />
-      <div className="hidden md:block absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none transform-gpu" />
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none transform-gpu" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none transform-gpu" />
 
       <div className="max-w-7xl mx-auto relative z-10 space-y-6">
         <Header />
 
         {/* Top Header Banner */}
-        <div className="p-6 bg-[#131B2E]/90 backdrop-blur-2xl border border-slate-800/80 rounded-3xl shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="p-4 sm:p-6 bg-[#131B2E]/90 backdrop-blur-2xl border border-slate-800/80 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="px-3 py-1 bg-emerald-950/80 text-[#00FF87] border border-emerald-500/40 rounded-full text-xs font-black uppercase tracking-wider">
                 BÁO CÁO TỔNG QUAN
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+            <h1 className="text-xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
               <span>📈</span> Báo Cáo Tiến Độ & Thống Kê
             </h1>
-            <p className="text-xs text-slate-400 font-medium mt-1">
+            <p className="text-[11px] sm:text-xs text-slate-400 font-medium mt-1">
               Theo dõi lịch tập luyện trong tháng, danh sách bài tập đã thực hiện và chỉ số dinh dưỡng Calo.
             </p>
           </div>
@@ -442,75 +442,75 @@ export default function ProgressPage() {
         </div>
 
         {/* High-Level Key Performance Indicators (KPIs) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           
           {/* KPI 1: Monthly Workouts */}
-          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-5 rounded-3xl space-y-3 shadow-xl">
+          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl space-y-2 sm:space-y-3 shadow-xl">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">BUỔI TẬP THÁNG NÀY</span>
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-[#00E5FF] flex items-center justify-center text-lg">
+              <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">BUỔI TẬP THÁNG</span>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-[#00E5FF] flex items-center justify-center text-sm sm:text-lg shrink-0">
                 📅
               </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-white">{monthCompletedCount}</span>
-              <span className="text-xs text-slate-400 font-semibold">/ {actualDaysInMonth} ngày</span>
+            <div className="flex items-baseline gap-1.5 sm:gap-2">
+              <span className="text-xl sm:text-3xl font-black text-white">{monthCompletedCount}</span>
+              <span className="text-[10px] sm:text-xs text-slate-400 font-semibold truncate">/ {actualDaysInMonth} ngày</span>
             </div>
-            <p className="text-[11px] text-emerald-400 font-bold">
-              ✓ Đạt {Math.round((monthCompletedCount / (actualDaysInMonth || 1)) * 100)}% chỉ tiêu tháng
+            <p className="text-[10px] sm:text-[11px] text-emerald-400 font-bold truncate">
+              ✓ Đạt {Math.round((monthCompletedCount / (actualDaysInMonth || 1)) * 100)}%
             </p>
           </div>
 
           {/* KPI 2: Active Streak */}
-          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-5 rounded-3xl space-y-3 shadow-xl">
+          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl space-y-2 sm:space-y-3 shadow-xl">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">CHUỖI STREAK</span>
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-lg">
+              <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">STREAK</span>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-sm sm:text-lg shrink-0">
                 🔥
               </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-white">{streakHistory.length}</span>
-              <span className="text-xs text-slate-400 font-semibold">ngày liên tục</span>
+            <div className="flex items-baseline gap-1.5 sm:gap-2">
+              <span className="text-xl sm:text-3xl font-black text-white">{streakHistory.length}</span>
+              <span className="text-[10px] sm:text-xs text-slate-400 font-semibold truncate">ngày liên tục</span>
             </div>
-            <p className="text-[11px] text-amber-300 font-bold">
-              ⚡ Kỷ lục rèn luyện cá nhân
+            <p className="text-[10px] sm:text-[11px] text-amber-300 font-bold truncate">
+              ⚡ Kỷ lục rèn luyện
             </p>
           </div>
 
           {/* KPI 3: Daily Calorie Progress */}
-          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-5 rounded-3xl space-y-3 shadow-xl">
+          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl space-y-2 sm:space-y-3 shadow-xl">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                CALO NGÀY {selectedCalendarDate ? selectedCalendarDate.split('-').reverse().join('/') : 'HÔM NAY'}
+              <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">
+                CALO NGÀY
               </span>
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[#00FF87] flex items-center justify-center text-lg">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[#00FF87] flex items-center justify-center text-sm sm:text-lg shrink-0">
                 🥗
               </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-[#00FF87]">{dailyCalories}</span>
-              <span className="text-xs text-slate-400 font-semibold">/ {targetCalories} kcal</span>
+            <div className="flex items-baseline gap-1.5 sm:gap-2">
+              <span className="text-xl sm:text-3xl font-black text-[#00FF87]">{dailyCalories}</span>
+              <span className="text-[10px] sm:text-xs text-slate-400 font-semibold truncate">/ {targetCalories} kcal</span>
             </div>
-            <div className="w-full h-2 bg-[#0B101D] rounded-full overflow-hidden border border-slate-800">
+            <div className="w-full h-1.5 sm:h-2 bg-[#0B101D] rounded-full overflow-hidden border border-slate-800">
               <div className="h-full bg-gradient-to-r from-[#00E5FF] to-[#00FF87] transition-all duration-500" style={{ width: `${caloriePercent}%` }} />
             </div>
           </div>
 
           {/* KPI 4: Energy Expenditure (TDEE) */}
-          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-5 rounded-3xl space-y-3 shadow-xl">
+          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl space-y-2 sm:space-y-3 shadow-xl">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">TDEE CHUYỂN HÓA</span>
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 flex items-center justify-center text-lg">
+              <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">TDEE</span>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 flex items-center justify-center text-sm sm:text-lg shrink-0">
                 ⚡
               </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-purple-300">{tdee}</span>
-              <span className="text-xs text-slate-400 font-semibold">kcal/ngày</span>
+            <div className="flex items-baseline gap-1.5 sm:gap-2">
+              <span className="text-xl sm:text-3xl font-black text-purple-300">{tdee}</span>
+              <span className="text-[10px] sm:text-xs text-slate-400 font-semibold truncate">kcal/ngày</span>
             </div>
-            <p className="text-[11px] text-purple-300 font-bold">
-              BMR Cơ bản: {bmr} kcal
+            <p className="text-[10px] sm:text-[11px] text-purple-300 font-bold truncate">
+              BMR: {bmr} kcal
             </p>
           </div>
 

@@ -18,55 +18,66 @@ export default function Dashboard() {
   }, [router]);
 
 
-  if (isLoading) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">Loading...</div>;
+  if (isLoading) return <div className="min-h-screen bg-[#0B0F19] flex items-center justify-center text-white">Đang tải...</div>;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-[#0B0F19] text-white p-4 sm:p-6 md:p-8 relative overflow-x-hidden font-sans">
+      {/* Ambient Neon Glow Effects */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none transform-gpu" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none transform-gpu" />
+
+      <div className="max-w-6xl mx-auto relative z-10 space-y-6">
         <Header />
+
         {/* Welcome Section */}
-        <div className="mb-10">
-          <h2 className="text-3xl font-semibold mb-2">Chào mừng trở lại! 👋</h2>
-          <p className="text-zinc-400">Hôm nay bạn muốn thực hiện hoạt động gì? (Chức năng đang phát triển)</p>
+        <div className="p-4 sm:p-6 bg-[#131B2E]/90 backdrop-blur-2xl border border-slate-800/80 rounded-2xl sm:rounded-3xl shadow-2xl">
+          <h2 className="text-xl sm:text-3xl font-extrabold mb-1 tracking-tight">Chào mừng trở lại! 👋</h2>
+          <p className="text-slate-400 text-xs sm:text-sm font-medium">Hệ Thống Luyện Tập & Quản Lý Thông Minh Smart Fitness</p>
         </div>
 
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Dashboard Grid - 3 Columns on Mobile & Desktop */}
+        <div className="grid grid-cols-3 gap-3 sm:gap-6">
           
           {/* Card 1: Food Diary */}
           <div 
             onClick={() => router.push('/nutrition')}
-            className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl hover:border-emerald-500/50 transition cursor-pointer group"
+            className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl hover:border-emerald-500/50 transition cursor-pointer group shadow-xl flex flex-col justify-between"
           >
-            <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center mb-4 text-2xl group-hover:scale-110 transition">
-              🥗
+            <div>
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 text-lg sm:text-2xl group-hover:scale-110 transition shrink-0">
+                🥗
+              </div>
+              <h3 className="text-xs sm:text-xl font-extrabold mb-1 text-white truncate">Nhật ký ăn uống</h3>
+              <p className="text-slate-400 text-[10px] sm:text-xs line-clamp-2">Ghi lại lượng calo và dinh dưỡng mỗi ngày.</p>
             </div>
-            <h3 className="text-xl font-semibold mb-2">Nhật ký ăn uống</h3>
-            <p className="text-zinc-400 text-sm">Ghi lại lượng calo và dinh dưỡng mỗi ngày của bạn.</p>
           </div>
 
           {/* Card 2: Workout Schedule */}
           <div 
             onClick={() => router.push('/workouts')}
-            className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl hover:border-cyan-500/50 transition cursor-pointer group"
+            className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl hover:border-cyan-500/50 transition cursor-pointer group shadow-xl flex flex-col justify-between"
           >
-            <div className="w-12 h-12 bg-cyan-500/10 text-cyan-400 rounded-xl flex items-center justify-center mb-4 text-2xl group-hover:scale-110 transition">
-              💪
+            <div>
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-cyan-500/10 border border-cyan-500/20 text-[#00E5FF] rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 text-lg sm:text-2xl group-hover:scale-110 transition shrink-0">
+                🏋️
+              </div>
+              <h3 className="text-xs sm:text-xl font-extrabold mb-1 text-white truncate">Lịch tập luyện</h3>
+              <p className="text-slate-400 text-[10px] sm:text-xs line-clamp-2">Thiết kế và theo dõi bài tập theo nhóm cơ.</p>
             </div>
-            <h3 className="text-xl font-semibold mb-2">Lịch tập luyện</h3>
-            <p className="text-zinc-400 text-sm">Thiết kế và theo dõi các bài tập cho từng nhóm cơ.</p>
           </div>
 
           {/* Card 3: Progress */}
           <div 
             onClick={() => router.push('/progress')}
-            className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl hover:border-purple-500/50 transition cursor-pointer group"
+            className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl hover:border-purple-500/50 transition cursor-pointer group shadow-xl flex flex-col justify-between"
           >
-            <div className="w-12 h-12 bg-purple-500/10 text-purple-400 rounded-xl flex items-center justify-center mb-4 text-2xl group-hover:scale-110 transition">
-              📈
+            <div>
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 text-lg sm:text-2xl group-hover:scale-110 transition shrink-0">
+                📈
+              </div>
+              <h3 className="text-xs sm:text-xl font-extrabold mb-1 text-white truncate">Báo cáo tiến độ</h3>
+              <p className="text-slate-400 text-[10px] sm:text-xs line-clamp-2">Thống kê lịch tập trong tháng & calo hàng ngày.</p>
             </div>
-            <h3 className="text-xl font-semibold mb-2">Theo dõi tiến độ & Thống kê</h3>
-            <p className="text-zinc-400 text-sm">Báo cáo lịch tập luyện trong tháng, calo hàng ngày & chỉ số cơ thể.</p>
           </div>
 
         </div>

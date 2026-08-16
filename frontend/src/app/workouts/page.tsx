@@ -134,13 +134,13 @@ function LiveClock() {
   const formattedDate = time ? time.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Thu, Aug 13, 2026';
 
   return (
-    <div suppressHydrationWarning className="hidden sm:flex items-center gap-3 bg-[#0B101D] px-4 py-2.5 rounded-2xl border border-slate-800/80 shadow-inner">
-      <div className="flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-1 rounded-full">
-        <span className="w-2 h-2 rounded-full bg-[#00FF87] animate-ping" />
-        <span className="text-[10px] font-bold text-[#00FF87] uppercase tracking-wider">LIVE</span>
+    <div suppressHydrationWarning className="flex items-center gap-2 sm:gap-3 bg-[#0B101D] px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl border border-slate-800/80 shadow-inner">
+      <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-950/80 border border-emerald-500/30 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full">
+        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#00FF87] animate-ping" />
+        <span className="text-[9px] sm:text-[10px] font-bold text-[#00FF87] uppercase tracking-wider">LIVE</span>
       </div>
-      <span className="text-xl sm:text-2xl font-mono font-black text-[#00E5FF] tracking-tight">{formattedTime}</span>
-      <span className="text-xs text-slate-400 font-medium border-l border-slate-800 pl-3">{formattedDate}</span>
+      <span className="text-sm sm:text-2xl font-mono font-black text-[#00E5FF] tracking-tight">{formattedTime}</span>
+      <span className="text-[10px] sm:text-xs text-slate-400 font-medium border-l border-slate-800 pl-2 sm:pl-3 truncate">{formattedDate}</span>
     </div>
   );
 }
@@ -919,8 +919,8 @@ export default function Workouts() {
   return (
     <div suppressHydrationWarning className="min-h-screen bg-[#0B0F19] text-white p-3 sm:p-6 md:p-8 relative overflow-x-hidden font-sans">
       {/* Smart Ambient Glow Effects */}
-      <div className="hidden md:block absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[100px] pointer-events-none transform-gpu" />
-      <div className="hidden md:block absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[100px] pointer-events-none transform-gpu" />
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[100px] pointer-events-none transform-gpu" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[100px] pointer-events-none transform-gpu" />
 
       <div className="max-w-7xl mx-auto relative z-10 space-y-4 sm:space-y-6">
         <Header />
@@ -983,43 +983,43 @@ export default function Workouts() {
         )}
 
         {/* Stats Dashboard Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+        <div className="grid grid-cols-3 gap-2 sm:gap-6">
 
           {/* Stat 1: Progress */}
-          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl flex items-center gap-3 sm:gap-4 shadow-xl">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-lg sm:text-xl font-bold shrink-0">
+          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-2.5 sm:p-5 rounded-xl sm:rounded-3xl flex flex-col sm:flex-row items-center gap-2 sm:gap-4 shadow-xl text-center sm:text-left">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-sm sm:text-xl font-bold shrink-0">
               📋
             </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block truncate">TIẾN ĐỘ BÀI TẬP</span>
-              <span className="text-base sm:text-xl font-extrabold text-white block truncate">
-                {isWorkoutSaved ? `${progressPercent}% Hoàn Thành` : 'Đang chọn bài...'}
+            <div className="flex-1 min-w-0 w-full">
+              <span className="text-[9px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block truncate">TIẾN ĐỘ</span>
+              <span className="text-xs sm:text-xl font-extrabold text-white block truncate">
+                {isWorkoutSaved ? `${progressPercent}%` : 'Chọn bài...'}
               </span>
-              <div className="w-full h-1.5 sm:h-2 bg-[#0B101D] rounded-full mt-1.5 overflow-hidden border border-slate-800">
+              <div className="w-full h-1 sm:h-2 bg-[#0B101D] rounded-full mt-1 overflow-hidden border border-slate-800">
                 <div className="h-full bg-gradient-to-r from-[#00E5FF] to-[#00FF87] transition-all duration-500" style={{ width: `${progressPercent}%` }} />
               </div>
             </div>
           </div>
 
           {/* Stat 2: Mode */}
-          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl flex items-center gap-3 sm:gap-4 shadow-xl">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-[#00FF87] text-lg sm:text-xl font-bold shrink-0">
+          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-2.5 sm:p-5 rounded-xl sm:rounded-3xl flex flex-col sm:flex-row items-center gap-2 sm:gap-4 shadow-xl text-center sm:text-left">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-[#00FF87] text-sm sm:text-xl font-bold shrink-0">
               🏋️
             </div>
-            <div className="min-w-0">
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">CHẾ ĐỘ TẬP</span>
-              <span className="text-base sm:text-xl font-extrabold text-[#00FF87] block truncate">{activeRoutine?.name || 'Push - Pull - Leg'}</span>
+            <div className="min-w-0 w-full">
+              <span className="text-[9px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block truncate">CHẾ ĐỘ</span>
+              <span className="text-xs sm:text-xl font-extrabold text-[#00FF87] block truncate">{activeRoutine?.name || 'Push-Pull-Leg'}</span>
             </div>
           </div>
 
           {/* Stat 3: Streak */}
-          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl flex items-center gap-3 sm:gap-4 shadow-xl">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-lg sm:text-xl font-bold shrink-0">
+          <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 p-2.5 sm:p-5 rounded-xl sm:rounded-3xl flex flex-col sm:flex-row items-center gap-2 sm:gap-4 shadow-xl text-center sm:text-left">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-sm sm:text-xl font-bold shrink-0">
               🔥
             </div>
-            <div>
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">STREAK TẬP</span>
-              <span className="text-base sm:text-xl font-extrabold text-white block">{streakDays} Ngày Liên Tục</span>
+            <div className="min-w-0 w-full">
+              <span className="text-[9px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block truncate">STREAK</span>
+              <span className="text-xs sm:text-xl font-extrabold text-white block truncate">{streakDays} Ngày</span>
             </div>
           </div>
 
@@ -1098,7 +1098,7 @@ export default function Workouts() {
               </div>
             </div>
 
-            <div className={`${showMobileBodyModel ? 'block' : 'hidden lg:block'} space-y-3`}>
+            <div className="block space-y-3">
               <div className="w-full max-w-[240px] sm:max-w-xs mx-auto py-2">
                 <Model
                   type={modelType}
