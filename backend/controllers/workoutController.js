@@ -71,7 +71,7 @@ const saveWorkoutLog = async (req, res) => {
         exercises: exercises || [],
         isSaved: isSaved !== undefined ? isSaved : false
       },
-      { upsert: true, new: true, runValidators: true }
+      { upsert: true, returnDocument: 'after', runValidators: true }
     );
 
     return res.status(200).json(updatedLog);

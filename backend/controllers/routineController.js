@@ -64,7 +64,7 @@ const updateRoutine = async (req, res) => {
     const updatedRoutine = await Routine.findOneAndUpdate(
       { id: req.params.id },
       updateData,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     res.status(200).json(updatedRoutine);
