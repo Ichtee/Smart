@@ -213,10 +213,29 @@ export default function Workouts() {
   useEffect(() => {
     fetchInitialData();
 
-    try {
-      const history = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
-      setStreakDays(Math.max(1, history.length));
-    } catch (e) { }
+    const fetchStreak = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const res = await fetch(`${API_URL}/api/workouts/streak`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.count !== undefined) {
+              setStreakDays(Math.max(1, data.count));
+              return;
+            }
+          }
+        }
+      } catch (e) { }
+      try {
+        const history = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
+        setStreakDays(Math.max(1, history.length));
+      } catch (e) { }
+    };
+
+    fetchStreak();
 
     setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -359,42 +378,126 @@ export default function Workouts() {
     }
   };
 
+  // Function to push workout log state to Backend API
+  const pushWorkoutToBackend = async (payload: {
+    selectedIds: string[];
+    completedIds: string[];
+    detailsMap: Record<string, any>;
+    isSaved: boolean;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const completedExercises = (payload.selectedIds || [])
+        .map(id => {
+          const ex = allExercises.find(item => item.id === id || item._id === id || item._id?.toString() === id);
+          if (!ex || !ex.name) return null;
+          const detail = payload.detailsMap[id] || {};
+          return {
+            id: ex.id,
+            name: ex.name,
+            sets: detail.sets || ex.defaultSets || 3,
+            reps: detail.reps || ex.defaultReps || '10-12',
+            muscle: ex.muscle,
+            normMuscle: ex.normMuscle,
+            completed: payload.completedIds.includes(id)
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null);
+
+      await fetch(`${API_URL}/api/workouts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          date: activeTabDateStr,
+          routineId: activeRoutineId,
+          routineName: activeRoutine?.name || '',
+          dayName: currentTabWorkout ? `${currentTabWorkout.day}: ${currentTabWorkout.name}` : '',
+          dayIndex: currentDayIndex,
+          selectedIds: payload.selectedIds,
+          completedIds: payload.completedIds,
+          detailsMap: payload.detailsMap,
+          exercises: completedExercises,
+          isSaved: payload.isSaved
+        })
+      });
+    } catch (err) {
+      console.error('Failed to push workout log to API:', err);
+    }
+  };
+
   // Load / Initialize Day Selections per Day Tab with real-time event synchronization
   useEffect(() => {
-    const syncWorkoutTab = () => {
+    let isCancelled = false;
+
+    const syncWorkoutTab = async () => {
       if (!currentTabWorkout || isFetching) return;
 
-      let savedSel = localStorage.getItem(`smart_sel_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_sel_${todayDateStr}_${currentDayKey}`);
-      let savedComp = localStorage.getItem(`smart_comp_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_comp_${todayDateStr}_${currentDayKey}`);
-      let savedSaved = localStorage.getItem(`smart_saved_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_saved_${todayDateStr}_${currentDayKey}`);
-      let savedDet = localStorage.getItem(`smart_det_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_det_${todayDateStr}_${currentDayKey}`);
-
-      // Fallback to legacy key if user-prefixed key is not set yet
-      if (!savedSel) savedSel = localStorage.getItem(`smart_sel_${activeTabDateStr}_${legacyDayKey}`) || localStorage.getItem(`smart_sel_${todayDateStr}_${legacyDayKey}`);
-      if (!savedComp) savedComp = localStorage.getItem(`smart_comp_${activeTabDateStr}_${legacyDayKey}`) || localStorage.getItem(`smart_comp_${todayDateStr}_${legacyDayKey}`);
-      if (!savedSaved) savedSaved = localStorage.getItem(`smart_saved_${activeTabDateStr}_${legacyDayKey}`) || localStorage.getItem(`smart_saved_${todayDateStr}_${legacyDayKey}`);
-      if (!savedDet) savedDet = localStorage.getItem(`smart_det_${activeTabDateStr}_${legacyDayKey}`) || localStorage.getItem(`smart_det_${todayDateStr}_${legacyDayKey}`);
-
       let selectedIds: string[] = [];
+      let completedIds: string[] = [];
       let detailsMap: Record<string, any> = {};
+      let isSavedSession = false;
+      let loadedFromApi = false;
 
-      if (savedDet) {
-        try { detailsMap = JSON.parse(savedDet); } catch (e) { }
-      }
-
-      const isSavedSession = savedSaved === 'true';
-
-      if (savedSel && isSavedSession) {
+      // 1. Try fetching from Backend API if logged in
+      const token = localStorage.getItem('token');
+      if (token) {
         try {
-          const rawIds: string[] = JSON.parse(savedSel);
-          if (allExercises.length > 0) {
-            selectedIds = rawIds.filter(id => 
-              allExercises.some(ex => ex.id === id || ex._id === id || ex._id?.toString() === id || (ex.name && id.includes(ex.name)))
-            );
-          } else {
-            selectedIds = rawIds;
+          const res = await fetch(`${API_URL}/api/workouts?date=${activeTabDateStr}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const apiLog = await res.json();
+            if (apiLog && (apiLog.isSaved || (apiLog.selectedIds && apiLog.selectedIds.length > 0))) {
+              selectedIds = apiLog.selectedIds || [];
+              completedIds = apiLog.completedIds || [];
+              detailsMap = apiLog.detailsMap || {};
+              isSavedSession = !!apiLog.isSaved;
+              loadedFromApi = true;
+            }
           }
         } catch (e) { }
+      }
+
+      // 2. Fallback to localStorage if API had no saved session
+      if (!loadedFromApi) {
+        let savedSel = localStorage.getItem(`smart_sel_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_sel_${todayDateStr}_${currentDayKey}`);
+        let savedComp = localStorage.getItem(`smart_comp_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_comp_${todayDateStr}_${currentDayKey}`);
+        let savedSaved = localStorage.getItem(`smart_saved_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_saved_${todayDateStr}_${currentDayKey}`);
+        let savedDet = localStorage.getItem(`smart_det_${activeTabDateStr}_${currentDayKey}`) || localStorage.getItem(`smart_det_${todayDateStr}_${currentDayKey}`);
+
+        // Fallback to legacy key if user-prefixed key is not set yet
+        if (!savedSel) savedSel = localStorage.getItem(`smart_sel_${activeTabDateStr}_${legacyDayKey}`) || localStorage.getItem(`smart_sel_${todayDateStr}_${legacyDayKey}`);
+        if (!savedComp) savedComp = localStorage.getItem(`smart_comp_${activeTabDateStr}_${legacyDayKey}`) || localStorage.getItem(`smart_comp_${todayDateStr}_${legacyDayKey}`);
+        if (!savedSaved) savedSaved = localStorage.getItem(`smart_saved_${activeTabDateStr}_${legacyDayKey}`) || localStorage.getItem(`smart_saved_${todayDateStr}_${legacyDayKey}`);
+        if (!savedDet) savedDet = localStorage.getItem(`smart_det_${activeTabDateStr}_${legacyDayKey}`) || localStorage.getItem(`smart_det_${todayDateStr}_${legacyDayKey}`);
+
+        if (savedDet) {
+          try { detailsMap = JSON.parse(savedDet); } catch (e) { }
+        }
+
+        isSavedSession = savedSaved === 'true';
+
+        if (savedSel && isSavedSession) {
+          try {
+            const rawIds: string[] = JSON.parse(savedSel);
+            if (allExercises.length > 0) {
+              selectedIds = rawIds.filter(id => 
+                allExercises.some(ex => ex.id === id || ex._id === id || ex._id?.toString() === id || (ex.name && id.includes(ex.name)))
+              );
+            } else {
+              selectedIds = rawIds;
+            }
+          } catch (e) { }
+        }
+
+        if (savedComp) {
+          try { completedIds = JSON.parse(savedComp); } catch (e) { }
+        }
       }
 
       if ((!isSavedSession || selectedIds.length === 0) && currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
@@ -428,14 +531,11 @@ export default function Workouts() {
         localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(detailsMap));
       }
 
-      let completedIds: string[] = [];
-      if (savedComp) {
-        try { completedIds = JSON.parse(savedComp); } catch (e) { }
-      }
+      if (isCancelled) return;
 
       setDaySelections(prev => ({ ...prev, [currentDayKey]: selectedIds }));
       setDayCompleted(prev => ({ ...prev, [currentDayKey]: completedIds }));
-      setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: savedSaved === 'true' }));
+      setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: isSavedSession }));
       if (Object.keys(detailsMap).length > 0) {
         setExerciseDetails(prev => ({ ...prev, ...detailsMap }));
       }
@@ -449,6 +549,7 @@ export default function Workouts() {
     window.addEventListener('focus', syncWorkoutTab);
 
     return () => {
+      isCancelled = true;
       window.removeEventListener('storage', syncWorkoutTab);
       window.removeEventListener('smart_nutrition_updated', syncWorkoutTab);
       window.removeEventListener('smart_workout_updated', syncWorkoutTab);
@@ -611,6 +712,13 @@ export default function Workouts() {
       notifyStorageChange(activeTabDateStr);
     } catch (e) { }
 
+    pushWorkoutToBackend({
+      selectedIds: currentSelectedIds,
+      completedIds: currentCompletedIds,
+      detailsMap: exerciseDetails,
+      isSaved: true
+    });
+
     setNoticeMessage('Đã chốt lịch tập thành công! Bạn có thể bắt đầu tích chọn hoàn thành các bài tập.');
     setTimeout(() => setNoticeMessage(''), 4000);
   };
@@ -618,6 +726,12 @@ export default function Workouts() {
   const handleUnlockWorkout = () => {
     setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: false }));
     localStorage.setItem(`smart_saved_${activeTabDateStr}_${currentDayKey}`, 'false');
+    pushWorkoutToBackend({
+      selectedIds: currentSelectedIds,
+      completedIds: currentCompletedIds,
+      detailsMap: exerciseDetails,
+      isSaved: false
+    });
   };
 
   const toggleCompleteExercise = (id: string) => {
@@ -636,6 +750,13 @@ export default function Workouts() {
 
     setDayCompleted(prev => ({ ...prev, [currentDayKey]: newComp }));
     localStorage.setItem(`smart_comp_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(newComp));
+
+    pushWorkoutToBackend({
+      selectedIds: currentSelectedIds,
+      completedIds: newComp,
+      detailsMap: exerciseDetails,
+      isSaved: true
+    });
 
     if (newComp.length > 0) {
       const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');

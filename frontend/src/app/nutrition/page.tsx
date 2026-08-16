@@ -53,43 +53,105 @@ export default function Nutrition() {
   const [imageUploadError, setImageUploadError] = useState('');
   const [selectedPreviewImage, setSelectedPreviewImage] = useState<string | null>(null);
 
+  const pushNutritionToBackend = async (
+    targetWaterGlasses: number,
+    targetMlPerGlass: number,
+    targetMeals: Record<string, MealItem[]>
+  ) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      await fetch(`${API_URL}/api/nutrition`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          date: selectedDate,
+          waterGlasses: targetWaterGlasses,
+          mlPerGlass: targetMlPerGlass,
+          meals: targetMeals
+        })
+      });
+    } catch (err) {
+      console.error('Failed to push nutrition log to API:', err);
+    }
+  };
+
   // Load meals & water for selectedDate with real-time event synchronization
   useEffect(() => {
-    const loadNutrition = () => {
-      try {
-        let savedWater = localStorage.getItem(`smart_water_${selectedDate}`);
-        let savedMeals = localStorage.getItem(`smart_meals_${selectedDate}`);
+    let isCancelled = false;
 
-        // Auto-migrate data logged under yesterday if today is empty due to previous UTC bug
-        if (selectedDate === todayStr && !savedMeals) {
-          const yesterdayDate = new Date();
-          yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-          const yStr = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}-${String(yesterdayDate.getDate()).padStart(2, '0')}`;
-          const yesterdayMeals = localStorage.getItem(`smart_meals_${yStr}`);
-          if (yesterdayMeals) {
-            localStorage.setItem(`smart_meals_${selectedDate}`, yesterdayMeals);
-            savedMeals = yesterdayMeals;
-          }
-          const yesterdayWater = localStorage.getItem(`smart_water_${yStr}`);
-          if (yesterdayWater && !savedWater) {
-            localStorage.setItem(`smart_water_${selectedDate}`, yesterdayWater);
-            savedWater = yesterdayWater;
-          }
-        }
+    const loadNutrition = async () => {
+      let loadedFromApi = false;
+      let targetWater = 0;
+      let targetMl = mlPerGlass || 250;
+      let targetMeals: Record<string, MealItem[]> = {
+        'Bữa Sáng': [],
+        'Bữa Trưa': [],
+        'Bữa Tối': [],
+        'Ăn Vặt': []
+      };
 
-        setWaterGlasses(savedWater ? parseInt(savedWater, 10) || 0 : 0);
-
-        if (savedMeals) {
-          setMeals(JSON.parse(savedMeals));
-        } else {
-          setMeals({
-            'Bữa Sáng': [],
-            'Bữa Trưa': [],
-            'Bữa Tối': [],
-            'Ăn Vặt': []
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const res = await fetch(`${API_URL}/api/nutrition?date=${selectedDate}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
           });
-        }
-      } catch (e) { }
+          if (res.ok) {
+            const apiLog = await res.json();
+            if (apiLog && (apiLog.waterGlasses > 0 || (apiLog.meals && Object.values(apiLog.meals).some((m: any) => m && m.length > 0)))) {
+              targetWater = apiLog.waterGlasses || 0;
+              targetMl = apiLog.mlPerGlass || 250;
+              targetMeals = {
+                'Bữa Sáng': apiLog.meals?.['Bữa Sáng'] || [],
+                'Bữa Trưa': apiLog.meals?.['Bữa Trưa'] || [],
+                'Bữa Tối': apiLog.meals?.['Bữa Tối'] || [],
+                'Ăn Vặt': apiLog.meals?.['Ăn Vặt'] || []
+              };
+              loadedFromApi = true;
+            }
+          }
+        } catch (e) { }
+      }
+
+      if (!loadedFromApi) {
+        try {
+          let savedWater = localStorage.getItem(`smart_water_${selectedDate}`);
+          let savedMeals = localStorage.getItem(`smart_meals_${selectedDate}`);
+
+          // Auto-migrate data logged under yesterday if today is empty due to previous UTC bug
+          if (selectedDate === todayStr && !savedMeals) {
+            const yesterdayDate = new Date();
+            yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+            const yStr = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}-${String(yesterdayDate.getDate()).padStart(2, '0')}`;
+            const yesterdayMeals = localStorage.getItem(`smart_meals_${yStr}`);
+            if (yesterdayMeals) {
+              localStorage.setItem(`smart_meals_${selectedDate}`, yesterdayMeals);
+              savedMeals = yesterdayMeals;
+            }
+            const yesterdayWater = localStorage.getItem(`smart_water_${yStr}`);
+            if (yesterdayWater && !savedWater) {
+              localStorage.setItem(`smart_water_${selectedDate}`, yesterdayWater);
+              savedWater = yesterdayWater;
+            }
+          }
+
+          targetWater = savedWater ? parseInt(savedWater, 10) || 0 : 0;
+          if (savedMeals) {
+            targetMeals = JSON.parse(savedMeals);
+          }
+        } catch (e) { }
+      }
+
+      if (isCancelled) return;
+
+      setWaterGlasses(targetWater);
+      setMlPerGlass(targetMl);
+      setMeals(targetMeals);
     };
 
     loadNutrition();
@@ -100,6 +162,7 @@ export default function Nutrition() {
     window.addEventListener('focus', loadNutrition);
 
     return () => {
+      isCancelled = true;
       window.removeEventListener('storage', loadNutrition);
       window.removeEventListener('smart_nutrition_updated', loadNutrition);
       window.removeEventListener('smart_workout_updated', loadNutrition);
@@ -204,6 +267,7 @@ export default function Nutrition() {
     const newVal = Math.max(0, waterGlasses + delta);
     setWaterGlasses(newVal);
     localStorage.setItem(`smart_water_${selectedDate}`, newVal.toString());
+    pushNutritionToBackend(newVal, mlPerGlass, meals);
     notifyStorageChange(selectedDate);
   };
 
@@ -273,6 +337,7 @@ export default function Nutrition() {
 
     setMeals(updatedMeals);
     localStorage.setItem(`smart_meals_${selectedDate}`, JSON.stringify(updatedMeals));
+    pushNutritionToBackend(waterGlasses, mlPerGlass, updatedMeals);
     notifyStorageChange(selectedDate);
 
     // Reset Form & Modal
@@ -291,6 +356,7 @@ export default function Nutrition() {
     };
     setMeals(updatedMeals);
     localStorage.setItem(`smart_meals_${selectedDate}`, JSON.stringify(updatedMeals));
+    pushNutritionToBackend(waterGlasses, mlPerGlass, updatedMeals);
     notifyStorageChange(selectedDate);
   };
 

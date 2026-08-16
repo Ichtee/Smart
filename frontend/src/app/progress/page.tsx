@@ -107,6 +107,24 @@ export default function ProgressPage() {
             goal: data.goal || 'Tăng cơ'
           });
         }
+
+        // Fetch Streak History & Workout Logs from Backend API
+        const [streakRes, logsRes] = await Promise.all([
+          fetch(`${API_URL}/api/workouts/streak`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_URL}/api/workouts/logs`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        if (streakRes.ok && logsRes.ok) {
+          const streakData = await streakRes.json();
+          const logsData = await logsRes.json();
+
+          if (streakData.streakDates) {
+            setStreakHistory(streakData.streakDates);
+          }
+          if (logsData && Object.keys(logsData).length > 0) {
+            setWorkoutLogs(logsData);
+          }
+        }
       } catch (err) {
         console.error('Failed to fetch progress data:', err);
       } finally {
@@ -121,85 +139,74 @@ export default function ProgressPage() {
       const todayStr = getTodayStr();
       setSelectedCalendarDate(todayStr);
 
-      // Auto-relocate any workout logs saved under wrong dates
       let history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
       let logs = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
 
-      const currentToday = new Date();
-      const currentDayOfWeek = currentToday.getDay() === 0 ? 7 : currentToday.getDay();
-      const mondayDate = new Date(currentToday);
-      mondayDate.setDate(currentToday.getDate() - (currentDayOfWeek - 1));
-
-      const getExactWeekdayDate = (dayOffset: number) => {
-        const d = new Date(mondayDate);
-        d.setDate(mondayDate.getDate() + dayOffset);
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      };
-
-      let hasLogChanges = false;
-      Object.keys(logs).forEach(dateKey => {
-        const log = logs[dateKey];
-        if (!log || !log.dayName) return;
-
-        let targetOffset: number | null = null;
-        const normDay = log.dayName.toLowerCase();
-        if (normDay.includes('thứ 2') || normDay.includes('hai')) targetOffset = 0;
-        else if (normDay.includes('thứ 3') || normDay.includes('ba')) targetOffset = 1;
-        else if (normDay.includes('thứ 4') || normDay.includes('tư')) targetOffset = 2;
-        else if (normDay.includes('thứ 5') || normDay.includes('năm')) targetOffset = 3;
-        else if (normDay.includes('thứ 6') || normDay.includes('sáu')) targetOffset = 4;
-        else if (normDay.includes('thứ 7') || normDay.includes('bảy')) targetOffset = 5;
-        else if (normDay.includes('chủ nhật') || normDay.includes('cn')) targetOffset = 6;
-
-        if (targetOffset !== null) {
-          const expectedDateStr = getExactWeekdayDate(targetOffset);
-          if (dateKey !== expectedDateStr) {
-            logs[expectedDateStr] = { ...log, date: expectedDateStr };
-            delete logs[dateKey];
-            history = history.filter(d => d !== dateKey);
-            if (!history.includes(expectedDateStr)) history.push(expectedDateStr);
-            hasLogChanges = true;
-          }
-        }
-      });
-
-      if (hasLogChanges) {
-        localStorage.setItem('smart_workout_logs', JSON.stringify(logs));
-        localStorage.setItem('smart_streak_history', JSON.stringify(history));
+      if (history.length > 0) {
+        setStreakHistory(prev => prev.length > 0 ? prev : history);
       }
-
-      setStreakHistory(history);
-      setWorkoutLogs(logs);
+      if (Object.keys(logs).length > 0) {
+        setWorkoutLogs(prev => Object.keys(prev).length > 0 ? prev : logs);
+      }
     } catch (e) { }
   }, [router]);
 
   // Synchronize calories, macros, meals, workout logs & streak history with real-time event bus
   useEffect(() => {
-    const syncAllData = () => {
+    let isCancelled = false;
+
+    const syncAllData = async () => {
       const targetDateStr = selectedCalendarDate || getTodayStr();
+
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const nutRes = await fetch(`${API_URL}/api/nutrition?date=${targetDateStr}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (nutRes.ok) {
+            const nutLog = await nutRes.json();
+            if (nutLog) {
+              const mealsObj = nutLog.meals || { 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] };
+              if (!isCancelled) {
+                setSelectedDateMeals(mealsObj);
+                const allItems = Object.values(mealsObj).flat() as Array<{ calories?: number }>;
+                const activeCal = allItems.reduce((sum, item) => sum + (item.calories || 0), 0);
+                setDailyCalories(activeCal);
+                setTempCalories(activeCal.toString());
+                setSelectedDateWater(nutLog.waterGlasses || 0);
+              }
+              return;
+            }
+          }
+        } catch (e) { }
+      }
 
       try {
         const savedMeals = localStorage.getItem(`smart_meals_${targetDateStr}`);
         if (savedMeals) {
           const parsed = JSON.parse(savedMeals);
-          setSelectedDateMeals(parsed);
-          const allItems = Object.values(parsed).flat() as Array<{ calories: number }>;
-          const activeCal = allItems.reduce((sum, item) => sum + (item.calories || 0), 0);
-          setDailyCalories(activeCal);
-          setTempCalories(activeCal.toString());
+          if (!isCancelled) {
+            setSelectedDateMeals(parsed);
+            const allItems = Object.values(parsed).flat() as Array<{ calories: number }>;
+            const activeCal = allItems.reduce((sum, item) => sum + (item.calories || 0), 0);
+            setDailyCalories(activeCal);
+            setTempCalories(activeCal.toString());
+          }
         } else {
-          setSelectedDateMeals({ 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] });
-          const savedCal = localStorage.getItem(`smart_daily_cal_${targetDateStr}`);
-          const activeCal = savedCal ? (parseInt(savedCal, 10) || 0) : 0;
-          setDailyCalories(activeCal);
-          setTempCalories(activeCal.toString());
+          if (!isCancelled) {
+            setSelectedDateMeals({ 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] });
+            const savedCal = localStorage.getItem(`smart_daily_cal_${targetDateStr}`);
+            const activeCal = savedCal ? (parseInt(savedCal, 10) || 0) : 0;
+            setDailyCalories(activeCal);
+            setTempCalories(activeCal.toString());
+          }
         }
 
         const savedWater = localStorage.getItem(`smart_water_${targetDateStr}`);
-        setSelectedDateWater(savedWater ? (parseInt(savedWater, 10) || 0) : 0);
-
-        setStreakHistory(JSON.parse(localStorage.getItem('smart_streak_history') || '[]'));
-        setWorkoutLogs(JSON.parse(localStorage.getItem('smart_workout_logs') || '{}'));
+        if (!isCancelled) {
+          setSelectedDateWater(savedWater ? (parseInt(savedWater, 10) || 0) : 0);
+        }
       } catch (e) { }
     };
 
@@ -211,6 +218,7 @@ export default function ProgressPage() {
     window.addEventListener('focus', syncAllData);
 
     return () => {
+      isCancelled = true;
       window.removeEventListener('storage', syncAllData);
       window.removeEventListener('smart_nutrition_updated', syncAllData);
       window.removeEventListener('smart_workout_updated', syncAllData);
