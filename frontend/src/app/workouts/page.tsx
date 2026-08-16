@@ -772,19 +772,18 @@ export default function Workouts() {
       return;
     }
 
-    // Save as the last trained routine & day tab to User Profile
-    pushUserProfileUpdate({
-      lastActiveRoutineId: activeRoutineId,
-      lastActiveRoutineName: activeRoutine?.name || '',
-      lastActiveDayIndex: currentDayIndex
-    });
-
     const isAlreadyComp = currentCompletedIds.includes(id);
     const newComp = isAlreadyComp ? currentCompletedIds.filter(i => i !== id) : [...currentCompletedIds, id];
 
+    // 1. Instant UI update
     setDayCompleted(prev => ({ ...prev, [currentDayKey]: newComp }));
-    localStorage.setItem(`smart_comp_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(newComp));
 
+    // 2. Background local cache sync
+    try {
+      localStorage.setItem(`smart_comp_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(newComp));
+    } catch (e) { }
+
+    // 3. Background API push to MongoDB
     pushWorkoutToBackend({
       selectedIds: currentSelectedIds,
       completedIds: newComp,
@@ -793,44 +792,13 @@ export default function Workouts() {
     });
 
     if (newComp.length > 0) {
-      const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
-      if (!history.includes(activeTabDateStr)) {
-        const newHistory = [...history, activeTabDateStr];
-        localStorage.setItem('smart_streak_history', JSON.stringify(newHistory));
-        setStreakDays(newHistory.length);
-      }
-
-      // Save rich workout log entry to smart_workout_logs for target date
       try {
-        const logsMap = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
-        const completedExercises = activeSelectedExercises
-          .filter(ex => newComp.includes(ex.id))
-          .map(ex => ({
-            id: ex.id,
-            name: ex.name,
-            sets: ex.sets,
-            reps: ex.reps,
-            muscle: ex.muscle,
-            normMuscle: ex.normMuscle
-          }));
-
-        logsMap[activeTabDateStr] = {
-          date: activeTabDateStr,
-          routineId: activeRoutineId,
-          routineName: activeRoutine?.name || 'Lịch tập tự do',
-          dayName: currentTabWorkout ? `${currentTabWorkout.day}: ${currentTabWorkout.name}` : 'Buổi tập',
-          exercises: completedExercises,
-          updatedAt: new Date().toISOString()
-        };
-        localStorage.setItem('smart_workout_logs', JSON.stringify(logsMap));
-        notifyStorageChange(activeTabDateStr);
-      } catch (e) { }
-    } else {
-      try {
-        const logsMap = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
-        delete logsMap[activeTabDateStr];
-        localStorage.setItem('smart_workout_logs', JSON.stringify(logsMap));
-        notifyStorageChange(activeTabDateStr);
+        const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
+        if (!history.includes(activeTabDateStr)) {
+          const newHistory = [...history, activeTabDateStr];
+          localStorage.setItem('smart_streak_history', JSON.stringify(newHistory));
+          setStreakDays(newHistory.length);
+        }
       } catch (e) { }
     }
   };
