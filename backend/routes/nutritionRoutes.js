@@ -3,10 +3,13 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const {
   getNutritionLog,
-  saveNutritionLog
+  saveNutritionLog,
+  getAllNutritionLogs
 } = require('../controllers/nutritionController');
 
 router.use(protect);
+
+router.get('/logs', getAllNutritionLogs);
 
 router.route('/')
   .get(getNutritionLog)

@@ -65,6 +65,15 @@ export default function ProgressPage() {
   const [isEditingCalories, setIsEditingCalories] = useState(false);
   const [tempCalories, setTempCalories] = useState('0');
 
+  // Nutrition Logs Map for Calendar tiles & Timeline
+  const [nutritionLogs, setNutritionLogs] = useState<Record<string, {
+    date: string;
+    dayCalories: number;
+    photoCount: number;
+    waterGlasses?: number;
+    meals?: any;
+  }>>({});
+
   // Selected date nutrition data helper state
   const [selectedDateMeals, setSelectedDateMeals] = useState<Record<string, Array<{ id: string; name: string; calories: number; image?: string }>>>({
     'Bữa Sáng': [],
@@ -110,22 +119,24 @@ export default function ProgressPage() {
           });
         }
 
-        // Fetch Streak History & Workout Logs from Backend API
-        const [streakRes, logsRes] = await Promise.all([
+        // Fetch Streak History, Workout Logs & Nutrition Logs from Backend API
+        const [streakRes, logsRes, nutLogsRes] = await Promise.all([
           fetch(`${API_URL}/api/workouts/streak`, { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch(`${API_URL}/api/workouts/logs`, { headers: { 'Authorization': `Bearer ${token}` } })
+          fetch(`${API_URL}/api/workouts/logs`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_URL}/api/nutrition/logs`, { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
-        if (streakRes.ok && logsRes.ok) {
+        if (streakRes.ok) {
           const streakData = await streakRes.json();
+          if (streakData.streakDates) setStreakHistory(streakData.streakDates);
+        }
+        if (logsRes.ok) {
           const logsData = await logsRes.json();
-
-          if (streakData.streakDates) {
-            setStreakHistory(streakData.streakDates);
-          }
-          if (logsData && Object.keys(logsData).length > 0) {
-            setWorkoutLogs(logsData);
-          }
+          if (logsData && Object.keys(logsData).length > 0) setWorkoutLogs(logsData);
+        }
+        if (nutLogsRes.ok) {
+          const nutLogsData = await nutLogsRes.json();
+          if (nutLogsData && Object.keys(nutLogsData).length > 0) setNutritionLogs(nutLogsData);
         }
       } catch (err) {
         console.error('Failed to fetch progress data:', err);
@@ -172,11 +183,23 @@ export default function ProgressPage() {
               const mealsObj = nutLog.meals || { 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] };
               if (!isCancelled) {
                 setSelectedDateMeals(mealsObj);
-                const allItems = Object.values(mealsObj).flat() as Array<{ calories?: number }>;
+                const allItems = Object.values(mealsObj).flat() as Array<{ calories?: number; image?: string }>;
                 const activeCal = allItems.reduce((sum, item) => sum + (item.calories || 0), 0);
+                const photoCount = allItems.filter(item => Boolean(item.image)).length;
                 setDailyCalories(activeCal);
                 setTempCalories(activeCal.toString());
                 setSelectedDateWater(nutLog.waterGlasses || 0);
+
+                setNutritionLogs(prev => ({
+                  ...prev,
+                  [targetDateStr]: {
+                    date: targetDateStr,
+                    dayCalories: activeCal,
+                    photoCount,
+                    waterGlasses: nutLog.waterGlasses || 0,
+                    meals: mealsObj
+                  }
+                }));
               }
               return;
             }
@@ -291,7 +314,11 @@ export default function ProgressPage() {
       let dayCalories = 0;
       let photoCount = 0;
 
-      if (typeof window !== 'undefined') {
+      const nutLog = nutritionLogs[dateStr];
+      if (nutLog) {
+        dayCalories = nutLog.dayCalories || 0;
+        photoCount = nutLog.photoCount || 0;
+      } else if (typeof window !== 'undefined') {
         try {
           const savedMeals = localStorage.getItem(`smart_meals_${dateStr}`);
           if (savedMeals) {
@@ -321,7 +348,7 @@ export default function ProgressPage() {
       });
     }
     return days;
-  }, [streakHistory, workoutLogs, selectedCalendarDate, dailyCalories]);
+  }, [streakHistory, workoutLogs, nutritionLogs, selectedCalendarDate, dailyCalories]);
 
   const actualDaysInMonth = useMemo(() => {
     return monthDays.filter(d => !d.isPadding).length;
