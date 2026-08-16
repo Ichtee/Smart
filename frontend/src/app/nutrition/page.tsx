@@ -684,29 +684,42 @@ export default function Nutrition() {
                       <span>✓</span> Đã tải lên ImgBB
                     </div>
                   </div>
+                ) : uploadingImage ? (
+                  <div className="flex items-center justify-center gap-2 text-xs font-bold text-[#00E5FF] p-6 bg-[#0B101D] border border-slate-800 rounded-2xl">
+                    <div className="w-4 h-4 border-2 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
+                    Đang tải ảnh lên ImgBB...
+                  </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-[#00E5FF]/60 rounded-2xl p-4 cursor-pointer bg-[#0B101D] transition-colors group">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={handleImageSelect}
-                      disabled={uploadingImage}
-                      className="hidden"
-                    />
-                    {uploadingImage ? (
-                      <div className="flex items-center gap-2 text-xs font-bold text-[#00E5FF]">
-                        <div className="w-4 h-4 border-2 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
-                        Đang tải ảnh lên ImgBB...
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center text-slate-400 group-hover:text-[#00E5FF] transition-colors">
-                        <span className="text-2xl mb-1">📷</span>
-                        <span className="text-xs font-bold">Chụp / Chọn ảnh món ăn</span>
-                        <span className="text-[10px] text-slate-500 mt-0.5">Lưu dưới dạng Link ImgBB (Tiết kiệm Database)</span>
-                      </div>
-                    )}
-                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Option 1: Pick existing image from device / gallery */}
+                    <label className="flex flex-col items-center justify-center border border-slate-800 hover:border-[#00E5FF] bg-[#0B101D] hover:bg-[#131B2E] rounded-2xl p-4 cursor-pointer transition-all group text-center">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        disabled={uploadingImage}
+                        className="hidden"
+                      />
+                      <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">🖼️</span>
+                      <span className="text-xs font-bold text-slate-300 group-hover:text-[#00E5FF]">Chọn từ thiết bị</span>
+                      <span className="text-[10px] text-slate-500 mt-0.5">Thư viện ảnh / File</span>
+                    </label>
+
+                    {/* Option 2: Direct camera capture */}
+                    <label className="flex flex-col items-center justify-center border border-slate-800 hover:border-[#00FF87] bg-[#0B101D] hover:bg-[#131B2E] rounded-2xl p-4 cursor-pointer transition-all group text-center">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleImageSelect}
+                        disabled={uploadingImage}
+                        className="hidden"
+                      />
+                      <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📸</span>
+                      <span className="text-xs font-bold text-slate-300 group-hover:text-[#00FF87]">Chụp ảnh mới</span>
+                      <span className="text-[10px] text-slate-500 mt-0.5">Camera điện thoại</span>
+                    </label>
+                  </div>
                 )}
                 {imageUploadError && (
                   <p className="text-rose-400 text-xs mt-1 font-semibold">{imageUploadError}</p>
