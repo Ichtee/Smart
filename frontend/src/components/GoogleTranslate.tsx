@@ -48,7 +48,7 @@ export default function GoogleTranslate() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Continuously enforce body top: 0px to prevent Google Translate top bar layout displacement
+    // Enforce body style and hide Google Translate banner frame without polling
     const enforceBodyStyle = () => {
       if (document.body.style.top !== '0px') {
         document.body.style.top = '0px';
@@ -61,18 +61,24 @@ export default function GoogleTranslate() {
         (frame as HTMLElement).style.visibility = 'hidden';
       });
 
-      // Remove "Được hỗ trợ bởi" text nodes dynamically
       const gadgets = document.querySelectorAll('.goog-te-gadget');
       gadgets.forEach((gadget) => {
         Array.from(gadget.childNodes).forEach((node) => {
-          if (node.nodeType === Node.TEXT_NODE) {
+          if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
             node.textContent = '';
           }
         });
       });
     };
 
-    const interval = setInterval(enforceBodyStyle, 300);
+    enforceBodyStyle();
+
+    // Use MutationObserver instead of polling setInterval to avoid mobile layout thrashing
+    const observer = new MutationObserver(() => {
+      enforceBodyStyle();
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
 
     // Prevent duplicate script insertion
     if (!document.getElementById('google-translate-script')) {
@@ -104,7 +110,7 @@ export default function GoogleTranslate() {
     document.addEventListener('mousedown', handleClickOutside);
 
     return () => {
-      clearInterval(interval);
+      observer.disconnect();
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
