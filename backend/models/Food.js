@@ -1,6 +1,15 @@
 const mongoose = require('mongoose');
 
 const foodSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null // null = System Global Food, ObjectId = User Custom Food
+  },
+  isCustom: {
+    type: Boolean,
+    default: false
+  },
   name: {
     type: String,
     required: [true, 'Tên món ăn là bắt buộc'],

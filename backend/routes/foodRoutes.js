@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const Food = require('../models/Food');
+const User = require('../models/User');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 const initialFoods = [
@@ -16,52 +18,112 @@ const initialFoods = [
   { name: 'Hạt hạnh nhân', servingSize: '30g', calories: 170, protein: 6, carbs: 6, fat: 15, category: 'Ăn Vặt' }
 ];
 
-// Seed initial foods if collection is empty
+// Seed initial system foods if collection is empty
 const seedFoodsIfEmpty = async () => {
   try {
-    const count = await Food.countDocuments({});
+    const count = await Food.countDocuments({ isCustom: false });
     if (count === 0) {
-      await Food.insertMany(initialFoods);
+      await Food.insertMany(initialFoods.map(f => ({ ...f, isCustom: false, user: null })));
     }
   } catch (e) {
     console.error('Failed to seed initial foods:', e);
   }
 };
 
-// GET all food items (supports ?search=...&category=...)
-router.get('/', async (req, res) => {
+// Optional user extractor middleware from Auth Header / Cookie
+const optionalAuth = async (req, res, next) => {
+  try {
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    }
+
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id).select('-password');
+    }
+  } catch (e) {
+    // Ignore invalid token in optional auth
+  }
+  next();
+};
+
+// GET all food items (System foods + User's own custom foods)
+router.get('/', optionalAuth, async (req, res) => {
   try {
     await seedFoodsIfEmpty();
-    const { search, category } = req.query;
-    let query = {};
+    const { search, category, onlyCustom } = req.query;
+    let queryConditions = [];
+
+    // Filter by user ownership (Global System Foods + User Custom Foods)
+    if (onlyCustom === 'true' && req.user) {
+      queryConditions.push({ user: req.user._id, isCustom: true });
+    } else if (req.user) {
+      queryConditions.push({ user: null });
+      queryConditions.push({ user: req.user._id });
+    } else {
+      queryConditions.push({ user: null });
+    }
+
+    let mainQuery = { $or: queryConditions };
 
     if (category && category !== 'Tất cả') {
-      query.category = category;
+      mainQuery.category = category;
     }
 
     if (search && search.trim()) {
-      query.name = { $regex: search.trim(), $options: 'i' };
+      mainQuery.name = { $regex: search.trim(), $options: 'i' };
     }
 
-    const foods = await Food.find(query).sort({ createdAt: -1 });
+    const foods = await Food.find(mainQuery).sort({ createdAt: -1 });
     res.json(foods);
   } catch (err) {
     res.status(500).json({ message: 'Lỗi server khi lấy danh sách món ăn', error: err.message });
   }
 });
 
-// GET single food item
-router.get('/:id', async (req, res) => {
+// POST create custom food item (User endpoint)
+router.post('/custom', protect, async (req, res) => {
   try {
-    const food = await Food.findById(req.params.id);
-    if (!food) return res.status(404).json({ message: 'Không tìm thấy món ăn' });
-    res.json(food);
+    const { name, servingSize, calories, protein, carbs, fat, category, image } = req.body;
+    if (!name || calories === undefined) {
+      return res.status(400).json({ message: 'Tên món ăn và lượng Calo là bắt buộc' });
+    }
+
+    const customFood = new Food({
+      user: req.user._id,
+      isCustom: true,
+      name: name.trim(),
+      servingSize: servingSize || '1 phần',
+      calories: Number(calories),
+      protein: Number(protein) || 0,
+      carbs: Number(carbs) || 0,
+      fat: Number(fat) || 0,
+      category: category || 'Tất cả',
+      image: image || ''
+    });
+
+    const saved = await customFood.save();
+    res.status(201).json(saved);
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi server khi lấy chi tiết món ăn', error: err.message });
+    res.status(400).json({ message: 'Lỗi khi tạo món ăn cá nhân', error: err.message });
   }
 });
 
-// POST create new food item (Admin only)
+// DELETE custom food item (User endpoint - only own custom food)
+router.delete('/custom/:id', protect, async (req, res) => {
+  try {
+    const food = await Food.findOneAndDelete({ _id: req.params.id, user: req.user._id, isCustom: true });
+    if (!food) return res.status(404).json({ message: 'Không tìm thấy món ăn cá nhân của bạn để xóa' });
+    res.json({ message: 'Đã xóa món ăn cá nhân thành công' });
+  } catch (err) {
+    res.status(500).json({ message: 'Lỗi khi xóa món ăn cá nhân', error: err.message });
+  }
+});
+
+// POST create system food item (Admin only)
 router.post('/', protect, admin, async (req, res) => {
   try {
     const { name, servingSize, calories, protein, carbs, fat, category, image } = req.body;
@@ -70,6 +132,8 @@ router.post('/', protect, admin, async (req, res) => {
     }
 
     const food = new Food({
+      user: null,
+      isCustom: false,
       name: name.trim(),
       servingSize: servingSize || '1 phần',
       calories: Number(calories),

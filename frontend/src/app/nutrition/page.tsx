@@ -68,21 +68,27 @@ export default function Nutrition() {
     calories: number;
     category?: string;
     image?: string;
+    isCustom?: boolean;
   }>>([]);
   const [showDbDropdown, setShowDbDropdown] = useState(false);
+  const [saveAsCustomFood, setSaveAsCustomFood] = useState(false);
+  const [activeModalTab, setActiveModalTab] = useState<'search' | 'my_foods'>('search');
+
+  const fetchFoodsFromDb = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/foods`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDbFoods(data);
+      }
+    } catch (e) {}
+  };
 
   useEffect(() => {
-    const fetchFoodsFromDb = async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/foods`, {
-          credentials: 'include'
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setDbFoods(data);
-        }
-      } catch (e) {}
-    };
     fetchFoodsFromDb();
   }, []);
 
@@ -403,12 +409,34 @@ export default function Nutrition() {
     pushNutritionToBackend(waterGlasses, mlPerGlass, updatedMeals);
     notifyStorageChange(selectedDate);
 
+    // Save as Custom Food if checked
+    if (saveAsCustomFood) {
+      const token = localStorage.getItem('token');
+      if (token) {
+        fetch(`${API_URL}/api/foods/custom`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            name: trimmedFoodName,
+            servingSize: cleanServing,
+            calories: parseFloat(baseCalories) || computedTotalCalories,
+            image: foodImage || ''
+          })
+        }).then(() => fetchFoodsFromDb()).catch(() => {});
+      }
+    }
+
     // Reset Form & Modal
     setFoodName('');
     setServingSize('1 phần');
     setBaseCalories('');
     setPortionMultiplier('1');
     setFoodImage('');
+    setSaveAsCustomFood(false);
     setImageUploadError('');
     setActiveMealCategory(null);
   };
@@ -703,15 +731,113 @@ export default function Nutrition() {
       {activeMealCategory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setActiveMealCategory(null)}></div>
-          <div className="relative bg-[#131B2E] border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-md">
-            <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+          <div className="relative bg-[#131B2E] border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <span>➕</span> Thêm món vào <span className="text-[#00E5FF]">{activeMealCategory}</span>
               </h3>
               <button onClick={() => setActiveMealCategory(null)} className="text-slate-500 hover:text-white text-xl font-bold">&times;</button>
             </div>
 
-            <form onSubmit={handleAddFood} className="space-y-4">
+            {/* Modal Tabs */}
+            <div className="grid grid-cols-2 gap-2 mb-4 p-1 bg-[#0B101D] border border-slate-800 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setActiveModalTab('search')}
+                className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                  activeModalTab === 'search'
+                    ? 'bg-[#00E5FF] text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🔍 Tra cứu / Nhập mới
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveModalTab('my_foods')}
+                className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  activeModalTab === 'my_foods'
+                    ? 'bg-[#00E5FF] text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>⭐ Món của tôi</span>
+                <span className="px-1.5 py-0.2 bg-slate-800 text-slate-200 text-[10px] rounded-full">
+                  {dbFoods.filter(f => f.isCustom).length}
+                </span>
+              </button>
+            </div>
+
+            {activeModalTab === 'my_foods' ? (
+              /* Tab 2: My Custom Foods List */
+              <div className="space-y-3">
+                <p className="text-xs text-slate-400 font-semibold">Danh sách các món ăn cá nhân bạn đã lưu lại để dùng nhanh:</p>
+                {dbFoods.filter(f => f.isCustom).length > 0 ? (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {dbFoods.filter(f => f.isCustom).map(item => (
+                      <div
+                        key={item._id}
+                        onClick={() => {
+                          setFoodName(item.name);
+                          setServingSize(item.servingSize || '1 phần');
+                          setBaseCalories(item.calories.toString());
+                          setPortionMultiplier('1');
+                          if (item.image) setFoodImage(item.image);
+                          setActiveModalTab('search');
+                        }}
+                        className="p-3 bg-[#0B101D] border border-slate-800 hover:border-[#00E5FF] rounded-2xl cursor-pointer transition-all flex items-center justify-between group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">⭐</span>
+                          <div>
+                            <p className="text-xs font-bold text-white group-hover:text-[#00E5FF]">{item.name}</p>
+                            <p className="text-[10px] text-slate-400">{item.servingSize}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-black text-[#00E5FF]">{item.calories} kcal</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!confirm(`Xóa món "${item.name}" khỏi "Món ăn của tôi"?`)) return;
+                              const token = localStorage.getItem('token');
+                              if (token) {
+                                fetch(`${API_URL}/api/foods/custom/${item._id}`, {
+                                  method: 'DELETE',
+                                  headers: { 'Authorization': `Bearer ${token}` },
+                                  credentials: 'include'
+                                }).then(() => fetchFoodsFromDb());
+                              }
+                            }}
+                            className="text-slate-500 hover:text-rose-400 p-1 text-sm font-bold"
+                            title="Xóa món ăn cá nhân"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center bg-[#0B101D] border border-slate-800 rounded-2xl space-y-2">
+                    <p className="text-2xl">⭐</p>
+                    <p className="text-xs text-slate-400 font-semibold">Bạn chưa có món ăn cá nhân nào.</p>
+                    <p className="text-[10px] text-slate-500">Khi nhập món ăn mới, tích chọn ô <i>"Lưu vào Món ăn của tôi"</i> để hiển thị tại đây!</p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setActiveModalTab('search')}
+                  className="w-full py-2.5 bg-[#18233C] text-slate-300 hover:text-white font-bold rounded-xl text-xs transition"
+                >
+                  ← Quay lại nhập món
+                </button>
+              </div>
+            ) : (
+              /* Tab 1: Standard Add Food Form */
+              <form onSubmit={handleAddFood} className="space-y-4">
               <button
                 type="button"
                 onClick={() => setIsBarcodeModalOpen(true)}
@@ -867,6 +993,19 @@ export default function Nutrition() {
                 </div>
               </div>
 
+              {/* Checkbox: Save to My Custom Foods */}
+              <label className="flex items-center gap-2.5 p-3 bg-[#0B101D] border border-slate-800/80 rounded-xl cursor-pointer hover:border-slate-700 transition">
+                <input
+                  type="checkbox"
+                  checked={saveAsCustomFood}
+                  onChange={(e) => setSaveAsCustomFood(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#00E5FF] bg-slate-900 border-slate-700 focus:ring-0 cursor-pointer"
+                />
+                <span className="text-xs text-slate-300 font-semibold flex items-center gap-1.5">
+                  <span>⭐</span> Lưu vào <b className="text-white font-bold">"Món ăn của tôi"</b> để dùng lại sau
+                </span>
+              </label>
+
               {/* Photo Upload via ImgBB */}
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Hình ảnh món ăn (tùy chọn)</label>
@@ -972,6 +1111,7 @@ export default function Nutrition() {
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       )}
