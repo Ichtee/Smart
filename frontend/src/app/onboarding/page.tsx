@@ -25,6 +25,13 @@ export default function Onboarding() {
   });
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     // If we reach step 4, calculate the results
     if (step === 4) {
       const w = Number(formData.weight);

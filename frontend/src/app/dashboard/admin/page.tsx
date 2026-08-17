@@ -13,8 +13,7 @@ export default function AdminDashboard() {
     const checkAuthAndFetchStats = async () => {
       const storedToken = localStorage.getItem('token');
       if (!storedToken) {
-        setAuthError('Bạn chưa đăng nhập.');
-        setLoading(false);
+        router.push('/login');
         return;
       }
 

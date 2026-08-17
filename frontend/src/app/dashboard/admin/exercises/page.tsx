@@ -83,8 +83,7 @@ export default function AdminExercises() {
     const checkAuth = async () => {
       const storedToken = localStorage.getItem('token');
       if (!storedToken) {
-        setAuthError('Bạn chưa đăng nhập. Vui lòng đăng nhập bằng tài khoản Admin.');
-        setLoading(false);
+        router.push('/login');
         return;
       }
       setToken(storedToken);

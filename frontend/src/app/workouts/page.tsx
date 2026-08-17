@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Model from 'react-body-highlighter';
 import Header from '@/components/Header';
 import { API_URL } from '@/utils/api';
@@ -146,6 +147,7 @@ function LiveClock() {
 }
 
 export default function Workouts() {
+  const router = useRouter();
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [modelType, setModelType] = useState<'anterior' | 'posterior'>('anterior');
   const [activeRoutineId, setActiveRoutineId] = useState<string>('ppl');
@@ -178,6 +180,12 @@ export default function Workouts() {
   const [librarySearchTerm, setLibrarySearchTerm] = useState<string>('');
 
   const fetchInitialData = async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
     setIsFetching(true);
     setFetchError(false);
     try {

@@ -288,8 +288,7 @@ export default function RoutineManagement() {
     const checkAuth = async () => {
       const storedToken = localStorage.getItem('token');
       if (!storedToken) {
-        setAuthError('Bạn chưa đăng nhập.');
-        setLoading(false);
+        router.push('/login');
         return;
       }
       setToken(storedToken);
