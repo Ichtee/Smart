@@ -930,6 +930,13 @@ export default function Nutrition() {
         </div>
       )}
 
+      {/* Barcode Scanner Modal */}
+      <BarcodeScannerModal
+        isOpen={isBarcodeModalOpen}
+        onClose={() => setIsBarcodeModalOpen(false)}
+        onDetectedProduct={handleDetectedProduct}
+      />
+
     </div>
   );
 }
