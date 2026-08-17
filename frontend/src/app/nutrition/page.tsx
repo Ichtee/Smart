@@ -49,8 +49,10 @@ export default function Nutrition() {
   // Modal State for adding food & photo upload
   const [activeMealCategory, setActiveMealCategory] = useState<string | null>(null);
   const [foodName, setFoodName] = useState('');
-  const [foodQuantity, setFoodQuantity] = useState('');
-  const [foodCalories, setFoodCalories] = useState('');
+  const [quantityAmount, setQuantityAmount] = useState<string>('1');
+  const [quantityUnit, setQuantityUnit] = useState<string>('phần');
+  const [unitCalories, setUnitCalories] = useState<string>('100');
+  const [foodCalories, setFoodCalories] = useState('100');
   const [foodImage, setFoodImage] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUploadError, setImageUploadError] = useState('');
@@ -58,6 +60,42 @@ export default function Nutrition() {
 
   // Barcode Scanner Modal State
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+
+  const calcAndSetTotalCalories = (amountStr: string, unitStr: string, unitCalStr: string) => {
+    const amountVal = parseFloat(amountStr);
+    const unitCalVal = parseFloat(unitCalStr);
+
+    if (isNaN(amountVal) || amountVal <= 0 || isNaN(unitCalVal) || unitCalVal < 0) {
+      setFoodCalories('');
+      return;
+    }
+
+    let calculated = 0;
+    if (unitStr === 'g' || unitStr === 'ml') {
+      // For grams and milliliters, unitCalories is standard per 100g/100ml
+      calculated = Math.round((amountVal / 100) * unitCalVal);
+    } else {
+      // Standard per unit (phần, bát, tô, dĩa, quả, cái, hộp, lon, ổ, cup, kg, lít...)
+      calculated = Math.round(amountVal * unitCalVal);
+    }
+
+    setFoodCalories(calculated.toString());
+  };
+
+  const handleAmountChange = (val: string) => {
+    setQuantityAmount(val);
+    calcAndSetTotalCalories(val, quantityUnit, unitCalories);
+  };
+
+  const handleUnitChange = (unit: string) => {
+    setQuantityUnit(unit);
+    calcAndSetTotalCalories(quantityAmount, unit, unitCalories);
+  };
+
+  const handleUnitCaloriesChange = (calStr: string) => {
+    setUnitCalories(calStr);
+    calcAndSetTotalCalories(quantityAmount, quantityUnit, calStr);
+  };
 
   const handleDetectedProduct = (product: {
     name: string;
@@ -70,7 +108,9 @@ export default function Nutrition() {
     const targetCat = activeMealCategory || 'Bữa Sáng';
     setActiveMealCategory(targetCat);
     setFoodName(product.name);
-    setFoodQuantity(product.servingSize || '100g');
+    setQuantityAmount('1');
+    setQuantityUnit('phần');
+    setUnitCalories(product.calories.toString());
     setFoodCalories(product.calories.toString());
   };
 
@@ -345,11 +385,12 @@ export default function Nutrition() {
       return;
     }
 
+    const formattedQuantity = `${quantityAmount} ${quantityUnit}`.trim();
     const newItem: MealItem = {
       id: Date.now().toString(),
       name: trimmedFoodName,
       calories: calVal,
-      quantity: foodQuantity.trim() || undefined,
+      quantity: formattedQuantity || undefined,
       image: foodImage || undefined
     };
 
@@ -365,8 +406,10 @@ export default function Nutrition() {
 
     // Reset Form & Modal
     setFoodName('');
-    setFoodQuantity('');
-    setFoodCalories('');
+    setQuantityAmount('1');
+    setQuantityUnit('phần');
+    setUnitCalories('100');
+    setFoodCalories('100');
     setFoodImage('');
     setImageUploadError('');
     setActiveMealCategory(null);
@@ -697,31 +740,74 @@ export default function Nutrition() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Số lượng / Định lượng (tùy chọn)</label>
-                <input
-                  type="text"
-                  maxLength={30}
-                  value={foodQuantity}
-                  onChange={(e) => setFoodQuantity(e.target.value)}
-                  placeholder="VD: 100g, 1 tô, 2 quả, 1 cup, 250ml..."
-                  className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
-                />
+              {/* Số lượng & Đơn vị tính (Select) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Số lượng</label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="any"
+                    required
+                    value={quantityAmount}
+                    onChange={(e) => handleAmountChange(e.target.value)}
+                    placeholder="VD: 1, 2, 150..."
+                    className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Đơn vị tính</label>
+                  <select
+                    value={quantityUnit}
+                    onChange={(e) => handleUnitChange(e.target.value)}
+                    className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-[#00E5FF] font-bold focus:outline-none focus:border-[#00E5FF] cursor-pointer"
+                  >
+                    <option value="phần">phần (khẩu phần)</option>
+                    <option value="g">g (gram - calo/100g)</option>
+                    <option value="kg">kg (kilogram)</option>
+                    <option value="ml">ml (milliliter - calo/100ml)</option>
+                    <option value="lít">lít (L)</option>
+                    <option value="bát">bát / tô</option>
+                    <option value="dĩa">dĩa / đĩa</option>
+                    <option value="quả">quả / cái / trái</option>
+                    <option value="hộp">hộp / lon / chai</option>
+                    <option value="ổ">ổ (bánh mì)</option>
+                    <option value="cup">cup (cốc)</option>
+                    <option value="lát">lát / miếng</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Lượng Calo (kcal)</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  max="10000"
-                  value={foodCalories}
-                  onChange={(e) => setFoodCalories(e.target.value)}
-                  onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
-                  placeholder="VD: 350"
-                  className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
-                />
+              {/* Calo đơn vị & Tổng Calo */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    {quantityUnit === 'g' || quantityUnit === 'ml' ? `Calo / 100${quantityUnit}` : `Calo / 1 ${quantityUnit}`}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={unitCalories}
+                    onChange={(e) => handleUnitCaloriesChange(e.target.value)}
+                    placeholder="VD: 100"
+                    className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#00E5FF] uppercase tracking-wider mb-2 flex items-center gap-1">
+                    <span>⚡</span> Tổng Calo (kcal)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="10000"
+                    value={foodCalories}
+                    onChange={(e) => setFoodCalories(e.target.value)}
+                    placeholder="Tự động tính..."
+                    className="w-full bg-[#0B101D] border border-[#00E5FF]/50 text-[#00E5FF] font-black rounded-xl p-3 text-sm focus:outline-none focus:border-[#00E5FF] shadow-sm shadow-[#00E5FF]/20"
+                  />
+                </div>
               </div>
 
               {/* Photo Upload via ImgBB */}
@@ -789,23 +875,25 @@ export default function Nutrition() {
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Gợi ý nhanh:</label>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { name: 'Phở bò', cal: 450, qty: '1 tô' },
-                    { name: 'Cơm tấm', cal: 600, qty: '1 dĩa' },
-                    { name: 'Ức gà', cal: 220, qty: '200g' },
-                    { name: 'Trứng ốp la', cal: 150, qty: '2 quả' },
-                    { name: 'Bánh mì', cal: 300, qty: '1 ổ' }
+                    { name: 'Phở bò', cal: 450, qty: '1', unit: 'tô' },
+                    { name: 'Cơm tấm', cal: 600, qty: '1', unit: 'dĩa' },
+                    { name: 'Ức gà', cal: 165, qty: '200', unit: 'g' },
+                    { name: 'Trứng ốp la', cal: 75, qty: '2', unit: 'quả' },
+                    { name: 'Bánh mì', cal: 300, qty: '1', unit: 'ổ' }
                   ].map(sug => (
                     <button
                       key={sug.name}
                       type="button"
                       onClick={() => {
                         setFoodName(sug.name);
-                        setFoodCalories(sug.cal.toString());
-                        setFoodQuantity(sug.qty);
+                        setQuantityAmount(sug.qty);
+                        setQuantityUnit(sug.unit);
+                        setUnitCalories(sug.cal.toString());
+                        calcAndSetTotalCalories(sug.qty, sug.unit, sug.cal.toString());
                       }}
                       className="px-2.5 py-1 bg-[#18233C] hover:bg-slate-800 border border-slate-800 rounded-lg text-xs text-slate-300 font-medium"
                     >
-                      {sug.name} ({sug.qty} • {sug.cal}k)
+                      {sug.name} ({sug.qty} {sug.unit})
                     </button>
                   ))}
                 </div>
