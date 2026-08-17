@@ -12,11 +12,11 @@ const exerciseSchema = new mongoose.Schema({
   },
   defaultSets: {
     type: Number,
-    default: 3
+    default: 1
   },
   defaultReps: {
     type: String,
-    default: '10-12'
+    default: '10'
   },
   equipment: {
     type: String,

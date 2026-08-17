@@ -62,8 +62,8 @@ export default function AdminExercises() {
     muscle: 'chest',
     secondaryMuscles: '',
     equipment: '',
-    defaultSets: 3,
-    defaultReps: '10-12',
+    defaultSets: 1,
+    defaultReps: '10',
     videoUrl: '',
     description: ''
   });
@@ -127,8 +127,8 @@ export default function AdminExercises() {
       muscle: 'chest',
       secondaryMuscles: '',
       equipment: '',
-      defaultSets: 3,
-      defaultReps: '10-12',
+      defaultSets: 1,
+      defaultReps: '10',
       videoUrl: '',
       description: ''
     });
@@ -227,8 +227,8 @@ export default function AdminExercises() {
       muscle: ex.muscle || 'chest',
       secondaryMuscles: Array.isArray(ex.secondaryMuscles) ? ex.secondaryMuscles.join(', ') : '',
       equipment: ex.equipment || '',
-      defaultSets: ex.defaultSets || 3,
-      defaultReps: ex.defaultReps || '10-12',
+      defaultSets: ex.defaultSets || 1,
+      defaultReps: ex.defaultReps || '10',
       videoUrl: ex.videoUrl || '',
       description: ex.description || ''
     });

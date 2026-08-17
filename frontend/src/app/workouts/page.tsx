@@ -251,8 +251,8 @@ export default function Workouts() {
         videoUrl: ex.videoUrl || '',
         normMuscle: normalizeMuscleId(ex.muscle),
         name: ex.name,
-        defaultSets: ex.defaultSets || 3,
-        defaultReps: ex.defaultReps || '10-12',
+        defaultSets: ex.defaultSets || 1,
+        defaultReps: ex.defaultReps || '10',
       }));
       setAllExercises(mapped);
       setIsFetching(false);
@@ -443,8 +443,8 @@ export default function Workouts() {
           return {
             id: ex.id,
             name: ex.name,
-            sets: detail.sets || ex.defaultSets || 3,
-            reps: detail.reps || ex.defaultReps || '10-12',
+            sets: detail.sets || ex.defaultSets || 1,
+            reps: detail.reps || ex.defaultReps || '10',
             muscle: ex.muscle,
             normMuscle: ex.normMuscle,
             completed: payload.completedIds.includes(id)
@@ -613,7 +613,7 @@ export default function Workouts() {
       .map(id => {
         const ex = allExercises.find(item => item.id === id || item._id === id || item._id?.toString() === id);
         if (!ex || !ex.name) return null;
-        const detail = exerciseDetails[id] || { sets: ex.defaultSets || 3, reps: ex.defaultReps || '10-12' };
+        const detail = exerciseDetails[id] || { sets: ex.defaultSets || 1, reps: ex.defaultReps || '10' };
         return {
           ...ex,
           sets: detail.sets,
@@ -635,7 +635,7 @@ export default function Workouts() {
     setExerciseDetails(prev => {
       const updated = {
         ...prev,
-        [id]: { ...(prev[id] || { sets: 3, reps: '10-12' }), sets: newSets }
+        [id]: { ...(prev[id] || { sets: 1, reps: '10' }), sets: newSets }
       };
       localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(updated));
       return updated;
@@ -644,13 +644,13 @@ export default function Workouts() {
 
   const adjustExerciseReps = (id: string, delta: number) => {
     setExerciseDetails(prev => {
-      const currentReps = prev[id]?.reps || '10-12';
+      const currentReps = prev[id]?.reps || '10';
       const numMatch = currentReps.match(/\d+/);
       const baseNum = numMatch ? parseInt(numMatch[0]) : 10;
       const newNum = Math.max(1, Math.min(100, baseNum + delta));
       const updated = {
         ...prev,
-        [id]: { ...(prev[id] || { sets: 3, reps: '10-12' }), reps: `${newNum}` }
+        [id]: { ...(prev[id] || { sets: 1, reps: '10' }), reps: `${newNum}` }
       };
       localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(updated));
       return updated;
@@ -1592,11 +1592,11 @@ export default function Workouts() {
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800">
                     <span className="text-slate-400 block font-medium">Số Hiệp (Sets):</span>
-                    <strong className="text-white text-base font-black">{selectedDetailExercise.sets || selectedDetailExercise.defaultSets || 3} Hiệp</strong>
+                    <strong className="text-white text-base font-black">{selectedDetailExercise.sets || selectedDetailExercise.defaultSets || 1} Hiệp</strong>
                   </div>
                   <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800">
                     <span className="text-slate-400 block font-medium">Số Lần (Reps):</span>
-                    <strong className="text-[#00E5FF] text-base font-black">{selectedDetailExercise.reps || selectedDetailExercise.defaultReps || '8-12'} Lần</strong>
+                    <strong className="text-[#00E5FF] text-base font-black">{selectedDetailExercise.reps || selectedDetailExercise.defaultReps || '10'} Lần</strong>
                   </div>
                   <div className="bg-[#131B2E] p-3 rounded-xl border border-slate-800">
                     <span className="text-slate-400 block font-medium">Ngưỡng RIR:</span>
