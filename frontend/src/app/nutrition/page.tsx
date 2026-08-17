@@ -51,6 +51,7 @@ export default function Nutrition() {
   const [foodName, setFoodName] = useState('');
   const [foodQuantity, setFoodQuantity] = useState('');
   const [foodCalories, setFoodCalories] = useState('');
+  const [baseCalRatio, setBaseCalRatio] = useState<number>(0);
   const [foodImage, setFoodImage] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUploadError, setImageUploadError] = useState('');
@@ -58,6 +59,30 @@ export default function Nutrition() {
 
   // Barcode Scanner Modal State
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+
+  const handleQuantityChange = (newQty: string) => {
+    setFoodQuantity(newQty);
+    const numMatch = newQty.trim().match(/^([\d.]+)/);
+    if (numMatch && baseCalRatio > 0) {
+      const num = parseFloat(numMatch[1]);
+      if (!isNaN(num) && num > 0) {
+        const calcCal = Math.round(num * baseCalRatio);
+        setFoodCalories(calcCal.toString());
+      }
+    }
+  };
+
+  const handleCaloriesChange = (newCalStr: string) => {
+    setFoodCalories(newCalStr);
+    const cal = parseFloat(newCalStr);
+    const numMatch = foodQuantity.trim().match(/^([\d.]+)/);
+    if (numMatch) {
+      const num = parseFloat(numMatch[1]);
+      if (!isNaN(cal) && cal > 0 && !isNaN(num) && num > 0) {
+        setBaseCalRatio(cal / num);
+      }
+    }
+  };
 
   const handleDetectedProduct = (product: {
     name: string;
@@ -70,8 +95,24 @@ export default function Nutrition() {
     const targetCat = activeMealCategory || 'Bữa Sáng';
     setActiveMealCategory(targetCat);
     setFoodName(product.name);
-    setFoodQuantity(product.servingSize || '100g');
-    setFoodCalories(product.calories.toString());
+
+    const qty = product.servingSize || '100g';
+    const cal = product.calories || 0;
+
+    setFoodQuantity(qty);
+    setFoodCalories(cal.toString());
+
+    const numMatch = qty.trim().match(/^([\d.]+)/);
+    if (numMatch && cal > 0) {
+      const num = parseFloat(numMatch[1]);
+      if (!isNaN(num) && num > 0) {
+        setBaseCalRatio(cal / num);
+      } else {
+        setBaseCalRatio(0);
+      }
+    } else {
+      setBaseCalRatio(0);
+    }
   };
 
   const pushNutritionToBackend = async (
@@ -367,6 +408,7 @@ export default function Nutrition() {
     setFoodName('');
     setFoodQuantity('');
     setFoodCalories('');
+    setBaseCalRatio(0);
     setFoodImage('');
     setImageUploadError('');
     setActiveMealCategory(null);
@@ -705,20 +747,27 @@ export default function Nutrition() {
                     type="text"
                     maxLength={30}
                     value={foodQuantity}
-                    onChange={(e) => setFoodQuantity(e.target.value)}
-                    placeholder="VD: 100g, 1 tô, 2 quả..."
+                    onChange={(e) => handleQuantityChange(e.target.value)}
+                    placeholder="VD: 200g, 1 tô, 2 quả..."
                     className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Lượng Calo (kcal)</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                    <span>Lượng Calo (kcal)</span>
+                    {baseCalRatio > 0 && (
+                      <span className="text-[10px] text-[#00E5FF] font-semibold normal-case" title="Tỷ lệ Calo theo đơn vị">
+                        ⚡ {baseCalRatio >= 1 ? baseCalRatio.toFixed(1) : baseCalRatio.toFixed(2)} kcal/đơn vị
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="number"
                     required
                     min="1"
                     max="10000"
                     value={foodCalories}
-                    onChange={(e) => setFoodCalories(e.target.value)}
+                    onChange={(e) => handleCaloriesChange(e.target.value)}
                     onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                     placeholder="VD: 350"
                     className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-[#00E5FF] font-bold focus:outline-none focus:border-[#00E5FF]"
@@ -802,8 +851,12 @@ export default function Nutrition() {
                       type="button"
                       onClick={() => {
                         setFoodName(sug.name);
-                        setFoodCalories(sug.cal.toString());
                         setFoodQuantity(sug.qty);
+                        setFoodCalories(sug.cal.toString());
+                        const match = sug.qty.match(/^([\d.]+)/);
+                        if (match) {
+                          setBaseCalRatio(sug.cal / parseFloat(match[1]));
+                        }
                       }}
                       className="px-2.5 py-1 bg-[#18233C] hover:bg-slate-800 border border-slate-800 rounded-lg text-xs text-slate-300 font-medium"
                     >
