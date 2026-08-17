@@ -49,9 +49,9 @@ export default function Nutrition() {
   // Modal State for adding food & photo upload
   const [activeMealCategory, setActiveMealCategory] = useState<string | null>(null);
   const [foodName, setFoodName] = useState('');
-  const [foodQuantity, setFoodQuantity] = useState('');
-  const [foodCalories, setFoodCalories] = useState('');
-  const [baseCalRatio, setBaseCalRatio] = useState<number>(0);
+  const [servingSize, setServingSize] = useState('1 phần');
+  const [baseCalories, setBaseCalories] = useState('');
+  const [portionMultiplier, setPortionMultiplier] = useState<string>('1');
   const [foodImage, setFoodImage] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUploadError, setImageUploadError] = useState('');
@@ -60,29 +60,14 @@ export default function Nutrition() {
   // Barcode Scanner Modal State
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
 
-  const handleQuantityChange = (newQty: string) => {
-    setFoodQuantity(newQty);
-    const numMatch = newQty.trim().match(/^([\d.]+)/);
-    if (numMatch && baseCalRatio > 0) {
-      const num = parseFloat(numMatch[1]);
-      if (!isNaN(num) && num > 0) {
-        const calcCal = Math.round(num * baseCalRatio);
-        setFoodCalories(calcCal.toString());
-      }
+  const computedTotalCalories = useMemo(() => {
+    const mult = parseFloat(portionMultiplier);
+    const baseCal = parseFloat(baseCalories);
+    if (isNaN(mult) || mult <= 0 || isNaN(baseCal) || baseCal <= 0) {
+      return 0;
     }
-  };
-
-  const handleCaloriesChange = (newCalStr: string) => {
-    setFoodCalories(newCalStr);
-    const cal = parseFloat(newCalStr);
-    const numMatch = foodQuantity.trim().match(/^([\d.]+)/);
-    if (numMatch) {
-      const num = parseFloat(numMatch[1]);
-      if (!isNaN(cal) && cal > 0 && !isNaN(num) && num > 0) {
-        setBaseCalRatio(cal / num);
-      }
-    }
-  };
+    return Math.round(mult * baseCal);
+  }, [portionMultiplier, baseCalories]);
 
   const handleDetectedProduct = (product: {
     name: string;
@@ -95,24 +80,9 @@ export default function Nutrition() {
     const targetCat = activeMealCategory || 'Bữa Sáng';
     setActiveMealCategory(targetCat);
     setFoodName(product.name);
-
-    const qty = product.servingSize || '100g';
-    const cal = product.calories || 0;
-
-    setFoodQuantity(qty);
-    setFoodCalories(cal.toString());
-
-    const numMatch = qty.trim().match(/^([\d.]+)/);
-    if (numMatch && cal > 0) {
-      const num = parseFloat(numMatch[1]);
-      if (!isNaN(num) && num > 0) {
-        setBaseCalRatio(cal / num);
-      } else {
-        setBaseCalRatio(0);
-      }
-    } else {
-      setBaseCalRatio(0);
-    }
+    setServingSize(product.servingSize || '1 phần');
+    setBaseCalories((product.calories || 0).toString());
+    setPortionMultiplier('1');
   };
 
   const pushNutritionToBackend = async (
@@ -373,24 +343,27 @@ export default function Nutrition() {
   const handleAddFood = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedFoodName = foodName.trim().replace(/\s+/g, ' ');
-    if (!activeMealCategory || !trimmedFoodName || !foodCalories) return;
+    if (!activeMealCategory || !trimmedFoodName || computedTotalCalories <= 0) return;
 
     if (trimmedFoodName.length < 2 || trimmedFoodName.length > 60) {
       alert('Tên món ăn không được chứa toàn khoảng trắng, độ dài từ 2 đến 60 ký tự!');
       return;
     }
 
-    const calVal = parseInt(foodCalories, 10);
-    if (isNaN(calVal) || calVal <= 0 || calVal > 10000) {
-      alert('Lượng Calo phải là số dương hợp lệ (từ 1 đến 10,000 kcal)!');
+    if (computedTotalCalories > 10000) {
+      alert('Lượng Calo tổng phải là số dương hợp lệ (tối đa 10,000 kcal)!');
       return;
     }
+
+    const multVal = parseFloat(portionMultiplier) || 1;
+    const cleanServing = servingSize.trim() || '1 phần';
+    const formattedQuantity = multVal === 1 ? cleanServing : `${multVal} x (${cleanServing})`;
 
     const newItem: MealItem = {
       id: Date.now().toString(),
       name: trimmedFoodName,
-      calories: calVal,
-      quantity: foodQuantity.trim() || undefined,
+      calories: computedTotalCalories,
+      quantity: formattedQuantity,
       image: foodImage || undefined
     };
 
@@ -406,9 +379,9 @@ export default function Nutrition() {
 
     // Reset Form & Modal
     setFoodName('');
-    setFoodQuantity('');
-    setFoodCalories('');
-    setBaseCalRatio(0);
+    setServingSize('1 phần');
+    setBaseCalories('');
+    setPortionMultiplier('1');
     setFoodImage('');
     setImageUploadError('');
     setActiveMealCategory(null);
@@ -726,6 +699,8 @@ export default function Nutrition() {
                 <span className="flex-shrink mx-3 text-[10px] text-slate-500 uppercase font-bold">hoặc nhập thủ công</span>
                 <div className="flex-grow border-t border-slate-800"></div>
               </div>
+              
+              {/* 1. Tên món ăn */}
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tên món ăn</label>
                 <input
@@ -734,44 +709,96 @@ export default function Nutrition() {
                   maxLength={60}
                   value={foodName}
                   onChange={(e) => setFoodName(e.target.value)}
-                  placeholder="VD: Phở bò, Ức gà, Cơm tấm..."
+                  placeholder="VD: Mì Hảo Hảo, Phở bò, Ức gà..."
                   className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
                 />
               </div>
 
-              {/* Số lượng & Calo side-by-side grid */}
+              {/* 2. Khẩu phần chuẩn gốc & Calo 1 khẩu phần */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Định lượng / Số lượng</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Khẩu phần chuẩn</label>
                   <input
                     type="text"
                     maxLength={30}
-                    value={foodQuantity}
-                    onChange={(e) => handleQuantityChange(e.target.value)}
-                    placeholder="VD: 200g, 1 tô, 2 quả..."
+                    value={servingSize}
+                    onChange={(e) => setServingSize(e.target.value)}
+                    placeholder="VD: Gói 200g, 100g, 1 tô..."
                     className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-                    <span>Lượng Calo (kcal)</span>
-                    {baseCalRatio > 0 && (
-                      <span className="text-[10px] text-[#00E5FF] font-semibold normal-case" title="Tỷ lệ Calo theo đơn vị">
-                        ⚡ {baseCalRatio >= 1 ? baseCalRatio.toFixed(1) : baseCalRatio.toFixed(2)} kcal/đơn vị
-                      </span>
-                    )}
-                  </label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Calo / 1 khẩu phần</label>
                   <input
                     type="number"
                     required
                     min="1"
                     max="10000"
-                    value={foodCalories}
-                    onChange={(e) => handleCaloriesChange(e.target.value)}
-                    onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
-                    placeholder="VD: 350"
-                    className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-[#00E5FF] font-bold focus:outline-none focus:border-[#00E5FF]"
+                    value={baseCalories}
+                    onChange={(e) => setBaseCalories(e.target.value)}
+                    placeholder="VD: 400"
+                    className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
                   />
+                </div>
+              </div>
+
+              {/* 3. Bộ nhân số lượng (Portion Multiplier) */}
+              <div className="bg-[#0B101D] p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Số lượng / Khẩu phần ăn</label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-slate-400 font-medium">Hệ số:</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      max="50"
+                      value={portionMultiplier}
+                      onChange={(e) => setPortionMultiplier(e.target.value)}
+                      className="w-14 bg-[#131B2E] border border-slate-700 text-[#00E5FF] font-black text-center text-xs py-1 rounded-lg focus:outline-none focus:border-[#00E5FF]"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Multiplier Buttons */}
+                <div className="grid grid-cols-5 gap-1.5">
+                  {[
+                    { label: '½', val: 0.5 },
+                    { label: '1', val: 1 },
+                    { label: '1.5', val: 1.5 },
+                    { label: '2', val: 2 },
+                    { label: '3', val: 3 }
+                  ].map((btn) => {
+                    const isSelected = parseFloat(portionMultiplier) === btn.val;
+                    return (
+                      <button
+                        key={btn.val}
+                        type="button"
+                        onClick={() => setPortionMultiplier(btn.val.toString())}
+                        className={`py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#00E5FF] text-slate-950 shadow-md shadow-[#00E5FF]/20'
+                            : 'bg-[#18233C] text-slate-300 hover:bg-slate-800 border border-slate-800'
+                        }`}
+                      >
+                        {btn.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. Tổng Calo tính toán tự động */}
+              <div className="p-3.5 bg-[#0E1526] border border-[#00E5FF]/40 rounded-2xl flex items-center justify-between shadow-sm">
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">TỔNG CALO NẠP VÀO</span>
+                  <span className="text-xs text-slate-300 font-medium">
+                    {portionMultiplier || '1'} x ({servingSize || '1 phần'})
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xl font-black text-[#00E5FF]">{computedTotalCalories}</span>
+                  <span className="text-xs text-slate-400 font-bold ml-1">kcal</span>
                 </div>
               </div>
 
@@ -851,12 +878,9 @@ export default function Nutrition() {
                       type="button"
                       onClick={() => {
                         setFoodName(sug.name);
-                        setFoodQuantity(sug.qty);
-                        setFoodCalories(sug.cal.toString());
-                        const match = sug.qty.match(/^([\d.]+)/);
-                        if (match) {
-                          setBaseCalRatio(sug.cal / parseFloat(match[1]));
-                        }
+                        setServingSize(sug.qty);
+                        setBaseCalories(sug.cal.toString());
+                        setPortionMultiplier('1');
                       }}
                       className="px-2.5 py-1 bg-[#18233C] hover:bg-slate-800 border border-slate-800 rounded-lg text-xs text-slate-300 font-medium"
                     >
