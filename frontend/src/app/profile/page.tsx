@@ -31,9 +31,8 @@ export default function Profile() {
         }
 
         const res = await fetch(`${API_URL}/api/users/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          credentials: 'include'
         });
 
         if (res.ok) {
@@ -112,8 +111,9 @@ export default function Profile() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
+        credentials: 'include',
         body: JSON.stringify({
           name: trimmedName,
           age: formData.age ? Number(formData.age) : undefined,

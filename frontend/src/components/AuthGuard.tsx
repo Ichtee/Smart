@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { API_URL } from '@/utils/api';
 
 const PUBLIC_PATHS = [
   '/',
@@ -18,52 +19,74 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [checking, setChecking] = useState<boolean>(true);
 
   useEffect(() => {
-    const checkAuth = () => {
+    let isCancelled = false;
+
+    const checkAuth = async () => {
       // Check if current route is public or dynamic public like /reset-password/...
       const isPublic = PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/reset-password');
 
       if (isPublic) {
-        setAuthorized(true);
-        setChecking(false);
+        if (!isCancelled) {
+          setAuthorized(true);
+          setChecking(false);
+        }
         return;
       }
 
-      // Route is protected, check token in localStorage
+      // Check auth via Cookie / Token with backend profile API
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
-      if (!token) {
-        setAuthorized(false);
-        setChecking(false);
-        router.push('/login');
-        return;
-      }
+      try {
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
 
-      // Check admin subroutes
-      if (pathname.startsWith('/dashboard/admin')) {
-        try {
-          const userStr = localStorage.getItem('user');
-          if (userStr) {
-            const user = JSON.parse(userStr);
-            if (user.role !== 'admin') {
+        const res = await fetch(`${API_URL}/api/users/profile`, {
+          headers,
+          credentials: 'include',
+          cache: 'no-store'
+        });
+
+        if (res.ok) {
+          const user = await res.json();
+
+          // Check admin subroutes
+          if (pathname.startsWith('/dashboard/admin') && user.role !== 'admin') {
+            if (!isCancelled) {
               setAuthorized(false);
               setChecking(false);
               router.push('/dashboard');
-              return;
             }
+            return;
           }
-        } catch (e) {
-          setAuthorized(false);
-          setChecking(false);
-          router.push('/login');
+
+          if (!isCancelled) {
+            setAuthorized(true);
+            setChecking(false);
+          }
           return;
         }
+      } catch (e) { }
+
+      // Unauthorized or server error -> clear local session and redirect
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       }
 
-      setAuthorized(true);
-      setChecking(false);
+      if (!isCancelled) {
+        setAuthorized(false);
+        setChecking(false);
+        router.push('/login');
+      }
     };
 
     checkAuth();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [pathname, router]);
 
   // If on a protected route and checking auth or unauthorized, render loading state

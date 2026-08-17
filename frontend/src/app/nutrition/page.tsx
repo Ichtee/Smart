@@ -66,8 +66,9 @@ export default function Nutrition() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
+        credentials: 'include',
         body: JSON.stringify({
           date: selectedDate,
           waterGlasses: targetWaterGlasses,
@@ -99,7 +100,8 @@ export default function Nutrition() {
       if (token) {
         try {
           const res = await fetch(`${API_URL}/api/nutrition?date=${selectedDate}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            credentials: 'include'
           });
           if (res.ok) {
             const apiLog = await res.json();
@@ -180,9 +182,8 @@ export default function Nutrition() {
         }
 
         const res = await fetch(`${API_URL}/api/users/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          credentials: 'include'
         });
 
         if (res.ok) {

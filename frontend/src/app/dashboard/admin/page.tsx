@@ -19,16 +19,20 @@ export default function AdminDashboard() {
 
       try {
         const profileRes = await fetch(`${API_URL}/api/users/profile`, {
-          headers: { 'Authorization': `Bearer ${storedToken}` }
+          headers: storedToken ? { 'Authorization': `Bearer ${storedToken}` } : {},
+          credentials: 'include'
         });
         const user = await profileRes.json();
 
         if (profileRes.ok && user.role === 'admin') {
           const [usersRes, exercisesRes] = await Promise.all([
             fetch(`${API_URL}/api/users`, {
-              headers: { 'Authorization': `Bearer ${storedToken}` }
+              headers: storedToken ? { 'Authorization': `Bearer ${storedToken}` } : {},
+              credentials: 'include'
             }),
-            fetch(`${API_URL}/api/exercises`)
+            fetch(`${API_URL}/api/exercises`, {
+              credentials: 'include'
+            })
           ]);
 
           let usersCount = 0;

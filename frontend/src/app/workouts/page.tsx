@@ -214,7 +214,8 @@ export default function Workouts() {
       if (token) {
         try {
           const profileRes = await fetch(`${API_URL}/api/users/profile`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            credentials: 'include'
           });
           if (profileRes.ok) {
             const userProfile = await profileRes.json();
@@ -270,8 +271,9 @@ export default function Workouts() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
+        credentials: 'include',
         body: JSON.stringify(data)
       });
     } catch (e) {
@@ -287,7 +289,8 @@ export default function Workouts() {
         const token = localStorage.getItem('token');
         if (token) {
           const res = await fetch(`${API_URL}/api/workouts/streak`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            credentials: 'include'
           });
           if (res.ok) {
             const data = await res.json();
@@ -453,8 +456,9 @@ export default function Workouts() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
+        credentials: 'include',
         body: JSON.stringify({
           date: activeTabDateStr,
           routineId: activeRoutineId,
@@ -491,7 +495,8 @@ export default function Workouts() {
       if (token) {
         try {
           const res = await fetch(`${API_URL}/api/workouts?date=${activeTabDateStr}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            credentials: 'include'
           });
           if (res.ok) {
             const apiLog = await res.json();

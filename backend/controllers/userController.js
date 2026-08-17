@@ -179,7 +179,16 @@ const loginUser = async (req, res) => {
     }
 
     if (await bcrypt.compare(password, user.password)) {
-      res.json({
+      const token = generateToken(user._id);
+
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      };
+
+      res.cookie('token', token, cookieOptions).json({
         _id: user.id,
         name: user.name,
         username: user.username,
@@ -194,7 +203,7 @@ const loginUser = async (req, res) => {
         lastActiveRoutineId: user.lastActiveRoutineId || 'ppl',
         lastActiveRoutineName: user.lastActiveRoutineName || '',
         lastActiveDayIndex: user.lastActiveDayIndex || 0,
-        token: generateToken(user._id),
+        token: token,
       });
     } else {
       res.status(401).json({ message: 'Invalid credentials' });
@@ -541,9 +550,24 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const logoutUser = async (req, res) => {
+  try {
+    res.cookie('token', '', {
+      httpOnly: true,
+      expires: new Date(0),
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+    res.status(200).json({ message: 'Đăng xuất thành công!' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error during logout' });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
+  logoutUser,
   verifyEmail,
   resendVerification,
   getProfile,

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { API_URL } from '@/utils/api';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -11,26 +12,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [userName, setUserName] = useState('Admin');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-      return;
-    }
     try {
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const user = JSON.parse(userStr);
         if (user.name) setUserName(user.name);
-        if (user.role !== 'admin') {
-          router.push('/dashboard');
-        }
       }
     } catch (e) {}
-  }, [router]);
+  }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    try {
+      await fetch(`${API_URL}/api/users/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (e) {}
+    localStorage.clear();
     router.push('/login');
   };
 

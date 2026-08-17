@@ -103,7 +103,8 @@ export default function ProgressPage() {
 
         // Fetch User Profile for BMR & TDEE calculation
         const res = await fetch(`${API_URL}/api/users/profile`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          credentials: 'include'
         });
 
         if (res.ok) {
@@ -121,9 +122,9 @@ export default function ProgressPage() {
 
         // Fetch Streak History, Workout Logs & Nutrition Logs from Backend API
         const [streakRes, logsRes, nutLogsRes] = await Promise.all([
-          fetch(`${API_URL}/api/workouts/streak`, { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch(`${API_URL}/api/workouts/logs`, { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch(`${API_URL}/api/nutrition/logs`, { headers: { 'Authorization': `Bearer ${token}` } })
+          fetch(`${API_URL}/api/workouts/streak`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {}, credentials: 'include' }),
+          fetch(`${API_URL}/api/workouts/logs`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {}, credentials: 'include' }),
+          fetch(`${API_URL}/api/nutrition/logs`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {}, credentials: 'include' })
         ]);
 
         if (streakRes.ok) {
@@ -175,7 +176,8 @@ export default function ProgressPage() {
       if (token) {
         try {
           const nutRes = await fetch(`${API_URL}/api/nutrition?date=${targetDateStr}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            credentials: 'include'
           });
           if (nutRes.ok) {
             const nutLog = await nutRes.json();

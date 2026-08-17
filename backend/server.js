@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const { generalLimiter } = require('./middleware/rateLimiter');
@@ -49,6 +50,7 @@ app.use(cors({
 
 // Limit request body to 10kb to prevent payload-based DoS
 app.use(express.json({ limit: '10kb' }));
+app.use(cookieParser());
 
 // Apply general rate limiter to all API routes
 app.use('/api', generalLimiter);

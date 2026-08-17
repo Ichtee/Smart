@@ -109,8 +109,9 @@ export default function Onboarding() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
+        credentials: 'include',
         body: JSON.stringify({
           age: Number(formData.age),
           gender: formData.gender,
