@@ -9,6 +9,7 @@ interface MealItem {
   id: string;
   name: string;
   calories: number;
+  quantity?: string;
   image?: string;
 }
 
@@ -48,6 +49,7 @@ export default function Nutrition() {
   // Modal State for adding food & photo upload
   const [activeMealCategory, setActiveMealCategory] = useState<string | null>(null);
   const [foodName, setFoodName] = useState('');
+  const [foodQuantity, setFoodQuantity] = useState('');
   const [foodCalories, setFoodCalories] = useState('');
   const [foodImage, setFoodImage] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -67,7 +69,8 @@ export default function Nutrition() {
   }) => {
     const targetCat = activeMealCategory || 'Bữa Sáng';
     setActiveMealCategory(targetCat);
-    setFoodName(`${product.name} (${product.servingSize})`);
+    setFoodName(product.name);
+    setFoodQuantity(product.servingSize || '100g');
     setFoodCalories(product.calories.toString());
   };
 
@@ -346,6 +349,7 @@ export default function Nutrition() {
       id: Date.now().toString(),
       name: trimmedFoodName,
       calories: calVal,
+      quantity: foodQuantity.trim() || undefined,
       image: foodImage || undefined
     };
 
@@ -361,6 +365,7 @@ export default function Nutrition() {
 
     // Reset Form & Modal
     setFoodName('');
+    setFoodQuantity('');
     setFoodCalories('');
     setFoodImage('');
     setImageUploadError('');
@@ -569,12 +574,6 @@ export default function Nutrition() {
               <span>🍱</span> Ghi chép bữa ăn trong ngày
             </h3>
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsBarcodeModalOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 text-xs font-extrabold hover:brightness-110 transition-all shadow-md shadow-emerald-500/20 flex items-center gap-1.5 active:scale-95 cursor-pointer"
-              >
-                <span>📷</span> Quét mã vạch
-              </button>
               <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tổng: <strong className="text-[#00E5FF] font-black">{caloriesConsumed} kcal</strong></span>
             </div>
           </div>
@@ -605,20 +604,10 @@ export default function Nutrition() {
 
                     <div className="flex items-center gap-1.5 self-start sm:self-auto">
                       <button
-                        onClick={() => {
-                          setActiveMealCategory(categoryName);
-                          setIsBarcodeModalOpen(true);
-                        }}
-                        className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 text-[10px] sm:text-xs font-black hover:brightness-110 transition-all shadow-md shadow-emerald-500/20 flex items-center gap-1 cursor-pointer"
-                        title={`Quét mã vạch cho ${categoryName}`}
-                      >
-                        <span>📷</span> Quét
-                      </button>
-                      <button
                         onClick={() => setActiveMealCategory(categoryName)}
-                        className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-[#00E5FF] text-slate-950 text-[10px] sm:text-xs font-black hover:bg-cyan-300 transition-all shadow-md shadow-[#00E5FF]/20 cursor-pointer"
+                        className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-[#00E5FF] text-slate-950 text-[10px] sm:text-xs font-black hover:bg-cyan-300 transition-all shadow-md shadow-[#00E5FF]/20 cursor-pointer flex items-center gap-1"
                       >
-                        + Thêm món
+                        <span>+</span> Thêm món
                       </button>
                     </div>
                   </div>
@@ -638,7 +627,12 @@ export default function Nutrition() {
                                 title="Bấm để xem ảnh phóng to"
                               />
                             )}
-                            <span className="font-semibold text-slate-200">{item.name}</span>
+                            <div>
+                              <span className="font-semibold text-slate-200">{item.name}</span>
+                              {item.quantity && (
+                                <span className="ml-1.5 text-[11px] text-slate-400 font-medium">({item.quantity})</span>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-[#00E5FF] font-bold">{item.calories} kcal</span>
@@ -699,6 +693,18 @@ export default function Nutrition() {
                   value={foodName}
                   onChange={(e) => setFoodName(e.target.value)}
                   placeholder="VD: Phở bò, Ức gà, Cơm tấm..."
+                  className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Số lượng / Định lượng (tùy chọn)</label>
+                <input
+                  type="text"
+                  maxLength={30}
+                  value={foodQuantity}
+                  onChange={(e) => setFoodQuantity(e.target.value)}
+                  placeholder="VD: 100g, 1 tô, 2 quả, 1 cup, 250ml..."
                   className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
                 />
               </div>
@@ -783,19 +789,23 @@ export default function Nutrition() {
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Gợi ý nhanh:</label>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { name: 'Phở bò', cal: 450 },
-                    { name: 'Cơm tấm', cal: 600 },
-                    { name: 'Ức gà', cal: 220 },
-                    { name: 'Trứng ốp la', cal: 150 },
-                    { name: 'Bánh mì', cal: 300 }
+                    { name: 'Phở bò', cal: 450, qty: '1 tô' },
+                    { name: 'Cơm tấm', cal: 600, qty: '1 dĩa' },
+                    { name: 'Ức gà', cal: 220, qty: '200g' },
+                    { name: 'Trứng ốp la', cal: 150, qty: '2 quả' },
+                    { name: 'Bánh mì', cal: 300, qty: '1 ổ' }
                   ].map(sug => (
                     <button
                       key={sug.name}
                       type="button"
-                      onClick={() => { setFoodName(sug.name); setFoodCalories(sug.cal.toString()); }}
+                      onClick={() => {
+                        setFoodName(sug.name);
+                        setFoodCalories(sug.cal.toString());
+                        setFoodQuantity(sug.qty);
+                      }}
                       className="px-2.5 py-1 bg-[#18233C] hover:bg-slate-800 border border-slate-800 rounded-lg text-xs text-slate-300 font-medium"
                     >
-                      {sug.name} ({sug.cal}k)
+                      {sug.name} ({sug.qty} • {sug.cal}k)
                     </button>
                   ))}
                 </div>
@@ -888,7 +898,12 @@ export default function Nutrition() {
                                   title="Xem ảnh"
                                 />
                               )}
-                              <span className="font-medium text-slate-200">{item.name}</span>
+                              <div>
+                                <span className="font-medium text-slate-200">{item.name}</span>
+                                {item.quantity && (
+                                  <span className="ml-1.5 text-[11px] text-slate-400 font-normal">({item.quantity})</span>
+                                )}
+                              </div>
                             </div>
                             <span className="font-bold text-[#00E5FF]">{item.calories} kcal</span>
                           </div>
