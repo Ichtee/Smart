@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/Header';
 import { useRouter } from 'next/navigation';
 import { API_URL } from '@/utils/api';
+import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 
 interface MealItem {
   id: string;
@@ -52,6 +53,23 @@ export default function Nutrition() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUploadError, setImageUploadError] = useState('');
   const [selectedPreviewImage, setSelectedPreviewImage] = useState<string | null>(null);
+
+  // Barcode Scanner Modal State
+  const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+
+  const handleDetectedProduct = (product: {
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    servingSize: string;
+  }) => {
+    const targetCat = activeMealCategory || 'Bữa Sáng';
+    setActiveMealCategory(targetCat);
+    setFoodName(`${product.name} (${product.servingSize})`);
+    setFoodCalories(product.calories.toString());
+  };
 
   const pushNutritionToBackend = async (
     targetWaterGlasses: number,
@@ -546,11 +564,19 @@ export default function Nutrition() {
 
         {/* Meal Logging Section */}
         <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl space-y-4 sm:space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-3 sm:pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 sm:pb-4 gap-2">
             <h3 className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
               <span>🍱</span> Ghi chép bữa ăn trong ngày
             </h3>
-            <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tổng: <strong className="text-[#00E5FF] font-black">{caloriesConsumed} kcal</strong></span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsBarcodeModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 text-xs font-extrabold hover:brightness-110 transition-all shadow-md shadow-emerald-500/20 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+              >
+                <span>📷</span> Quét mã vạch
+              </button>
+              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tổng: <strong className="text-[#00E5FF] font-black">{caloriesConsumed} kcal</strong></span>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:gap-6">
