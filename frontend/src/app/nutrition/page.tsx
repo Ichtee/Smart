@@ -79,6 +79,11 @@ export default function Nutrition() {
   const [customFormName, setCustomFormName] = useState('');
   const [customFormServing, setCustomFormServing] = useState('1 phần');
   const [customFormCal, setCustomFormCal] = useState('');
+  const [customFormProtein, setCustomFormProtein] = useState('0');
+  const [customFormCarbs, setCustomFormCarbs] = useState('0');
+  const [customFormFat, setCustomFormFat] = useState('0');
+  const [customFormCategory, setCustomFormCategory] = useState('Tất cả');
+  const [customFormImage, setCustomFormImage] = useState('');
   const [savingCustomFood, setSavingCustomFood] = useState(false);
 
   const fetchFoodsFromDb = async () => {
@@ -117,7 +122,12 @@ export default function Nutrition() {
         body: JSON.stringify({
           name: customFormName.trim(),
           servingSize: customFormServing.trim() || '1 phần',
-          calories: Number(customFormCal)
+          calories: Number(customFormCal),
+          protein: Number(customFormProtein) || 0,
+          carbs: Number(customFormCarbs) || 0,
+          fat: Number(customFormFat) || 0,
+          category: customFormCategory || 'Tất cả',
+          image: customFormImage.trim() || ''
         })
       });
 
@@ -125,6 +135,11 @@ export default function Nutrition() {
         setCustomFormName('');
         setCustomFormServing('1 phần');
         setCustomFormCal('');
+        setCustomFormProtein('0');
+        setCustomFormCarbs('0');
+        setCustomFormFat('0');
+        setCustomFormCategory('Tất cả');
+        setCustomFormImage('');
         setShowCreateCustomForm(false);
         fetchFoodsFromDb();
       } else {
@@ -874,6 +889,67 @@ export default function Nutrition() {
                           onChange={(e) => setCustomFormCal(e.target.value)}
                           placeholder="VD: 250"
                           className="w-full bg-[#131B2E] border border-slate-700 rounded-xl p-2.5 text-xs text-[#00E5FF] font-black focus:outline-none focus:border-[#00E5FF]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Macros: Protein, Carbs, Fat */}
+                    <div className="grid grid-cols-3 gap-2 pt-0.5">
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Đạm (Protein g)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={customFormProtein}
+                          onChange={(e) => setCustomFormProtein(e.target.value)}
+                          className="w-full bg-[#131B2E] border border-slate-700 rounded-xl p-2 text-xs text-cyan-400 font-bold focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Carbs (g)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={customFormCarbs}
+                          onChange={(e) => setCustomFormCarbs(e.target.value)}
+                          className="w-full bg-[#131B2E] border border-slate-700 rounded-xl p-2 text-xs text-amber-400 font-bold focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Chất béo (Fat g)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={customFormFat}
+                          onChange={(e) => setCustomFormFat(e.target.value)}
+                          className="w-full bg-[#131B2E] border border-slate-700 rounded-xl p-2 text-xs text-rose-400 font-bold focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Phân loại</label>
+                        <select
+                          value={customFormCategory}
+                          onChange={(e) => setCustomFormCategory(e.target.value)}
+                          className="w-full bg-[#131B2E] border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-[#00E5FF]"
+                        >
+                          <option value="Tất cả">Tất cả</option>
+                          <option value="Bữa Sáng">Bữa Sáng</option>
+                          <option value="Bữa Trưa">Bữa Trưa</option>
+                          <option value="Bữa Tối">Bữa Tối</option>
+                          <option value="Ăn Vặt">Ăn Vặt</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">URL Ảnh (Tùy chọn)</label>
+                        <input
+                          type="url"
+                          value={customFormImage}
+                          onChange={(e) => setCustomFormImage(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full bg-[#131B2E] border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-[#00E5FF]"
                         />
                       </div>
                     </div>
