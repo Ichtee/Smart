@@ -603,12 +603,24 @@ export default function Nutrition() {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => setActiveMealCategory(categoryName)}
-                      className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-[#00E5FF] text-slate-950 text-[10px] sm:text-xs font-black hover:bg-cyan-300 transition-all shadow-md shadow-[#00E5FF]/20 self-start sm:self-auto"
-                    >
-                      + Thêm món
-                    </button>
+                    <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                      <button
+                        onClick={() => {
+                          setActiveMealCategory(categoryName);
+                          setIsBarcodeModalOpen(true);
+                        }}
+                        className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 text-[10px] sm:text-xs font-black hover:brightness-110 transition-all shadow-md shadow-emerald-500/20 flex items-center gap-1 cursor-pointer"
+                        title={`Quét mã vạch cho ${categoryName}`}
+                      >
+                        <span>📷</span> Quét
+                      </button>
+                      <button
+                        onClick={() => setActiveMealCategory(categoryName)}
+                        className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-[#00E5FF] text-slate-950 text-[10px] sm:text-xs font-black hover:bg-cyan-300 transition-all shadow-md shadow-[#00E5FF]/20 cursor-pointer"
+                      >
+                        + Thêm món
+                      </button>
+                    </div>
                   </div>
 
                   {/* Food Items List */}
@@ -665,6 +677,19 @@ export default function Nutrition() {
             </div>
 
             <form onSubmit={handleAddFood} className="space-y-4">
+              <button
+                type="button"
+                onClick={() => setIsBarcodeModalOpen(true)}
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-md shadow-emerald-500/20 active:scale-95 cursor-pointer mb-2"
+              >
+                <span>📷</span> Quét mã vạch tự động
+              </button>
+
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-slate-800"></div>
+                <span className="flex-shrink mx-3 text-[10px] text-slate-500 uppercase font-bold">hoặc nhập thủ công</span>
+                <div className="flex-grow border-t border-slate-800"></div>
+              </div>
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tên món ăn</label>
                 <input
