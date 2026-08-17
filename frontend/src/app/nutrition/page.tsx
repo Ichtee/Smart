@@ -60,6 +60,32 @@ export default function Nutrition() {
   // Barcode Scanner Modal State
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
 
+  // Live Food Database State
+  const [dbFoods, setDbFoods] = useState<Array<{
+    _id: string;
+    name: string;
+    servingSize: string;
+    calories: number;
+    category?: string;
+    image?: string;
+  }>>([]);
+  const [showDbDropdown, setShowDbDropdown] = useState(false);
+
+  useEffect(() => {
+    const fetchFoodsFromDb = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/foods`, {
+          credentials: 'include'
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setDbFoods(data);
+        }
+      } catch (e) {}
+    };
+    fetchFoodsFromDb();
+  }, []);
+
   const computedTotalCalories = useMemo(() => {
     const mult = parseFloat(portionMultiplier);
     const baseCal = parseFloat(baseCalories);
@@ -700,18 +726,57 @@ export default function Nutrition() {
                 <div className="flex-grow border-t border-slate-800"></div>
               </div>
               
-              {/* 1. Tên món ăn */}
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tên món ăn</label>
+              {/* 1. Tên món ăn (kèm Live Search từ MongoDB Food Database) */}
+              <div className="relative">
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                  <span>Tên món ăn *</span>
+                  <span className="text-[10px] text-[#00E5FF] font-semibold">🔍 Tìm từ cơ sở dữ liệu</span>
+                </label>
                 <input
                   type="text"
                   required
                   maxLength={60}
                   value={foodName}
-                  onChange={(e) => setFoodName(e.target.value)}
-                  placeholder="VD: Mì Hảo Hảo, Phở bò, Ức gà..."
+                  onFocus={() => setShowDbDropdown(true)}
+                  onChange={(e) => {
+                    setFoodName(e.target.value);
+                    setShowDbDropdown(true);
+                  }}
+                  placeholder="VD: Phở bò, Ức gà, Cơm tấm..."
                   className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
                 />
+
+                {/* Live Food Database Dropdown Results */}
+                {showDbDropdown && dbFoods.length > 0 && foodName.trim() && (
+                  <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-[#131B2E] border border-slate-700 rounded-2xl shadow-2xl max-h-48 overflow-y-auto divide-y divide-slate-800">
+                    {dbFoods
+                      .filter(f => f.name.toLowerCase().includes(foodName.toLowerCase().trim()))
+                      .slice(0, 8)
+                      .map(item => (
+                        <div
+                          key={item._id}
+                          onClick={() => {
+                            setFoodName(item.name);
+                            setServingSize(item.servingSize || '1 phần');
+                            setBaseCalories(item.calories.toString());
+                            setPortionMultiplier('1');
+                            if (item.image) setFoodImage(item.image);
+                            setShowDbDropdown(false);
+                          }}
+                          className="p-3 hover:bg-[#18233C] cursor-pointer transition-colors flex items-center justify-between text-xs"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-base">🥗</span>
+                            <div>
+                              <p className="font-bold text-white">{item.name}</p>
+                              <p className="text-[10px] text-slate-400 font-medium">{item.servingSize}</p>
+                            </div>
+                          </div>
+                          <span className="font-black text-[#00E5FF]">{item.calories} kcal</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
 
               {/* 2. Khẩu phần chuẩn gốc & Calo 1 khẩu phần */}

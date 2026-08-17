@@ -36,6 +36,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Tổng quan', href: '/dashboard/admin', icon: '📊' },
     { name: 'Quản lý lịch tập', href: '/dashboard/admin/routines', icon: '📅' },
     { name: 'Quản lý bài tập', href: '/dashboard/admin/exercises', icon: '🏋️' },
+    { name: 'Quản lý món ăn', href: '/dashboard/admin/foods', icon: '🥗' },
     { name: 'Quản lý người dùng', href: '/dashboard/admin/users', icon: '👥' }
   ];
 
