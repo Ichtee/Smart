@@ -697,31 +697,33 @@ export default function Nutrition() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Số lượng / Định lượng (tùy chọn)</label>
-                <input
-                  type="text"
-                  maxLength={30}
-                  value={foodQuantity}
-                  onChange={(e) => setFoodQuantity(e.target.value)}
-                  placeholder="VD: 100g, 1 tô, 2 quả, 1 cup, 250ml..."
-                  className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Lượng Calo (kcal)</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  max="10000"
-                  value={foodCalories}
-                  onChange={(e) => setFoodCalories(e.target.value)}
-                  onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
-                  placeholder="VD: 350"
-                  className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
-                />
+              {/* Số lượng & Calo side-by-side grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Định lượng / Số lượng</label>
+                  <input
+                    type="text"
+                    maxLength={30}
+                    value={foodQuantity}
+                    onChange={(e) => setFoodQuantity(e.target.value)}
+                    placeholder="VD: 100g, 1 tô, 2 quả..."
+                    className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Lượng Calo (kcal)</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="10000"
+                    value={foodCalories}
+                    onChange={(e) => setFoodCalories(e.target.value)}
+                    onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
+                    placeholder="VD: 350"
+                    className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-[#00E5FF] font-bold focus:outline-none focus:border-[#00E5FF]"
+                  />
+                </div>
               </div>
 
               {/* Photo Upload via ImgBB */}
