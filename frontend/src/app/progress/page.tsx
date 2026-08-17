@@ -585,7 +585,7 @@ export default function ProgressPage() {
 
                       {item.hasMeals ? (
                         <span className="text-[11px] font-black text-[#00FF87] drop-shadow-sm mt-1">
-                          {item.dayCalories}k
+                          {item.dayCalories} kcal
                         </span>
                       ) : (
                         <span className="text-[10px] text-slate-600 mt-1">-</span>
@@ -606,7 +606,7 @@ export default function ProgressPage() {
                   <span>Hôm nay</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-[#00FF87]">1850k</span>
+                  <span className="text-xs font-bold text-[#00FF87]">1850 kcal</span>
                   <span>Lượng Calo đã nạp</span>
                 </div>
                 <div className="flex items-center gap-1.5">

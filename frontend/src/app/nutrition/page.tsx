@@ -805,7 +805,7 @@ export default function Nutrition() {
                       }}
                       className="px-2.5 py-1 bg-[#18233C] hover:bg-slate-800 border border-slate-800 rounded-lg text-xs text-slate-300 font-medium"
                     >
-                      {sug.name} ({sug.qty} • {sug.cal}k)
+                      {sug.name} ({sug.qty} • {sug.cal} kcal)
                     </button>
                   ))}
                 </div>
