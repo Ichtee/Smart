@@ -377,29 +377,37 @@ export default function Workouts() {
   const currentTabWorkout = sortedSchedule.length ? sortedSchedule[safeDayIndex] : null;
   const currentDayKey = `${userId ? userId + '_' : ''}${activeRoutineId}_${currentTabWorkout?.day || 'day'}`;
   const legacyDayKey = `${activeRoutineId}_${currentTabWorkout?.day || 'day'}`;
-  const todayDateStr = useMemo(() => {
-    const d = new Date();
+  // Auto-refresh todayDateStr at midnight so it stays correct across day boundaries
+  const formatDateStr = (d: Date) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-  }, []);
+  };
+  const [todayDateStr, setTodayDateStr] = useState(() => formatDateStr(new Date()));
+  useEffect(() => {
+    const now = new Date();
+    const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() - now.getTime();
+    const timer = setTimeout(() => {
+      setTodayDateStr(formatDateStr(new Date()));
+    }, msUntilMidnight + 500);
+    return () => clearTimeout(timer);
+  }, [todayDateStr]);
 
-  // Calculate exact YYYY-MM-DD date for current tab in current week (case-insensitive & flexible)
+  // Calculate exact YYYY-MM-DD date for current tab in current week using exact day name mapping
+  const DAY_TO_WEEK_OFFSET: Record<string, number> = {
+    'Thứ 2': 0,     // Monday
+    'Thứ 3': 1,     // Tuesday
+    'Thứ 4': 2,     // Wednesday
+    'Thứ 5': 3,     // Thursday
+    'Thứ 6': 4,     // Friday
+    'Thứ 7': 5,     // Saturday
+    'Chủ nhật': 6,  // Sunday
+  };
   const activeTabDateStr = useMemo(() => {
-    if (!currentTabWorkout || (!currentTabWorkout.day && !currentTabWorkout.name)) return todayDateStr;
+    if (!currentTabWorkout || !currentTabWorkout.day) return todayDateStr;
 
-    const textToMatch = `${currentTabWorkout.day || ''} ${currentTabWorkout.name || ''}`.toLowerCase().trim();
-
-    let offset: number | undefined = undefined;
-    if (textToMatch.includes('2') || textToMatch.includes('hai')) offset = 0;
-    else if (textToMatch.includes('3') || textToMatch.includes('ba')) offset = 1;
-    else if (textToMatch.includes('4') || textToMatch.includes('tư') || textToMatch.includes('tu')) offset = 2;
-    else if (textToMatch.includes('5') || textToMatch.includes('năm') || textToMatch.includes('nam')) offset = 3;
-    else if (textToMatch.includes('6') || textToMatch.includes('sáu') || textToMatch.includes('sau')) offset = 4;
-    else if (textToMatch.includes('7') || textToMatch.includes('bảy') || textToMatch.includes('bay')) offset = 5;
-    else if (textToMatch.includes('chủ nhật') || textToMatch.includes('cn') || textToMatch.includes('sunday')) offset = 6;
-
+    const offset = DAY_TO_WEEK_OFFSET[currentTabWorkout.day];
     if (offset === undefined) return todayDateStr;
 
     const today = new Date();
@@ -410,10 +418,7 @@ export default function Workouts() {
     const targetDate = new Date(monday);
     targetDate.setDate(monday.getDate() + offset);
 
-    const ty = targetDate.getFullYear();
-    const tm = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const td = String(targetDate.getDate()).padStart(2, '0');
-    return `${ty}-${tm}-${td}`;
+    return formatDateStr(targetDate);
   }, [currentTabWorkout, todayDateStr]);
 
   // Helper to notify other tabs/components of real-time storage changes
@@ -575,8 +580,8 @@ export default function Workouts() {
           }
         });
 
-        localStorage.setItem(`smart_sel_${todayDateStr}_${currentDayKey}`, JSON.stringify(selectedIds));
-        localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(detailsMap));
+        localStorage.setItem(`smart_sel_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(selectedIds));
+        localStorage.setItem(`smart_det_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(detailsMap));
       }
 
       if (isCancelled) return;
@@ -637,7 +642,7 @@ export default function Workouts() {
         ...prev,
         [id]: { ...(prev[id] || { sets: 1, reps: '10' }), sets: newSets }
       };
-      localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(updated));
+      localStorage.setItem(`smart_det_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(updated));
       return updated;
     });
   };
@@ -652,7 +657,7 @@ export default function Workouts() {
         ...prev,
         [id]: { ...(prev[id] || { sets: 1, reps: '10' }), reps: `${newNum}` }
       };
-      localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(updated));
+      localStorage.setItem(`smart_det_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(updated));
       return updated;
     });
   };
@@ -661,14 +666,14 @@ export default function Workouts() {
     if (isWorkoutSaved) return;
     const newSel = Array.from(new Set([...currentSelectedIds, exId]));
     setDaySelections(prev => ({ ...prev, [currentDayKey]: newSel }));
-    localStorage.setItem(`smart_sel_${todayDateStr}_${currentDayKey}`, JSON.stringify(newSel));
+    localStorage.setItem(`smart_sel_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(newSel));
   };
 
   const handleRemoveExercise = (exId: string) => {
     if (isWorkoutSaved) return;
     const newSel = currentSelectedIds.filter(id => id !== exId);
     setDaySelections(prev => ({ ...prev, [currentDayKey]: newSel }));
-    localStorage.setItem(`smart_sel_${todayDateStr}_${currentDayKey}`, JSON.stringify(newSel));
+    localStorage.setItem(`smart_sel_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(newSel));
   };
 
   const handleResetToTemplate = () => {
@@ -702,8 +707,8 @@ export default function Workouts() {
 
     setDaySelections(prev => ({ ...prev, [currentDayKey]: selectedIds }));
     setExerciseDetails(prev => ({ ...prev, ...detailsMap }));
-    localStorage.setItem(`smart_sel_${todayDateStr}_${currentDayKey}`, JSON.stringify(selectedIds));
-    localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(detailsMap));
+    localStorage.setItem(`smart_sel_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(selectedIds));
+    localStorage.setItem(`smart_det_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(detailsMap));
     setNoticeMessage('Đã khôi phục danh sách bài tập về lịch gốc (KA) mặc định!');
     setTimeout(() => setNoticeMessage(''), 4000);
   };
@@ -756,10 +761,15 @@ export default function Workouts() {
       notifyStorageChange(activeTabDateStr);
     } catch (e) { }
 
+    // Only send exercise details for the current day's selected exercises
+    const currentDayDetailsMap: Record<string, any> = {};
+    currentSelectedIds.forEach(id => {
+      if (exerciseDetails[id]) currentDayDetailsMap[id] = exerciseDetails[id];
+    });
     pushWorkoutToBackend({
       selectedIds: currentSelectedIds,
       completedIds: currentCompletedIds,
-      detailsMap: exerciseDetails,
+      detailsMap: currentDayDetailsMap,
       isSaved: true
     });
 
@@ -797,10 +807,15 @@ export default function Workouts() {
     } catch (e) { }
 
     // 3. Background API push to MongoDB
+    // Only send exercise details for the current day's selected exercises
+    const toggleDayDetailsMap: Record<string, any> = {};
+    currentSelectedIds.forEach(id => {
+      if (exerciseDetails[id]) toggleDayDetailsMap[id] = exerciseDetails[id];
+    });
     pushWorkoutToBackend({
       selectedIds: currentSelectedIds,
       completedIds: newComp,
-      detailsMap: exerciseDetails,
+      detailsMap: toggleDayDetailsMap,
       isSaved: true
     });
 
@@ -1343,7 +1358,7 @@ export default function Workouts() {
                                       ...prev,
                                       [ex.id]: { ...(prev[ex.id] || { sets: ex.sets, reps: ex.reps }), reps: val }
                                     };
-                                    localStorage.setItem(`smart_det_${todayDateStr}_${currentDayKey}`, JSON.stringify(updated));
+                                    localStorage.setItem(`smart_det_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(updated));
                                     return updated;
                                   });
                                 }}
