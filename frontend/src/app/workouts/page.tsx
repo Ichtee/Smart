@@ -886,10 +886,12 @@ export default function Workouts() {
       } catch (e) { }
     }
 
-    // 4. Start 3-minute rest timer when marking exercise as COMPLETED (not when uncompleting)
+    // 4. Start 3-minute rest timer when marking exercise as COMPLETED, stop it when UNTICKING
     if (!isAlreadyComp) {
       const completedEx = allExercises.find(ex => ex.id === id || ex._id === id || ex._id?.toString() === id);
       startRestTimer(id, completedEx?.name || 'Bài tập');
+    } else if (restTimerExerciseId === id) {
+      skipRestTimer();
     }
   };
 
