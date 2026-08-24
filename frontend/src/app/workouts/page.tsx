@@ -795,7 +795,8 @@ export default function Workouts() {
         sets: ex.sets,
         reps: ex.reps,
         muscle: ex.muscle,
-        normMuscle: ex.normMuscle
+        normMuscle: ex.normMuscle,
+        completed: currentCompletedIds.includes(ex.id)
       }));
 
       logsMap[activeTabDateStr] = {
@@ -860,6 +861,29 @@ export default function Workouts() {
     // 2. Background local cache sync
     try {
       localStorage.setItem(`smart_comp_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(newComp));
+
+      // Sync workout logs in localStorage with updated completion flags
+      const logsMap = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
+      const selectedExerciseList = activeSelectedExercises.map(ex => ({
+        id: ex.id,
+        name: ex.name,
+        sets: ex.sets,
+        reps: ex.reps,
+        muscle: ex.muscle,
+        normMuscle: ex.normMuscle,
+        completed: newComp.includes(ex.id)
+      }));
+
+      logsMap[activeTabDateStr] = {
+        date: activeTabDateStr,
+        routineId: activeRoutineId,
+        routineName: activeRoutine?.name || 'Lịch tập tự do',
+        dayName: currentTabWorkout ? `${currentTabWorkout.day}: ${currentTabWorkout.name}` : 'Buổi tập',
+        exercises: selectedExerciseList,
+        updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem('smart_workout_logs', JSON.stringify(logsMap));
+      notifyStorageChange(activeTabDateStr);
     } catch (e) { }
 
     // 3. Background API push to MongoDB

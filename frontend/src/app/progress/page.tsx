@@ -649,66 +649,72 @@ export default function ProgressPage() {
                   </div>
 
                   {/* Exercises Done List */}
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                        DANH SÁCH BÀI TẬP ĐÃ THỰC HIỆN ({selectedDayLog.exercises?.length || 0} BÀI):
-                      </span>
+                  {(() => {
+                    const completedExList = (selectedDayLog.exercises || []).filter((ex: any) => ex.completed !== false);
 
-                      <button
-                        onClick={() => setIsExerciseListCollapsed(prev => !prev)}
-                        className="px-3 py-1 bg-[#18233C] hover:bg-slate-800 rounded-xl text-xs font-bold text-[#00E5FF] border border-slate-700 transition flex items-center gap-1.5 cursor-pointer"
-                      >
-                        {isExerciseListCollapsed ? (
-                          <>
-                            <span>👁️ Mở rộng danh sách</span>
-                            <svg className="w-3.5 h-3.5 text-[#00E5FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </>
-                        ) : (
-                          <>
-                            <span>Thu gọn ✕</span>
-                            <svg className="w-3.5 h-3.5 text-[#00E5FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
-                            </svg>
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    return (
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                            DANH SÁCH BÀI TẬP ĐÃ THỰC HIỆN ({completedExList.length} BÀI):
+                          </span>
 
-                    {!isExerciseListCollapsed && (
-                      selectedDayLog.exercises && selectedDayLog.exercises.length > 0 ? (
-                        <div className="space-y-2 animate-in fade-in duration-300">
-                          {selectedDayLog.exercises.map((ex, idx) => (
-                            <div key={idx} className="p-3.5 bg-[#0E1526] border border-slate-800/90 rounded-2xl flex items-center justify-between gap-3 text-xs">
-                              <div className="space-y-1 min-w-0">
-                                <span className="font-extrabold text-white text-sm block truncate">
-                                  {idx + 1}. {ex.name}
-                                </span>
-                                {ex.muscle && (
-                                  <span className="text-emerald-400 font-semibold block text-[11px]">
-                                    🎯 Nhóm cơ: {MUSCLE_NAMES_VI[ex.muscle.toLowerCase()] || ex.muscle}
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className="bg-[#0B101D] px-3 py-1 rounded-xl border border-slate-800 text-slate-200 font-bold">
-                                  Hiệp: <strong className="text-[#00E5FF]">{ex.sets}</strong>
-                                </span>
-                                <span className="bg-[#0B101D] px-3 py-1 rounded-xl border border-slate-800 text-slate-200 font-bold">
-                                  Lần: <strong className="text-[#00FF87]">{ex.reps}</strong>
-                                </span>
-                              </div>
-                            </div>
-                          ))}
+                          <button
+                            onClick={() => setIsExerciseListCollapsed(prev => !prev)}
+                            className="px-3 py-1 bg-[#18233C] hover:bg-slate-800 rounded-xl text-xs font-bold text-[#00E5FF] border border-slate-700 transition flex items-center gap-1.5 cursor-pointer"
+                          >
+                            {isExerciseListCollapsed ? (
+                              <>
+                                <span>👁️ Mở rộng danh sách</span>
+                                <svg className="w-3.5 h-3.5 text-[#00E5FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </>
+                            ) : (
+                              <>
+                                <span>Thu gọn ✕</span>
+                                <svg className="w-3.5 h-3.5 text-[#00E5FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
+                                </svg>
+                              </>
+                            )}
+                          </button>
                         </div>
-                      ) : (
-                        <p className="text-xs text-slate-400 italic py-2">Chưa ghi nhận danh sách chi tiết các bài tập.</p>
-                      )
-                    )}
-                  </div>
+
+                        {!isExerciseListCollapsed && (
+                          completedExList.length > 0 ? (
+                            <div className="space-y-2 animate-in fade-in duration-300">
+                              {completedExList.map((ex: any, idx: number) => (
+                                <div key={idx} className="p-3.5 bg-[#0E1526] border border-slate-800/90 rounded-2xl flex items-center justify-between gap-3 text-xs">
+                                  <div className="space-y-1 min-w-0">
+                                    <span className="font-extrabold text-white text-sm block truncate">
+                                      {idx + 1}. {ex.name}
+                                    </span>
+                                    {ex.muscle && (
+                                      <span className="text-emerald-400 font-semibold block text-[11px]">
+                                        🎯 Nhóm cơ: {MUSCLE_NAMES_VI[ex.muscle.toLowerCase()] || ex.muscle}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="bg-[#0B101D] px-3 py-1 rounded-xl border border-slate-800 text-slate-200 font-bold">
+                                      Hiệp: <strong className="text-[#00E5FF]">{ex.sets}</strong>
+                                    </span>
+                                    <span className="bg-[#0B101D] px-3 py-1 rounded-xl border border-slate-800 text-slate-200 font-bold">
+                                      Lần: <strong className="text-[#00FF87]">{ex.reps}</strong>
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-400 italic py-2">Chưa hoàn thành bài tập nào trong buổi này.</p>
+                          )
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : streakHistory.includes(selectedCalendarDate || '') ? (
                 <div className="p-5 bg-[#0B101D] rounded-2xl border border-slate-800 space-y-3 text-xs">
