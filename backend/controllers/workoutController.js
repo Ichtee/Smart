@@ -81,18 +81,14 @@ const saveWorkoutLog = async (req, res) => {
   }
 };
 
-// @desc    Get streak history (list of dates trained)
+// @desc    Get streak history (list of dates trained with at least 1 completed exercise)
 // @route   GET /api/workouts/streak
 // @access  Private
 const getStreakHistory = async (req, res) => {
   try {
     const logs = await WorkoutLog.find({
       user: req.user._id,
-      $or: [
-        { isSaved: true },
-        { 'completedIds.0': { $exists: true } },
-        { 'exercises.0': { $exists: true } }
-      ]
+      'completedIds.0': { $exists: true }
     }).select('date');
 
     const streakDates = Array.from(new Set(logs.map(l => l.date))).sort();

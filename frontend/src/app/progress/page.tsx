@@ -308,10 +308,11 @@ export default function ProgressPage() {
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const isCompleted = streakHistory.includes(dateStr) || Boolean(workoutLogs[dateStr]);
+      const logData = workoutLogs[dateStr];
+      const hasCompletedExercises = (logData?.exercises && logData.exercises.some((e: any) => e.completed !== false)) || streakHistory.includes(dateStr);
+      const isCompleted = hasCompletedExercises && streakHistory.includes(dateStr);
       const isToday = day === now.getDate();
       const isPast = day <= now.getDate();
-      const logData = workoutLogs[dateStr];
 
       let dayCalories = 0;
       let photoCount = 0;
@@ -669,7 +670,7 @@ export default function ProgressPage() {
                 </h3>
 
                 <div className="flex items-center gap-2">
-                  {streakHistory.includes(selectedCalendarDate || '') && (
+                  {streakHistory.includes(selectedCalendarDate || '') && (selectedDayLog?.exercises || []).some((ex: any) => ex.completed !== false) && (
                     <span className="px-3 py-1 bg-emerald-950/80 text-[#00FF87] border border-emerald-500/40 text-xs font-bold rounded-xl">
                       ✓ Đã hoàn thành
                     </span>

@@ -808,13 +808,6 @@ export default function Workouts() {
         updatedAt: new Date().toISOString()
       };
       localStorage.setItem('smart_workout_logs', JSON.stringify(logsMap));
-
-      const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
-      if (!history.includes(activeTabDateStr)) {
-        const newHistory = [...history, activeTabDateStr];
-        localStorage.setItem('smart_streak_history', JSON.stringify(newHistory));
-        setStreakDays(newHistory.length);
-      }
       notifyStorageChange(activeTabDateStr);
     } catch (e) { }
 
@@ -883,6 +876,20 @@ export default function Workouts() {
         updatedAt: new Date().toISOString()
       };
       localStorage.setItem('smart_workout_logs', JSON.stringify(logsMap));
+
+      // Update streak history: only include date if at least 1 exercise is completed
+      const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
+      let updatedHistory = history;
+      if (newComp.length > 0) {
+        if (!history.includes(activeTabDateStr)) {
+          updatedHistory = [...history, activeTabDateStr];
+        }
+      } else {
+        updatedHistory = history.filter(d => d !== activeTabDateStr);
+      }
+      localStorage.setItem('smart_streak_history', JSON.stringify(updatedHistory));
+      setStreakDays(updatedHistory.length);
+
       notifyStorageChange(activeTabDateStr);
     } catch (e) { }
 
