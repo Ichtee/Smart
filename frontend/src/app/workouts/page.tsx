@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Model from 'react-body-highlighter';
 import Header from '@/components/Header';
@@ -178,6 +178,58 @@ export default function Workouts() {
   const [streakDays, setStreakDays] = useState<number>(1);
   const [noticeMessage, setNoticeMessage] = useState<string>('');
   const [librarySearchTerm, setLibrarySearchTerm] = useState<string>('');
+
+  // ═══ REST TIMER STATE ═══
+  const REST_DURATION = 180; // 3 minutes in seconds
+  const [restTimerActive, setRestTimerActive] = useState<boolean>(false);
+  const [restTimerPaused, setRestTimerPaused] = useState<boolean>(false);
+  const [restTimerSeconds, setRestTimerSeconds] = useState<number>(REST_DURATION);
+  const [restTimerExerciseName, setRestTimerExerciseName] = useState<string>('');
+  const restTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Rest Timer tick logic
+  useEffect(() => {
+    if (restTimerActive && !restTimerPaused && restTimerSeconds > 0) {
+      restTimerIntervalRef.current = setInterval(() => {
+        setRestTimerSeconds(prev => {
+          if (prev <= 1) {
+            // Timer finished
+            clearInterval(restTimerIntervalRef.current!);
+            setRestTimerActive(false);
+            setRestTimerPaused(false);
+            // Vibrate on mobile if supported
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              navigator.vibrate([200, 100, 200, 100, 200]);
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (restTimerIntervalRef.current) clearInterval(restTimerIntervalRef.current);
+    };
+  }, [restTimerActive, restTimerPaused, restTimerSeconds]);
+
+  const startRestTimer = useCallback((exerciseName: string) => {
+    if (restTimerIntervalRef.current) clearInterval(restTimerIntervalRef.current);
+    setRestTimerExerciseName(exerciseName);
+    setRestTimerSeconds(REST_DURATION);
+    setRestTimerPaused(false);
+    setRestTimerActive(true);
+  }, []);
+
+  const skipRestTimer = useCallback(() => {
+    if (restTimerIntervalRef.current) clearInterval(restTimerIntervalRef.current);
+    setRestTimerActive(false);
+    setRestTimerPaused(false);
+    setRestTimerSeconds(0);
+  }, []);
+
+  const toggleRestTimerPause = useCallback(() => {
+    setRestTimerPaused(prev => !prev);
+  }, []);
 
   const fetchInitialData = async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -828,6 +880,12 @@ export default function Workouts() {
           setStreakDays(newHistory.length);
         }
       } catch (e) { }
+    }
+
+    // 4. Start 3-minute rest timer when marking exercise as COMPLETED (not when uncompleting)
+    if (!isAlreadyComp) {
+      const completedEx = allExercises.find(ex => ex.id === id || ex._id === id || ex._id?.toString() === id);
+      startRestTimer(completedEx?.name || 'Bài tập');
     }
   };
 
@@ -1678,6 +1736,118 @@ export default function Workouts() {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* ═══ REST TIMER OVERLAY ═══ */}
+      {restTimerActive && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 pointer-events-none">
+          {/* Semi-transparent backdrop */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto" onClick={skipRestTimer}></div>
+
+          {/* Timer Card */}
+          <div className="relative pointer-events-auto w-full max-w-sm bg-[#131B2E]/95 backdrop-blur-2xl border border-cyan-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,229,255,0.15)] space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300 mb-4 sm:mb-0">
+
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-sm">
+                  ⏱️
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Nghỉ giữa hiệp</h3>
+                  <p className="text-[10px] text-slate-400 font-medium truncate max-w-[200px]">✅ {restTimerExerciseName}</p>
+                </div>
+              </div>
+              <button
+                onClick={skipRestTimer}
+                className="w-8 h-8 rounded-full bg-[#18233C] hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-lg font-bold transition border border-slate-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Circular Timer */}
+            <div className="flex justify-center">
+              <div className="relative w-44 h-44 sm:w-52 sm:h-52 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  {/* Background ring */}
+                  <circle
+                    cx="50" cy="50" r="42" fill="none"
+                    stroke="currentColor" className="text-slate-800/80"
+                    strokeWidth="6"
+                  />
+                  {/* Progress ring */}
+                  <circle
+                    cx="50" cy="50" r="42" fill="none"
+                    stroke="currentColor"
+                    className={`transition-all duration-1000 ease-linear ${
+                      restTimerSeconds <= 10
+                        ? 'text-rose-500 drop-shadow-[0_0_16px_rgba(239,68,68,0.7)]'
+                        : restTimerSeconds <= 30
+                          ? 'text-amber-400 drop-shadow-[0_0_16px_rgba(251,191,36,0.6)]'
+                          : 'text-[#00E5FF] drop-shadow-[0_0_16px_rgba(0,229,255,0.6)]'
+                    }`}
+                    strokeWidth="6"
+                    strokeDasharray={2 * Math.PI * 42}
+                    strokeDashoffset={2 * Math.PI * 42 * (1 - restTimerSeconds / REST_DURATION)}
+                    strokeLinecap="round"
+                  />
+                </svg>
+
+                {/* Time Display */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className={`text-5xl sm:text-6xl font-black tracking-tight tabular-nums ${
+                    restTimerSeconds <= 10
+                      ? 'text-rose-400 animate-pulse'
+                      : restTimerSeconds <= 30
+                        ? 'text-amber-300'
+                        : 'text-white'
+                  }`}>
+                    {Math.floor(restTimerSeconds / 60)}:{String(restTimerSeconds % 60).padStart(2, '0')}
+                  </span>
+                  <span className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">
+                    {restTimerPaused ? '⏸ Tạm dừng' : restTimerSeconds <= 0 ? '✅ Xong!' : 'Đang nghỉ...'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Control Buttons */}
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={toggleRestTimerPause}
+                className={`flex-1 px-4 py-3 rounded-2xl text-sm font-extrabold transition-all active:scale-95 ${
+                  restTimerPaused
+                    ? 'bg-[#00E5FF] text-slate-950 shadow-lg shadow-[#00E5FF]/30 hover:bg-cyan-300'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+                }`}
+              >
+                {restTimerPaused ? '▶ Tiếp tục' : '⏸ Tạm dừng'}
+              </button>
+
+              <button
+                onClick={skipRestTimer}
+                className="flex-1 px-4 py-3 rounded-2xl bg-[#18233C] hover:bg-slate-800 text-slate-300 text-sm font-extrabold border border-slate-700 transition-all active:scale-95"
+              >
+                ⏭ Bỏ qua
+              </button>
+            </div>
+
+            {/* Progress bar at bottom */}
+            <div className="w-full h-1.5 bg-[#0B101D] rounded-full overflow-hidden border border-slate-800">
+              <div
+                className={`h-full transition-all duration-1000 ease-linear rounded-full ${
+                  restTimerSeconds <= 10
+                    ? 'bg-gradient-to-r from-rose-500 to-rose-400'
+                    : restTimerSeconds <= 30
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-300'
+                      : 'bg-gradient-to-r from-[#00E5FF] to-[#00FF87]'
+                }`}
+                style={{ width: `${(restTimerSeconds / REST_DURATION) * 100}%` }}
+              />
+            </div>
           </div>
         </div>
       )}

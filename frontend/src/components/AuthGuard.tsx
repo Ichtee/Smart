@@ -13,7 +13,7 @@ const PUBLIC_PATHS = [
 ];
 
 const MAX_RETRIES = 2;
-const FETCH_TIMEOUT_MS = 12000; // 12s timeout per attempt — handles Render cold start
+const FETCH_TIMEOUT_MS = 15000; // 15s timeout per attempt — handles Render cold start
 
 /** Fetch with AbortController timeout */
 const fetchWithTimeout = (url: string, options: RequestInit, timeoutMs: number): Promise<Response> => {
@@ -22,124 +22,133 @@ const fetchWithTimeout = (url: string, options: RequestInit, timeoutMs: number):
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
 };
 
+/**
+ * Optimistic AuthGuard:
+ * - Public routes → render immediately, no check.
+ * - No token → show loading briefly, redirect to /login.
+ * - Has token → render children IMMEDIATELY (optimistic), verify in background.
+ *   - If verification fails (401/403) → clear token, redirect to /login.
+ *   - If network error → keep children visible (don't log out on cold start).
+ *   - Admin routes → redirect non-admin users after verification.
+ */
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [authorized, setAuthorized] = useState<boolean>(false);
-  const [checking, setChecking] = useState<boolean>(true);
-  const [statusMsg, setStatusMsg] = useState<string>('Đang kết nối đến máy chủ...');
-  const retryCountRef = useRef(0);
+  // Start with 'unknown' — we quickly resolve from localStorage
+  const [authState, setAuthState] = useState<'unknown' | 'public' | 'no-token' | 'optimistic' | 'verified' | 'failed'>('unknown');
+  const [statusMsg, setStatusMsg] = useState<string>('');
+  const verifyRunRef = useRef<string>('');
 
   useEffect(() => {
-    let isCancelled = false;
+    const isPublic = PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/reset-password');
 
-    const checkAuth = async () => {
-      // Check if current route is public or dynamic public like /reset-password/...
-      const isPublic = PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/reset-password');
+    if (isPublic) {
+      setAuthState('public');
+      return;
+    }
 
-      if (isPublic) {
-        if (!isCancelled) {
-          setAuthorized(true);
-          setChecking(false);
-        }
-        return;
-      }
+    // Quick synchronous check for token
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
-      // Check auth via Cookie / Token with backend profile API
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      setAuthState('no-token');
+      router.push('/login');
+      return;
+    }
 
-      // If no token at all, skip API call and redirect immediately
-      if (!token) {
-        if (!isCancelled) {
-          setAuthorized(false);
-          setChecking(false);
-          router.push('/login');
-        }
-        return;
-      }
+    // Token exists → optimistically show content immediately
+    setAuthState('optimistic');
 
-      // Retry loop to handle backend cold start
-      let lastError: unknown = null;
+    // Background verification
+    const runId = `${pathname}_${Date.now()}`;
+    verifyRunRef.current = runId;
+
+    const verifyInBackground = async () => {
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        if (isCancelled) return;
+        if (verifyRunRef.current !== runId) return; // stale
 
         if (attempt > 0) {
-          setStatusMsg(`Máy chủ đang khởi động... thử lại lần ${attempt}/${MAX_RETRIES}`);
-          // Brief pause before retry
-          await new Promise(r => setTimeout(r, 1500));
-        } else {
-          setStatusMsg('Đang kết nối đến máy chủ...');
+          await new Promise(r => setTimeout(r, 2000));
         }
 
         try {
-          const headers: Record<string, string> = {
-            'Authorization': `Bearer ${token}`
-          };
-
           const res = await fetchWithTimeout(
             `${API_URL}/api/users/profile`,
-            { headers, credentials: 'include', cache: 'no-store' },
+            {
+              headers: { 'Authorization': `Bearer ${token}` },
+              credentials: 'include',
+              cache: 'no-store'
+            },
             FETCH_TIMEOUT_MS
           );
+
+          if (verifyRunRef.current !== runId) return;
 
           if (res.ok) {
             const user = await res.json();
 
-            // Check admin subroutes
+            // Store user data for other components
+            try {
+              localStorage.setItem('user', JSON.stringify({
+                id: user._id || user.id,
+                name: user.name,
+                username: user.username,
+                role: user.role
+              }));
+            } catch (e) {}
+
+            // Admin route check
             if (pathname.startsWith('/dashboard/admin') && user.role !== 'admin') {
-              if (!isCancelled) {
-                setAuthorized(false);
-                setChecking(false);
-                router.push('/dashboard');
-              }
+              setAuthState('failed');
+              router.push('/dashboard');
               return;
             }
 
-            if (!isCancelled) {
-              setAuthorized(true);
-              setChecking(false);
-            }
+            setAuthState('verified');
             return;
           }
 
-          // Got a response but not ok (401/403) — no point retrying, auth is invalid
-          break;
+          // 401/403 — token is invalid, don't retry
+          if (res.status === 401 || res.status === 403) {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+            }
+            setAuthState('failed');
+            router.push('/login');
+            return;
+          }
+
+          // Other HTTP errors (500 etc.) — retry
+          continue;
         } catch (e) {
-          lastError = e;
-          // Network error or timeout — retry
+          // Network error / timeout — retry (backend cold start)
           continue;
         }
       }
 
-      // All retries exhausted or got non-ok response — clear session and redirect
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-
-      if (!isCancelled) {
-        setStatusMsg('Phiên đăng nhập hết hạn. Đang chuyển hướng...');
-        setAuthorized(false);
-        setChecking(false);
-        router.push('/login');
+      // All retries exhausted due to network errors — stay on page
+      // Don't log out the user just because the backend is slow
+      // The page is already rendering with cached/localStorage data
+      if (verifyRunRef.current === runId) {
+        setAuthState('optimistic'); // keep showing content
       }
     };
 
-    // Reset state for new pathname
-    retryCountRef.current = 0;
-    setChecking(true);
-    setAuthorized(false);
-    checkAuth();
+    verifyInBackground();
 
     return () => {
-      isCancelled = true;
+      verifyRunRef.current = ''; // cancel
     };
   }, [pathname, router]);
 
-  // If on a protected route and checking auth or unauthorized, render loading state
-  const isPublic = PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/reset-password');
+  // Public routes → always render
+  if (authState === 'public') {
+    return <>{children}</>;
+  }
 
-  if (!isPublic && (checking || !authorized)) {
+  // No token → brief loading then redirect
+  if (authState === 'no-token' || authState === 'failed') {
     return (
       <div className="min-h-screen bg-[#0B0F19] text-white flex items-center justify-center p-4 font-sans relative overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none" />
@@ -148,13 +157,24 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col items-center space-y-4 relative z-10 text-center">
           <div className="w-12 h-12 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
           <div className="space-y-1">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Xác thực quyền truy cập</h3>
-            <p className="text-xs text-slate-400 font-semibold">{statusMsg}</p>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Đang chuyển hướng...</h3>
+            <p className="text-xs text-slate-400 font-semibold">{statusMsg || 'Vui lòng đăng nhập để tiếp tục'}</p>
           </div>
         </div>
       </div>
     );
   }
 
+  // Unknown (initial render before useEffect runs) — show brief skeleton
+  if (authState === 'unknown') {
+    return (
+      <div className="min-h-screen bg-[#0B0F19] text-white flex items-center justify-center p-4 font-sans">
+        <div className="w-10 h-10 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // Optimistic or Verified → render children immediately
   return <>{children}</>;
 }
+
