@@ -287,17 +287,8 @@ export default function Nutrition() {
 
     loadNutrition();
 
-    window.addEventListener('storage', loadNutrition);
-    window.addEventListener('smart_nutrition_updated', loadNutrition);
-    window.addEventListener('smart_workout_updated', loadNutrition);
-    window.addEventListener('focus', loadNutrition);
-
     return () => {
       isCancelled = true;
-      window.removeEventListener('storage', loadNutrition);
-      window.removeEventListener('smart_nutrition_updated', loadNutrition);
-      window.removeEventListener('smart_workout_updated', loadNutrition);
-      window.removeEventListener('focus', loadNutrition);
     };
   }, [selectedDate, todayStr]);
 
