@@ -397,6 +397,51 @@ export default function ProgressPage() {
     return workoutLogs[selectedCalendarDate] || null;
   }, [selectedCalendarDate, workoutLogs]);
 
+  const handleDeleteWorkoutLog = async (targetDate: string) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa nhật ký tập luyện ngày ${targetDate} không?`)) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await fetch(`${API_URL}/api/workouts?date=${targetDate}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` },
+          credentials: 'include'
+        });
+      }
+
+      // Remove from localStorage
+      const logs = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
+      delete logs[targetDate];
+      localStorage.setItem('smart_workout_logs', JSON.stringify(logs));
+
+      const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
+      const newHistory = history.filter(d => d !== targetDate);
+      localStorage.setItem('smart_streak_history', JSON.stringify(newHistory));
+
+      // Remove specific day cache
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes(targetDate)) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      setWorkoutLogs(prev => {
+        const copy = { ...prev };
+        delete copy[targetDate];
+        return copy;
+      });
+      setStreakHistory(newHistory);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('smart_workout_updated', { detail: { date: targetDate } }));
+      }
+    } catch (e) {
+      console.error('Lỗi khi xóa nhật ký:', e);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0B0F19] flex items-center justify-center text-white">
@@ -623,11 +668,21 @@ export default function ProgressPage() {
                   <span>📋</span> Chi tiết buổi tập ngày: <span className="text-[#00E5FF] font-black">{selectedCalendarDate}</span>
                 </h3>
 
-                {streakHistory.includes(selectedCalendarDate || '') && (
-                  <span className="px-3 py-1 bg-emerald-950/80 text-[#00FF87] border border-emerald-500/40 text-xs font-bold rounded-xl">
-                    ✓ Đã hoàn thành
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {streakHistory.includes(selectedCalendarDate || '') && (
+                    <span className="px-3 py-1 bg-emerald-950/80 text-[#00FF87] border border-emerald-500/40 text-xs font-bold rounded-xl">
+                      ✓ Đã hoàn thành
+                    </span>
+                  )}
+                  {selectedDayLog && (
+                    <button
+                      onClick={() => handleDeleteWorkoutLog(selectedCalendarDate || '')}
+                      className="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold rounded-xl transition cursor-pointer"
+                    >
+                      🗑️ Xóa nhật ký
+                    </button>
+                  )}
+                </div>
               </div>
 
               {selectedDayLog ? (

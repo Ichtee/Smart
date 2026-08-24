@@ -4,6 +4,7 @@ const { protect } = require('../middleware/authMiddleware');
 const {
   getWorkoutLog,
   saveWorkoutLog,
+  deleteWorkoutLog,
   getStreakHistory,
   getAllWorkoutLogs
 } = require('../controllers/workoutController');
@@ -12,7 +13,8 @@ router.use(protect);
 
 router.route('/')
   .get(getWorkoutLog)
-  .post(saveWorkoutLog);
+  .post(saveWorkoutLog)
+  .delete(deleteWorkoutLog);
 
 router.get('/streak', getStreakHistory);
 router.get('/logs', getAllWorkoutLogs);

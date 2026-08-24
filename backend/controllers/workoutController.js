@@ -138,9 +138,29 @@ const getAllWorkoutLogs = async (req, res) => {
   }
 };
 
+// @desc    Delete workout log for a specific date
+// @route   DELETE /api/workouts
+// @access  Private
+const deleteWorkoutLog = async (req, res) => {
+  try {
+    const date = req.query.date;
+    if (!date) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp tham số date (YYYY-MM-DD)' });
+    }
+
+    await WorkoutLog.deleteOne({ user: req.user._id, date });
+
+    return res.status(200).json({ success: true, message: `Đã xóa nhật ký tập luyện ngày ${date}` });
+  } catch (error) {
+    console.error('Error deleting workout log:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi xóa nhật ký tập luyện' });
+  }
+};
+
 module.exports = {
   getWorkoutLog,
   saveWorkoutLog,
+  deleteWorkoutLog,
   getStreakHistory,
   getAllWorkoutLogs
 };
