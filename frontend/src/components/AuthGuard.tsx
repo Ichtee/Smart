@@ -25,22 +25,24 @@ const fetchWithTimeout = (url: string, options: RequestInit, timeoutMs: number):
 /**
  * Optimistic AuthGuard:
  * - Public routes → render immediately, no check.
- * - No token → show loading briefly, redirect to /login.
- * - Has token → render children IMMEDIATELY (optimistic), verify in background.
+ * - No token → redirect to /login.
+ * - Admin routes (/dashboard/admin/*) → BLOCK rendering until role is verified (no optimistic).
+ * - Regular protected routes → render IMMEDIATELY (optimistic), verify in background.
  *   - If verification fails (401/403) → clear token, redirect to /login.
  *   - If network error → keep children visible (don't log out on cold start).
- *   - Admin routes → redirect non-admin users after verification.
  */
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  // Start with 'unknown' — we quickly resolve from localStorage
-  const [authState, setAuthState] = useState<'unknown' | 'public' | 'no-token' | 'optimistic' | 'verified' | 'failed'>('unknown');
+  const [authState, setAuthState] = useState<
+    'unknown' | 'public' | 'no-token' | 'optimistic' | 'verified' | 'failed' | 'admin-checking'
+  >('unknown');
   const [statusMsg, setStatusMsg] = useState<string>('');
   const verifyRunRef = useRef<string>('');
 
   useEffect(() => {
     const isPublic = PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/reset-password');
+    const isAdminRoute = pathname.startsWith('/dashboard/admin');
 
     if (isPublic) {
       setAuthState('public');
@@ -56,8 +58,14 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Token exists → optimistically show content immediately
-    setAuthState('optimistic');
+    // For admin routes: BLOCK rendering, show spinner until role is verified
+    // For regular routes: optimistically render children immediately
+    if (isAdminRoute) {
+      setAuthState('admin-checking');
+      setStatusMsg('Đang xác thực quyền quản trị...');
+    } else {
+      setAuthState('optimistic');
+    }
 
     // Background verification
     const runId = `${pathname}_${Date.now()}`;
@@ -68,6 +76,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         if (verifyRunRef.current !== runId) return; // stale
 
         if (attempt > 0) {
+          if (isAdminRoute) {
+            setStatusMsg(`Máy chủ đang khởi động... thử lại lần ${attempt}/${MAX_RETRIES}`);
+          }
           await new Promise(r => setTimeout(r, 2000));
         }
 
@@ -97,10 +108,16 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
               }));
             } catch (e) {}
 
-            // Admin route check
-            if (pathname.startsWith('/dashboard/admin') && user.role !== 'admin') {
+            // Admin route — non-admin user → redirect with clear message
+            if (isAdminRoute && user.role !== 'admin') {
+              setStatusMsg('Bạn không có quyền truy cập trang quản trị.');
               setAuthState('failed');
-              router.push('/dashboard');
+              // Brief delay so user sees the message
+              setTimeout(() => {
+                if (verifyRunRef.current === runId) {
+                  router.push('/dashboard');
+                }
+              }, 1500);
               return;
             }
 
@@ -115,6 +132,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
               localStorage.removeItem('user');
             }
             setAuthState('failed');
+            setStatusMsg('Phiên đăng nhập hết hạn.');
             router.push('/login');
             return;
           }
@@ -127,11 +145,21 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // All retries exhausted due to network errors — stay on page
-      // Don't log out the user just because the backend is slow
-      // The page is already rendering with cached/localStorage data
+      // All retries exhausted due to network errors
       if (verifyRunRef.current === runId) {
-        setAuthState('optimistic'); // keep showing content
+        if (isAdminRoute) {
+          // For admin routes: don't allow access without verification
+          setStatusMsg('Không thể kết nối để xác thực quyền quản trị. Vui lòng thử lại.');
+          setAuthState('failed');
+          setTimeout(() => {
+            if (verifyRunRef.current === runId) {
+              router.push('/dashboard');
+            }
+          }, 2000);
+        } else {
+          // For regular routes: keep showing content (don't log out on cold start)
+          setAuthState('optimistic');
+        }
       }
     };
 
@@ -147,8 +175,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // No token → brief loading then redirect
-  if (authState === 'no-token' || authState === 'failed') {
+  // No token, failed, or admin-checking → show loading/redirect state
+  if (authState === 'no-token' || authState === 'failed' || authState === 'admin-checking') {
     return (
       <div className="min-h-screen bg-[#0B0F19] text-white flex items-center justify-center p-4 font-sans relative overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none" />
@@ -157,7 +185,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col items-center space-y-4 relative z-10 text-center">
           <div className="w-12 h-12 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
           <div className="space-y-1">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Đang chuyển hướng...</h3>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+              {authState === 'admin-checking' ? 'Xác thực quyền quản trị' : 'Đang chuyển hướng...'}
+            </h3>
             <p className="text-xs text-slate-400 font-semibold">{statusMsg || 'Vui lòng đăng nhập để tiếp tục'}</p>
           </div>
         </div>
