@@ -652,15 +652,8 @@ export default function Workouts() {
 
     syncWorkoutTab();
 
-    window.addEventListener('storage', syncWorkoutTab);
-    window.addEventListener('smart_nutrition_updated', syncWorkoutTab);
-    window.addEventListener('smart_workout_updated', syncWorkoutTab);
-
     return () => {
       isCancelled = true;
-      window.removeEventListener('storage', syncWorkoutTab);
-      window.removeEventListener('smart_nutrition_updated', syncWorkoutTab);
-      window.removeEventListener('smart_workout_updated', syncWorkoutTab);
     };
   }, [currentDayKey, legacyDayKey, allExercises, todayDateStr, activeTabDateStr, currentTabWorkout, isFetching]);
 
@@ -905,17 +898,6 @@ export default function Workouts() {
       detailsMap: toggleDayDetailsMap,
       isSaved: true
     });
-
-    if (newComp.length > 0) {
-      try {
-        const history: string[] = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
-        if (!history.includes(activeTabDateStr)) {
-          const newHistory = [...history, activeTabDateStr];
-          localStorage.setItem('smart_streak_history', JSON.stringify(newHistory));
-          setStreakDays(newHistory.length);
-        }
-      } catch (e) { }
-    }
 
     // 4. Start 3-minute rest timer when marking exercise as COMPLETED, stop it when UNTICKING
     if (!isAlreadyComp) {
