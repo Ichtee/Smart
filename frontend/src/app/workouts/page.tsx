@@ -185,6 +185,7 @@ export default function Workouts() {
   const [restTimerPaused, setRestTimerPaused] = useState<boolean>(false);
   const [restTimerSeconds, setRestTimerSeconds] = useState<number>(REST_DURATION);
   const [restTimerExerciseName, setRestTimerExerciseName] = useState<string>('');
+  const [restTimerExerciseId, setRestTimerExerciseId] = useState<string | null>(null);
   const restTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Rest Timer tick logic
@@ -197,6 +198,7 @@ export default function Workouts() {
             clearInterval(restTimerIntervalRef.current!);
             setRestTimerActive(false);
             setRestTimerPaused(false);
+            setRestTimerExerciseId(null);
             // Vibrate on mobile if supported
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
               navigator.vibrate([200, 100, 200, 100, 200]);
@@ -212,8 +214,9 @@ export default function Workouts() {
     };
   }, [restTimerActive, restTimerPaused, restTimerSeconds]);
 
-  const startRestTimer = useCallback((exerciseName: string) => {
+  const startRestTimer = useCallback((exerciseId: string, exerciseName: string) => {
     if (restTimerIntervalRef.current) clearInterval(restTimerIntervalRef.current);
+    setRestTimerExerciseId(exerciseId);
     setRestTimerExerciseName(exerciseName);
     setRestTimerSeconds(REST_DURATION);
     setRestTimerPaused(false);
@@ -224,6 +227,7 @@ export default function Workouts() {
     if (restTimerIntervalRef.current) clearInterval(restTimerIntervalRef.current);
     setRestTimerActive(false);
     setRestTimerPaused(false);
+    setRestTimerExerciseId(null);
     setRestTimerSeconds(0);
   }, []);
 
@@ -885,7 +889,7 @@ export default function Workouts() {
     // 4. Start 3-minute rest timer when marking exercise as COMPLETED (not when uncompleting)
     if (!isAlreadyComp) {
       const completedEx = allExercises.find(ex => ex.id === id || ex._id === id || ex._id?.toString() === id);
-      startRestTimer(completedEx?.name || 'Bài tập');
+      startRestTimer(id, completedEx?.name || 'Bài tập');
     }
   };
 
@@ -1333,154 +1337,214 @@ export default function Workouts() {
 
                 {activeSelectedExercises.length > 0 ? (
                   activeSelectedExercises.map((ex, i) => (
-                    <div key={ex.id} className="p-3.5 sm:p-5 rounded-2xl bg-[#0E1526] border border-slate-800/90 hover:border-cyan-500/40 transition-all flex items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-lg group">
+                    <div key={ex.id} className="flex flex-col gap-2">
+                      <div className="p-3.5 sm:p-5 rounded-2xl bg-[#0E1526] border border-slate-800/90 hover:border-cyan-500/40 transition-all flex items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-lg group">
 
-                      <div className="flex-1 space-y-2.5 sm:space-y-3 min-w-0">
-                        <div className="flex items-start sm:items-center justify-between flex-wrap gap-1.5 sm:gap-2">
-                          <h3 
-                            onClick={() => setSelectedDetailExercise(ex)}
-                            className="font-extrabold text-white text-sm sm:text-base hover:text-[#00E5FF] cursor-pointer transition-colors flex flex-wrap items-center gap-1.5 sm:gap-2"
-                            title="Bấm để xem hướng dẫn & chi tiết bài tập"
-                          >
-                            <span>{i + 1}. {ex.name}</span>
-                            <span className="text-[11px] sm:text-xs font-bold text-cyan-400 opacity-80 hover:opacity-100 flex items-center gap-0.5">
-                              ℹ️ Chi tiết
-                            </span>
-                            {ex.requiresWarmup && (
-                              <span className="px-2 py-0.5 bg-amber-950/80 text-amber-400 border border-amber-500/40 rounded-full text-[9px] sm:text-[10px] font-extrabold" title={ex.warmupNotes || 'Cần khởi động'}>
-                                🔥 Khởi Động
-                              </span>
-                            )}
-                            {ex.isOptional && (
-                              <span className="px-2 py-0.5 bg-purple-950/80 text-purple-300 border border-purple-500/40 rounded-full text-[9px] sm:text-[10px] font-extrabold">
-                                💡 Tùy Chọn
-                              </span>
-                            )}
-                          </h3>
-                          {!isWorkoutSaved && (
-                            <button
-                              onClick={() => handleRemoveExercise(ex.id)}
-                              className="text-[11px] sm:text-xs text-rose-400 hover:text-rose-300 font-bold ml-auto"
+                        <div className="flex-1 space-y-2.5 sm:space-y-3 min-w-0">
+                          <div className="flex items-start sm:items-center justify-between flex-wrap gap-1.5 sm:gap-2">
+                            <h3 
+                              onClick={() => setSelectedDetailExercise(ex)}
+                              className="font-extrabold text-white text-sm sm:text-base hover:text-[#00E5FF] cursor-pointer transition-colors flex flex-wrap items-center gap-1.5 sm:gap-2"
+                              title="Bấm để xem hướng dẫn & chi tiết bài tập"
                             >
-                              ✕ Xóa
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs">
-                          {/* Sets adjustment */}
-                          {!isWorkoutSaved ? (
-                            <div className="flex items-center gap-1.5 bg-[#0B101D] px-2 py-1 rounded-xl border border-slate-800">
-                              <span className="text-slate-400 font-semibold text-[10px] sm:text-xs">Hiệp:</span>
+                              <span>{i + 1}. {ex.name}</span>
+                              <span className="text-[11px] sm:text-xs font-bold text-cyan-400 opacity-80 hover:opacity-100 flex items-center gap-0.5">
+                                ℹ️ Chi tiết
+                              </span>
+                              {ex.requiresWarmup && (
+                                <span className="px-2 py-0.5 bg-amber-950/80 text-amber-400 border border-amber-500/40 rounded-full text-[9px] sm:text-[10px] font-extrabold" title={ex.warmupNotes || 'Cần khởi động'}>
+                                  🔥 Khởi Động
+                                </span>
+                              )}
+                              {ex.isOptional && (
+                                <span className="px-2 py-0.5 bg-purple-950/80 text-purple-300 border border-purple-500/40 rounded-full text-[9px] sm:text-[10px] font-extrabold">
+                                  💡 Tùy Chọn
+                                </span>
+                              )}
+                            </h3>
+                            {!isWorkoutSaved && (
                               <button
-                                onClick={() => updateExerciseSets(ex.id, ex.sets - 1)}
-                                className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-xs border border-slate-700 active:scale-95"
-                              >-</button>
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                value={ex.sets}
-                                onChange={(e) => {
-                                  const clean = e.target.value.replace(/[^0-9]/g, '');
-                                  updateExerciseSets(ex.id, parseInt(clean) || 1);
-                                }}
-                                className="w-7 bg-transparent text-[#00E5FF] font-black text-center focus:outline-none text-xs"
-                              />
-                              <button
-                                onClick={() => updateExerciseSets(ex.id, ex.sets + 1)}
-                                className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-xs border border-slate-700 active:scale-95"
-                              >+</button>
-                            </div>
-                          ) : (
-                            <span className="bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800 text-slate-300 font-bold">
-                              Hiệp: <strong className="text-[#00E5FF]">{ex.sets}</strong>
-                            </span>
-                          )}
-
-                          {/* Reps adjustment */}
-                          {!isWorkoutSaved ? (
-                            <div className="flex items-center gap-1.5 bg-[#0B101D] px-2 py-1 rounded-xl border border-slate-800">
-                              <span className="text-slate-400 font-semibold text-[10px] sm:text-xs">Lần:</span>
-                              <button
-                                onClick={() => adjustExerciseReps(ex.id, -1)}
-                                className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-xs border border-slate-700 active:scale-95"
-                              >-</button>
-                              <input
-                                type="text"
-                                value={ex.reps}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setExerciseDetails(prev => {
-                                    const updated = {
-                                      ...prev,
-                                      [ex.id]: { ...(prev[ex.id] || { sets: ex.sets, reps: ex.reps }), reps: val }
-                                    };
-                                    localStorage.setItem(`smart_det_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(updated));
-                                    return updated;
-                                  });
-                                }}
-                                className="w-12 bg-transparent text-[#00E5FF] font-black text-center focus:outline-none text-xs"
-                              />
-                              <button
-                                onClick={() => adjustExerciseReps(ex.id, 1)}
-                                className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-xs border border-slate-700 active:scale-95"
-                              >+</button>
-                            </div>
-                          ) : (
-                            <span className="bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800 text-slate-300 font-bold">
-                              Lần: <strong className="text-[#00E5FF]">{ex.reps}</strong>
-                            </span>
-                          )}
-
-                          {ex.rir && (
-                            <span className="bg-[#0B101D] px-2 py-1 rounded-xl border border-slate-800 text-amber-400 font-bold text-[10px] sm:text-xs">
-                              ⚡ RIR: <strong className="text-white">{ex.rir}</strong>
-                            </span>
-                          )}
-
-                          {ex.restTimeSeconds && (
-                            <span className="bg-[#0B101D] px-2 py-1 rounded-xl border border-slate-800 text-cyan-400 font-bold text-[10px] sm:text-xs">
-                              ⏱️ Nghỉ: <strong className="text-white">{Math.round(ex.restTimeSeconds / 60)}p</strong>
-                            </span>
-                          )}
-
-                          <span className="text-emerald-400 font-semibold text-[10px] sm:text-xs">
-                            🎯 {MUSCLE_NAMES_VI[ex.normMuscle] || ex.muscle}
-                          </span>
-                        </div>
-
-                        {/* Warmup or technique notes */}
-                        {(ex.warmupNotes || ex.notes) && (
-                          <div className="text-[11px] text-slate-300 bg-[#0B101D] p-2.5 rounded-xl border border-slate-800/80 space-y-1">
-                            {ex.warmupNotes && (
-                              <p className="text-amber-300 font-semibold">🔥 Khởi động: {ex.warmupNotes}</p>
-                            )}
-                            {ex.notes && (
-                              <p className="text-cyan-300 font-medium">📌 Ghi chú: {ex.notes}</p>
+                                onClick={() => handleRemoveExercise(ex.id)}
+                                className="text-[11px] sm:text-xs text-rose-400 hover:text-rose-300 font-bold ml-auto"
+                              >
+                                ✕ Xóa
+                              </button>
                             )}
                           </div>
-                        )}
+
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs">
+                            {/* Sets adjustment */}
+                            {!isWorkoutSaved ? (
+                              <div className="flex items-center gap-1.5 bg-[#0B101D] px-2 py-1 rounded-xl border border-slate-800">
+                                <span className="text-slate-400 font-semibold text-[10px] sm:text-xs">Hiệp:</span>
+                                <button
+                                  onClick={() => updateExerciseSets(ex.id, ex.sets - 1)}
+                                  className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-xs border border-slate-700 active:scale-95"
+                                >-</button>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  value={ex.sets}
+                                  onChange={(e) => {
+                                    const clean = e.target.value.replace(/[^0-9]/g, '');
+                                    updateExerciseSets(ex.id, parseInt(clean) || 1);
+                                  }}
+                                  className="w-7 bg-transparent text-[#00E5FF] font-black text-center focus:outline-none text-xs"
+                                />
+                                <button
+                                  onClick={() => updateExerciseSets(ex.id, ex.sets + 1)}
+                                  className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-xs border border-slate-700 active:scale-95"
+                                >+</button>
+                              </div>
+                            ) : (
+                              <span className="bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800 text-slate-300 font-bold">
+                                Hiệp: <strong className="text-[#00E5FF]">{ex.sets}</strong>
+                              </span>
+                            )}
+
+                            {/* Reps adjustment */}
+                            {!isWorkoutSaved ? (
+                              <div className="flex items-center gap-1.5 bg-[#0B101D] px-2 py-1 rounded-xl border border-slate-800">
+                                <span className="text-slate-400 font-semibold text-[10px] sm:text-xs">Lần:</span>
+                                <button
+                                  onClick={() => adjustExerciseReps(ex.id, -1)}
+                                  className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-xs border border-slate-700 active:scale-95"
+                                >-</button>
+                                <input
+                                  type="text"
+                                  value={ex.reps}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setExerciseDetails(prev => {
+                                      const updated = {
+                                        ...prev,
+                                        [ex.id]: { ...(prev[ex.id] || { sets: ex.sets, reps: ex.reps }), reps: val }
+                                      };
+                                      localStorage.setItem(`smart_det_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(updated));
+                                      return updated;
+                                    });
+                                  }}
+                                  className="w-12 bg-transparent text-[#00E5FF] font-black text-center focus:outline-none text-xs"
+                                />
+                                <button
+                                  onClick={() => adjustExerciseReps(ex.id, 1)}
+                                  className="w-6 h-6 rounded-lg bg-[#18233C] hover:bg-slate-700 text-[#00E5FF] font-black flex items-center justify-center text-xs border border-slate-700 active:scale-95"
+                                >+</button>
+                              </div>
+                            ) : (
+                              <span className="bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800 text-slate-300 font-bold">
+                                Lần: <strong className="text-[#00E5FF]">{ex.reps}</strong>
+                              </span>
+                            )}
+
+                            {ex.rir && (
+                              <span className="bg-[#0B101D] px-2 py-1 rounded-xl border border-slate-800 text-amber-400 font-bold text-[10px] sm:text-xs">
+                                ⚡ RIR: <strong className="text-white">{ex.rir}</strong>
+                              </span>
+                            )}
+
+                            {ex.restTimeSeconds && (
+                              <span className="bg-[#0B101D] px-2 py-1 rounded-xl border border-slate-800 text-cyan-400 font-bold text-[10px] sm:text-xs">
+                                ⏱️ Nghỉ: <strong className="text-white">{Math.round(ex.restTimeSeconds / 60)}p</strong>
+                              </span>
+                            )}
+
+                            <span className="text-emerald-400 font-semibold text-[10px] sm:text-xs">
+                              🎯 {MUSCLE_NAMES_VI[ex.normMuscle] || ex.muscle}
+                            </span>
+                          </div>
+
+                          {/* Warmup or technique notes */}
+                          {(ex.warmupNotes || ex.notes) && (
+                            <div className="text-[11px] text-slate-300 bg-[#0B101D] p-2.5 rounded-xl border border-slate-800/80 space-y-1">
+                              {ex.warmupNotes && (
+                                <p className="text-amber-300 font-semibold">🔥 Khởi động: {ex.warmupNotes}</p>
+                              )}
+                              {ex.notes && (
+                                <p className="text-cyan-300 font-medium">📌 Ghi chú: {ex.notes}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Interactive Checkbox */}
+                        <button
+                          onClick={() => toggleCompleteExercise(ex.id)}
+                          disabled={!isWorkoutSaved}
+                          title={!isWorkoutSaved ? 'Vui lòng bấm LƯU ở trên để bắt đầu tập' : 'Đánh dấu hoàn thành'}
+                          className={`w-9 h-9 rounded-xl border-2 transition-all flex items-center justify-center shrink-0 ${ex.completed
+                              ? 'bg-[#00FF87] border-[#00FF87] text-slate-950 shadow-lg shadow-[#00FF87]/30 scale-105'
+                              : isWorkoutSaved
+                                ? 'border-cyan-500/60 hover:border-[#00E5FF] bg-[#0B101D] text-slate-600'
+                                : 'border-slate-800 bg-[#0B101D]/50 text-slate-700 cursor-not-allowed'
+                            }`}
+                        >
+                          {ex.completed ? (
+                            <span className="font-black text-base">✓</span>
+                          ) : !isWorkoutSaved ? (
+                            <span className="text-[10px] text-slate-600">🔒</span>
+                          ) : null}
+                        </button>
                       </div>
 
-                      {/* Interactive Checkbox */}
-                      <button
-                        onClick={() => toggleCompleteExercise(ex.id)}
-                        disabled={!isWorkoutSaved}
-                        title={!isWorkoutSaved ? 'Vui lòng bấm LƯU ở trên để bắt đầu tập' : 'Đánh dấu hoàn thành'}
-                        className={`w-9 h-9 rounded-xl border-2 transition-all flex items-center justify-center shrink-0 ${ex.completed
-                            ? 'bg-[#00FF87] border-[#00FF87] text-slate-950 shadow-lg shadow-[#00FF87]/30 scale-105'
-                            : isWorkoutSaved
-                              ? 'border-cyan-500/60 hover:border-[#00E5FF] bg-[#0B101D] text-slate-600'
-                              : 'border-slate-800 bg-[#0B101D]/50 text-slate-700 cursor-not-allowed'
-                          }`}
-                      >
-                        {ex.completed ? (
-                          <span className="font-black text-base">✓</span>
-                        ) : !isWorkoutSaved ? (
-                          <span className="text-[10px] text-slate-600">🔒</span>
-                        ) : null}
-                      </button>
+                      {/* ═══ INLINE REST TIMER BELOW EXERCISE ═══ */}
+                      {restTimerActive && restTimerExerciseId === ex.id && (
+                        <div className="w-full p-3 sm:p-4 bg-[#0B101D] border border-cyan-500/50 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg shadow-cyan-500/5 animate-in fade-in duration-300">
+                          <div className="flex items-center gap-3 w-full sm:w-auto">
+                            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-base shrink-0 animate-pulse">
+                              ⏱️
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-extrabold text-slate-300 uppercase tracking-wider">Thời gian nghỉ:</span>
+                                <span className={`text-xl sm:text-2xl font-black tracking-tight tabular-nums ${
+                                  restTimerSeconds <= 10 ? 'text-rose-400 animate-pulse' : restTimerSeconds <= 30 ? 'text-amber-300' : 'text-[#00E5FF]'
+                                }`}>
+                                  {Math.floor(restTimerSeconds / 60)}:{String(restTimerSeconds % 60).padStart(2, '0')}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 font-semibold">
+                                {restTimerPaused ? '⏸ Tạm dừng đếm ngược' : restTimerSeconds <= 0 ? '✅ Hết giờ nghỉ!' : 'Đang nghỉ giữa hiệp...'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Progress bar in middle */}
+                          <div className="w-full sm:flex-1 mx-0 sm:mx-4 h-2 bg-[#131B2E] rounded-full overflow-hidden border border-slate-800">
+                            <div
+                              className={`h-full transition-all duration-1000 ease-linear rounded-full ${
+                                restTimerSeconds <= 10
+                                  ? 'bg-gradient-to-r from-rose-500 to-rose-400'
+                                  : restTimerSeconds <= 30
+                                    ? 'bg-gradient-to-r from-amber-500 to-amber-300'
+                                    : 'bg-gradient-to-r from-[#00E5FF] to-[#00FF87]'
+                              }`}
+                              style={{ width: `${(restTimerSeconds / REST_DURATION) * 100}%` }}
+                            />
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+                            <button
+                              onClick={toggleRestTimerPause}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all active:scale-95 ${
+                                restTimerPaused
+                                  ? 'bg-[#00E5FF] text-slate-950 hover:bg-cyan-300 shadow-md shadow-[#00E5FF]/20'
+                                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+                              }`}
+                            >
+                              {restTimerPaused ? '▶ Tiếp tục' : '⏸ Tạm dừng'}
+                            </button>
+                            <button
+                              onClick={skipRestTimer}
+                              className="px-3 py-1.5 rounded-xl bg-[#18233C] hover:bg-slate-800 text-slate-300 text-xs font-extrabold border border-slate-700 transition-all active:scale-95"
+                            >
+                              ⏭ Bỏ qua
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -1740,117 +1804,7 @@ export default function Workouts() {
         </div>
       )}
 
-      {/* ═══ REST TIMER OVERLAY ═══ */}
-      {restTimerActive && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 pointer-events-none">
-          {/* Semi-transparent backdrop */}
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto" onClick={skipRestTimer}></div>
-
-          {/* Timer Card */}
-          <div className="relative pointer-events-auto w-full max-w-sm bg-[#131B2E]/95 backdrop-blur-2xl border border-cyan-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,229,255,0.15)] space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300 mb-4 sm:mb-0">
-
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-sm">
-                  ⏱️
-                </div>
-                <div>
-                  <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Nghỉ giữa hiệp</h3>
-                  <p className="text-[10px] text-slate-400 font-medium truncate max-w-[200px]">✅ {restTimerExerciseName}</p>
-                </div>
-              </div>
-              <button
-                onClick={skipRestTimer}
-                className="w-8 h-8 rounded-full bg-[#18233C] hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-lg font-bold transition border border-slate-700"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Circular Timer */}
-            <div className="flex justify-center">
-              <div className="relative w-44 h-44 sm:w-52 sm:h-52 flex items-center justify-center">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  {/* Background ring */}
-                  <circle
-                    cx="50" cy="50" r="42" fill="none"
-                    stroke="currentColor" className="text-slate-800/80"
-                    strokeWidth="6"
-                  />
-                  {/* Progress ring */}
-                  <circle
-                    cx="50" cy="50" r="42" fill="none"
-                    stroke="currentColor"
-                    className={`transition-all duration-1000 ease-linear ${
-                      restTimerSeconds <= 10
-                        ? 'text-rose-500 drop-shadow-[0_0_16px_rgba(239,68,68,0.7)]'
-                        : restTimerSeconds <= 30
-                          ? 'text-amber-400 drop-shadow-[0_0_16px_rgba(251,191,36,0.6)]'
-                          : 'text-[#00E5FF] drop-shadow-[0_0_16px_rgba(0,229,255,0.6)]'
-                    }`}
-                    strokeWidth="6"
-                    strokeDasharray={2 * Math.PI * 42}
-                    strokeDashoffset={2 * Math.PI * 42 * (1 - restTimerSeconds / REST_DURATION)}
-                    strokeLinecap="round"
-                  />
-                </svg>
-
-                {/* Time Display */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className={`text-5xl sm:text-6xl font-black tracking-tight tabular-nums ${
-                    restTimerSeconds <= 10
-                      ? 'text-rose-400 animate-pulse'
-                      : restTimerSeconds <= 30
-                        ? 'text-amber-300'
-                        : 'text-white'
-                  }`}>
-                    {Math.floor(restTimerSeconds / 60)}:{String(restTimerSeconds % 60).padStart(2, '0')}
-                  </span>
-                  <span className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">
-                    {restTimerPaused ? '⏸ Tạm dừng' : restTimerSeconds <= 0 ? '✅ Xong!' : 'Đang nghỉ...'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Control Buttons */}
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={toggleRestTimerPause}
-                className={`flex-1 px-4 py-3 rounded-2xl text-sm font-extrabold transition-all active:scale-95 ${
-                  restTimerPaused
-                    ? 'bg-[#00E5FF] text-slate-950 shadow-lg shadow-[#00E5FF]/30 hover:bg-cyan-300'
-                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
-                }`}
-              >
-                {restTimerPaused ? '▶ Tiếp tục' : '⏸ Tạm dừng'}
-              </button>
-
-              <button
-                onClick={skipRestTimer}
-                className="flex-1 px-4 py-3 rounded-2xl bg-[#18233C] hover:bg-slate-800 text-slate-300 text-sm font-extrabold border border-slate-700 transition-all active:scale-95"
-              >
-                ⏭ Bỏ qua
-              </button>
-            </div>
-
-            {/* Progress bar at bottom */}
-            <div className="w-full h-1.5 bg-[#0B101D] rounded-full overflow-hidden border border-slate-800">
-              <div
-                className={`h-full transition-all duration-1000 ease-linear rounded-full ${
-                  restTimerSeconds <= 10
-                    ? 'bg-gradient-to-r from-rose-500 to-rose-400'
-                    : restTimerSeconds <= 30
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-300'
-                      : 'bg-gradient-to-r from-[#00E5FF] to-[#00FF87]'
-                }`}
-                style={{ width: `${(restTimerSeconds / REST_DURATION) * 100}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal End */}
     </div>
   );
 }
