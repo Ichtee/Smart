@@ -31,6 +31,13 @@ const normalizeMuscleId = (id: string): string => {
   return s;
 };
 
+const toFixedReps = (val: string | number | undefined | null): string => {
+  if (!val) return '10';
+  const str = String(val).trim();
+  const match = str.match(/\d+/);
+  return match ? match[0] : '10';
+};
+
 const MUSCLE_NAMES_VI: Record<string, string> = {
   chest: 'Ngực (Chest)',
   'upper-back': 'Lưng trên (Upper Back)',
@@ -161,6 +168,7 @@ export default function Workouts() {
   const [allExercises, setAllExercises] = useState<any[]>([]);
   const [daySelections, setDaySelections] = useState<Record<string, string[]>>({});
   const [dayCompleted, setDayCompleted] = useState<Record<string, string[]>>({});
+  const [completedSetsMap, setCompletedSetsMap] = useState<Record<string, number[]>>({});
   const [daySavedStatus, setDaySavedStatus] = useState<Record<string, boolean>>({});
   const [exerciseDetails, setExerciseDetails] = useState<Record<string, {
     sets: number;
@@ -607,6 +615,13 @@ export default function Workouts() {
         if (savedComp) {
           try { completedIds = JSON.parse(savedComp); } catch (e) { }
         }
+
+        const savedSetsComp = localStorage.getItem(`smart_sets_${activeTabDateStr}_${currentDayKey}`);
+        let setsMap: Record<string, number[]> = {};
+        if (savedSetsComp) {
+          try { setsMap = JSON.parse(savedSetsComp); } catch (e) { }
+        }
+        setCompletedSetsMap(setsMap);
       }
 
       if ((!isSavedSession || selectedIds.length === 0) && currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
@@ -625,7 +640,7 @@ export default function Workouts() {
             selectedIds.push(exId);
             detailsMap[exId] = {
               sets: tmplEx.sets || 3,
-              reps: tmplEx.repsRange || '8-12',
+              reps: toFixedReps(tmplEx.repsRange),
               rir: tmplEx.rir || '1',
               restTimeSeconds: tmplEx.restTimeSeconds || 180,
               isOptional: !!tmplEx.isOptional,
@@ -667,11 +682,11 @@ export default function Workouts() {
       .map(id => {
         const ex = allExercises.find(item => item.id === id || item._id === id || item._id?.toString() === id);
         if (!ex || !ex.name) return null;
-        const detail = exerciseDetails[id] || { sets: ex.defaultSets || 1, reps: ex.defaultReps || '10' };
+        const detail = exerciseDetails[id] || { sets: ex.defaultSets || 1, reps: toFixedReps(ex.defaultReps) };
         return {
           ...ex,
           sets: detail.sets,
-          reps: detail.reps,
+          reps: toFixedReps(detail.reps),
           rir: detail.rir || '1',
           restTimeSeconds: detail.restTimeSeconds || 180,
           isOptional: !!detail.isOptional,
@@ -743,7 +758,7 @@ export default function Workouts() {
         selectedIds.push(exId);
         detailsMap[exId] = {
           sets: tmplEx.sets || 3,
-          reps: tmplEx.repsRange || '8-12',
+          reps: toFixedReps(tmplEx.repsRange),
           rir: tmplEx.rir || '1',
           restTimeSeconds: tmplEx.restTimeSeconds || 180,
           isOptional: !!tmplEx.isOptional,
@@ -831,7 +846,7 @@ export default function Workouts() {
     });
   };
 
-  const toggleCompleteExercise = (id: string) => {
+  const toggleCompleteExercise = (id: string, forcedState?: boolean, customSets?: number[]) => {
     if (!isWorkoutSaved) {
       setNoticeMessage('Vui lòng nhấn "💾 LƯU & BẮT ĐẦU TẬP" ở trên để chốt danh sách bài tập trước!');
       setTimeout(() => setNoticeMessage(''), 4000);
@@ -839,10 +854,29 @@ export default function Workouts() {
     }
 
     const isAlreadyComp = currentCompletedIds.includes(id);
-    const newComp = isAlreadyComp ? currentCompletedIds.filter(i => i !== id) : [...currentCompletedIds, id];
+    const shouldBeComp = forcedState !== undefined ? forcedState : !isAlreadyComp;
+    const newComp = shouldBeComp 
+      ? (isAlreadyComp ? currentCompletedIds : [...currentCompletedIds, id])
+      : currentCompletedIds.filter(i => i !== id);
 
-    // 1. Instant UI update
+    // 1. Instant UI update for main exercise completion
     setDayCompleted(prev => ({ ...prev, [currentDayKey]: newComp }));
+
+    // Update completedSetsMap if clicking main exercise checkmark directly
+    if (customSets === undefined) {
+      const targetEx = activeSelectedExercises.find(ex => ex.id === id);
+      const totalSets = targetEx ? targetEx.sets : 3;
+      const newSets = shouldBeComp ? Array.from({ length: totalSets }, (_, i) => i) : [];
+      
+      const updatedSetsMap = {
+        ...completedSetsMap,
+        [id]: newSets
+      };
+      setCompletedSetsMap(updatedSetsMap);
+      try {
+        localStorage.setItem(`smart_sets_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(updatedSetsMap));
+      } catch (e) {}
+    }
 
     // 2. Background local cache sync
     try {
@@ -887,10 +921,9 @@ export default function Workouts() {
     } catch (e) { }
 
     // 3. Background API push to MongoDB
-    // Only send exercise details for the current day's selected exercises
     const toggleDayDetailsMap: Record<string, any> = {};
-    currentSelectedIds.forEach(id => {
-      if (exerciseDetails[id]) toggleDayDetailsMap[id] = exerciseDetails[id];
+    currentSelectedIds.forEach(exId => {
+      if (exerciseDetails[exId]) toggleDayDetailsMap[exId] = exerciseDetails[exId];
     });
     pushWorkoutToBackend({
       selectedIds: currentSelectedIds,
@@ -899,12 +932,56 @@ export default function Workouts() {
       isSaved: true
     });
 
-    // 4. Start 3-minute rest timer when marking exercise as COMPLETED, stop it when UNTICKING
-    if (!isAlreadyComp) {
-      const completedEx = allExercises.find(ex => ex.id === id || ex._id === id || ex._id?.toString() === id);
-      startRestTimer(id, completedEx?.name || 'Bài tập');
-    } else if (restTimerExerciseId === id) {
-      skipRestTimer();
+    // 4. Start 3-minute rest timer when marking exercise as COMPLETED directly, stop it when UNTICKING
+    if (forcedState === undefined) {
+      if (shouldBeComp) {
+        const completedEx = allExercises.find(ex => ex.id === id || ex._id === id || ex._id?.toString() === id);
+        startRestTimer(id, completedEx?.name || 'Bài tập');
+      } else if (restTimerExerciseId === id) {
+        skipRestTimer();
+      }
+    }
+  };
+
+  const toggleCompleteSet = (exId: string, setIndex: number, totalSets: number, exName: string) => {
+    if (!isWorkoutSaved) {
+      setNoticeMessage('Vui lòng nhấn "💾 LƯU & BẮT ĐẦU TẬP" ở trên để chốt danh sách bài tập trước!');
+      setTimeout(() => setNoticeMessage(''), 4000);
+      return;
+    }
+
+    const currentSets = completedSetsMap[exId] || [];
+    const isSetDone = currentSets.includes(setIndex);
+    let newSets: number[];
+
+    if (isSetDone) {
+      newSets = currentSets.filter(i => i !== setIndex);
+    } else {
+      newSets = [...currentSets, setIndex].sort((a, b) => a - b);
+    }
+
+    const updatedSetsMap = {
+      ...completedSetsMap,
+      [exId]: newSets
+    };
+    setCompletedSetsMap(updatedSetsMap);
+    try {
+      localStorage.setItem(`smart_sets_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(updatedSetsMap));
+    } catch (e) {}
+
+    // Trigger clock timer when checking a set
+    if (!isSetDone) {
+      startRestTimer(exId, `${exName} #${setIndex + 1}`);
+    }
+
+    // Check if ALL sets (0..totalSets-1) are completed
+    const allDone = Array.from({ length: totalSets }, (_, i) => i).every(i => newSets.includes(i));
+    const isMainDone = currentCompletedIds.includes(exId);
+
+    if (allDone && !isMainDone) {
+      toggleCompleteExercise(exId, true, newSets);
+    } else if (!allDone && isMainDone) {
+      toggleCompleteExercise(exId, false, newSets);
     }
   };
 
@@ -1428,13 +1505,16 @@ export default function Workouts() {
                                 >-</button>
                                 <input
                                   type="text"
-                                  value={ex.reps}
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  value={toFixedReps(ex.reps)}
                                   onChange={(e) => {
-                                    const val = e.target.value;
+                                    const val = e.target.value.replace(/[^0-9]/g, '');
+                                    if (val.length > 3) return;
                                     setExerciseDetails(prev => {
                                       const updated = {
                                         ...prev,
-                                        [ex.id]: { ...(prev[ex.id] || { sets: ex.sets, reps: ex.reps }), reps: val }
+                                        [ex.id]: { ...(prev[ex.id] || { sets: ex.sets, reps: '10' }), reps: val }
                                       };
                                       localStorage.setItem(`smart_det_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(updated));
                                       return updated;
@@ -1449,7 +1529,7 @@ export default function Workouts() {
                               </div>
                             ) : (
                               <span className="bg-[#0B101D] px-2.5 py-1 rounded-xl border border-slate-800 text-slate-300 font-bold">
-                                Lần: <strong className="text-[#00E5FF]">{ex.reps}</strong>
+                                Lần: <strong className="text-[#00E5FF]">{toFixedReps(ex.reps)}</strong>
                               </span>
                             )}
 
@@ -1481,6 +1561,82 @@ export default function Workouts() {
                               )}
                             </div>
                           )}
+
+                          {/* ═══ MINI-SUB SET BREAKDOWN LIST ═══ */}
+                          <div className="w-full mt-3 pt-3 border-t border-slate-800/80 space-y-2">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                              <span className="flex items-center gap-1.5 text-[#00E5FF]">
+                                <span>🔢</span> Các hiệp tập ({ex.sets} Hiệp)
+                              </span>
+                              <span className="text-[10px] text-cyan-400 font-bold bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded-md">
+                                {(completedSetsMap[ex.id] || []).length} / {ex.sets} Hoàn thành
+                              </span>
+                            </div>
+
+                            <div className="space-y-1.5 pt-1">
+                              {Array.from({ length: ex.sets }).map((_, setIdx) => {
+                                const isSetDone = (completedSetsMap[ex.id] || []).includes(setIdx);
+                                const setLabelName = `${ex.name} #${setIdx + 1}`;
+
+                                return (
+                                  <div
+                                    key={setIdx}
+                                    className={`p-2.5 sm:p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-xs ${
+                                      isSetDone
+                                        ? 'bg-[#00FF87]/10 border-[#00FF87]/50 text-white shadow-sm shadow-[#00FF87]/10'
+                                        : 'bg-[#0B101D] border-slate-800/80 text-slate-300 hover:border-slate-700'
+                                    }`}
+                                  >
+                                    {/* Mini-sub name */}
+                                    <div className="flex items-center gap-2 font-extrabold min-w-0">
+                                      <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] shrink-0 font-mono font-black ${
+                                        isSetDone ? 'bg-[#00FF87] text-slate-950' : 'bg-[#18233C] text-cyan-400 border border-cyan-500/30'
+                                      }`}>
+                                        #{setIdx + 1}
+                                      </span>
+                                      <span className="truncate text-white text-xs font-bold">
+                                        {setLabelName}
+                                      </span>
+                                    </div>
+
+                                    {/* Reps Display & Checkbox */}
+                                    <div className="flex items-center gap-2.5 shrink-0">
+                                      <span className="text-[11px] font-bold text-slate-400">
+                                        Lần: <strong className="text-[#00E5FF]">{toFixedReps(ex.reps)}</strong>
+                                      </span>
+
+                                      {/* Set Checkbox Button */}
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleCompleteSet(ex.id, setIdx, ex.sets, ex.name)}
+                                        disabled={!isWorkoutSaved}
+                                        title={!isWorkoutSaved ? 'Vui lòng nhấn LƯU ở trên để bắt đầu tập' : `Đánh dấu hoàn thành Hiệp ${setIdx + 1}`}
+                                        className={`px-3 py-1.5 rounded-lg border text-xs font-black transition-all flex items-center gap-1.5 shadow-sm active:scale-95 ${
+                                          isSetDone
+                                            ? 'bg-[#00FF87] border-[#00FF87] text-slate-950 shadow-[#00FF87]/20'
+                                            : isWorkoutSaved
+                                              ? 'bg-[#18233C] hover:bg-slate-700 border-cyan-500/40 text-cyan-300 cursor-pointer'
+                                              : 'bg-[#0B101D] border-slate-800 text-slate-600 cursor-not-allowed'
+                                        }`}
+                                      >
+                                        {isSetDone ? (
+                                          <>
+                                            <span>✓</span>
+                                            <span>Hiệp {setIdx + 1}</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <span className="w-3.5 h-3.5 rounded border border-cyan-400/60 inline-block"></span>
+                                            <span>Hiệp {setIdx + 1}</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
                         </div>
 
                         {/* Interactive Checkbox */}
@@ -1512,7 +1668,7 @@ export default function Workouts() {
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-extrabold text-slate-300 uppercase tracking-wider">Thời gian nghỉ:</span>
+                                <span className="text-xs font-extrabold text-slate-300 uppercase tracking-wider">Nghỉ giữa set/bài:</span>
                                 <span className={`text-xl sm:text-2xl font-black tracking-tight tabular-nums ${
                                   restTimerSeconds <= 10 ? 'text-rose-400 animate-pulse' : restTimerSeconds <= 30 ? 'text-amber-300' : 'text-[#00E5FF]'
                                 }`}>
@@ -1520,7 +1676,7 @@ export default function Workouts() {
                                 </span>
                               </div>
                               <p className="text-[10px] text-slate-400 font-semibold">
-                                {restTimerPaused ? '⏸ Tạm dừng đếm ngược' : restTimerSeconds <= 0 ? '✅ Hết giờ nghỉ!' : 'Đang nghỉ giữa hiệp...'}
+                                {restTimerPaused ? '⏸ Tạm dừng đếm ngược' : restTimerSeconds <= 0 ? '✅ Hết giờ nghỉ!' : 'Nghỉ giữa các set/bài...'}
                               </p>
                             </div>
                           </div>

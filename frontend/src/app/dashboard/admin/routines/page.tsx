@@ -523,7 +523,7 @@ export default function RoutineManagement() {
       exerciseName: selectedName || '',
       muscle: foundEx ? foundEx.muscle : 'chest',
       sets: 3,
-      repsRange: '8-12',
+      repsRange: '10',
       rir: '1',
       restTimeSeconds: 180
     });
@@ -823,7 +823,7 @@ export default function RoutineManagement() {
                                 <span className="text-slate-400">Reps:</span>
                                 <input
                                   type="text"
-                                  value={exObj.repsRange || '8-12'}
+                                  value={exObj.repsRange || '10'}
                                   onChange={(e) => updateExerciseInDay(dayIndex, exIndex, 'repsRange', e.target.value)}
                                   className="w-16 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-center text-white font-bold"
                                 />

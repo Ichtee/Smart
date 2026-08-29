@@ -19,14 +19,25 @@ const createRoutine = async (req, res) => {
   try {
     const { id, name, type, description, frequencyDaysPerWeek, generalNotes, schedule } = req.body;
     
-    const routineExists = await Routine.findOne({ id });
+    // Validation
+    if (!id || !id.trim()) {
+      return res.status(400).json({ message: 'ID lịch tập là bắt buộc.' });
+    }
+    if (!name || !name.trim() || name.trim().length < 2 || name.trim().length > 100) {
+      return res.status(400).json({ message: 'Tên lịch tập phải từ 2 đến 100 ký tự.' });
+    }
+    if (frequencyDaysPerWeek !== undefined && (isNaN(Number(frequencyDaysPerWeek)) || Number(frequencyDaysPerWeek) < 1 || Number(frequencyDaysPerWeek) > 7)) {
+      return res.status(400).json({ message: 'Tần suất tập phải từ 1 đến 7 ngày/tuần.' });
+    }
+
+    const routineExists = await Routine.findOne({ id: id.trim() });
     if (routineExists) {
       return res.status(400).json({ message: 'Routine with this ID already exists' });
     }
 
     const routine = await Routine.create({
-      id,
-      name,
+      id: id.trim(),
+      name: name.trim(),
       type,
       description,
       frequencyDaysPerWeek,

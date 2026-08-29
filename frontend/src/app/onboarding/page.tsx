@@ -180,6 +180,9 @@ export default function Onboarding() {
                   name="age"
                   value={formData.age}
                   onChange={handleChange}
+                  onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
+                  min="1"
+                  max="120"
                   placeholder="VD: 25"
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors text-lg"
                 />
@@ -201,6 +204,9 @@ export default function Onboarding() {
                   name="height"
                   value={formData.height}
                   onChange={handleChange}
+                  onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
+                  min="30"
+                  max="300"
                   placeholder="VD: 170"
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors text-lg"
                 />
@@ -213,6 +219,9 @@ export default function Onboarding() {
                   name="weight"
                   value={formData.weight}
                   onChange={handleChange}
+                  onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
+                  min="10"
+                  max="500"
                   placeholder="VD: 65"
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors text-lg"
                 />

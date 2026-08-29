@@ -419,7 +419,7 @@ export default function AdminExercises() {
                   value={formData.defaultReps}
                   onChange={e => setFormData({...formData, defaultReps: e.target.value})}
                   className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-[#00E5FF] focus:outline-none focus:border-[#00E5FF] transition font-bold"
-                  placeholder="VD: 8-12"
+                  placeholder="VD: 10"
                 />
               </div>
             </div>

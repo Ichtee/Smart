@@ -758,7 +758,7 @@ export default function ProgressPage() {
                                       Hiệp: <strong className="text-[#00E5FF]">{ex.sets}</strong>
                                     </span>
                                     <span className="bg-[#0B101D] px-3 py-1 rounded-xl border border-slate-800 text-slate-200 font-bold">
-                                      Lần: <strong className="text-[#00FF87]">{ex.reps}</strong>
+                                      Lần: <strong className="text-[#00FF87]">{String(ex.reps || '10').match(/\d+/)?.[0] || '10'}</strong>
                                     </span>
                                   </div>
                                 </div>

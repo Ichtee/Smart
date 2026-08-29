@@ -674,7 +674,16 @@ export default function Nutrition() {
                     <input
                       type="number"
                       value={mlPerGlass}
-                      onChange={(e) => setMlPerGlass(Number(e.target.value) || 0)}
+                      min={50}
+                      max={1000}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        if (val >= 0 && val <= 1000) setMlPerGlass(val || 0);
+                      }}
+                      onBlur={() => {
+                        if (mlPerGlass < 50) setMlPerGlass(50);
+                        if (mlPerGlass > 1000) setMlPerGlass(1000);
+                      }}
                       onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                       className="w-10 sm:w-14 bg-transparent text-[#00E5FF] font-black text-center text-[10px] sm:text-xs focus:outline-none"
                     />

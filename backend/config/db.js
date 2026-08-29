@@ -8,6 +8,9 @@ const connectDB = async () => {
     }
     const conn = await mongoose.connect(process.env.MONGO_URI);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
+    // Auto migrate all exercise/routine reps in DB to default 10
+    const migrateRepsToTen = require('../utils/migrateReps');
+    migrateRepsToTen();
   } catch (error) {
     console.error(`Error: ${error.message}`);
     process.exit(1);

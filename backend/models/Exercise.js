@@ -12,11 +12,15 @@ const exerciseSchema = new mongoose.Schema({
   },
   defaultSets: {
     type: Number,
-    default: 1
+    default: 1,
+    min: [1, 'Số hiệp tối thiểu là 1'],
+    max: [50, 'Số hiệp tối đa là 50']
   },
   defaultReps: {
     type: String,
-    default: '10'
+    default: '10',
+    minlength: [1, 'Số lần không được để trống'],
+    maxlength: [20, 'Số lần không được quá 20 ký tự']
   },
   equipment: {
     type: String,

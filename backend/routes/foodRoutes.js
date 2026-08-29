@@ -88,8 +88,22 @@ router.get('/', optionalAuth, async (req, res) => {
 router.post('/custom', protect, async (req, res) => {
   try {
     const { name, servingSize, calories, protein, carbs, fat, category, image } = req.body;
-    if (!name || calories === undefined) {
-      return res.status(400).json({ message: 'Tên món ăn và lượng Calo là bắt buộc' });
+
+    // Validation
+    if (!name || !name.trim() || name.trim().length < 2 || name.trim().length > 100) {
+      return res.status(400).json({ message: 'Tên món ăn phải từ 2 đến 100 ký tự.' });
+    }
+    if (calories === undefined || isNaN(Number(calories)) || Number(calories) <= 0 || Number(calories) > 10000) {
+      return res.status(400).json({ message: 'Lượng Calo phải là số dương hợp lệ (1 - 10,000 kcal).' });
+    }
+    if (protein !== undefined && (isNaN(Number(protein)) || Number(protein) < 0)) {
+      return res.status(400).json({ message: 'Protein phải là số không âm.' });
+    }
+    if (carbs !== undefined && (isNaN(Number(carbs)) || Number(carbs) < 0)) {
+      return res.status(400).json({ message: 'Carbs phải là số không âm.' });
+    }
+    if (fat !== undefined && (isNaN(Number(fat)) || Number(fat) < 0)) {
+      return res.status(400).json({ message: 'Fat phải là số không âm.' });
     }
 
     const customFood = new Food({
@@ -127,8 +141,22 @@ router.delete('/custom/:id', protect, async (req, res) => {
 router.post('/', protect, admin, async (req, res) => {
   try {
     const { name, servingSize, calories, protein, carbs, fat, category, image } = req.body;
-    if (!name || calories === undefined) {
-      return res.status(400).json({ message: 'Tên món ăn và lượng Calo là bắt buộc' });
+
+    // Validation
+    if (!name || !name.trim() || name.trim().length < 2 || name.trim().length > 100) {
+      return res.status(400).json({ message: 'Tên món ăn phải từ 2 đến 100 ký tự.' });
+    }
+    if (calories === undefined || isNaN(Number(calories)) || Number(calories) <= 0 || Number(calories) > 10000) {
+      return res.status(400).json({ message: 'Lượng Calo phải là số dương hợp lệ (1 - 10,000 kcal).' });
+    }
+    if (protein !== undefined && (isNaN(Number(protein)) || Number(protein) < 0)) {
+      return res.status(400).json({ message: 'Protein phải là số không âm.' });
+    }
+    if (carbs !== undefined && (isNaN(Number(carbs)) || Number(carbs) < 0)) {
+      return res.status(400).json({ message: 'Carbs phải là số không âm.' });
+    }
+    if (fat !== undefined && (isNaN(Number(fat)) || Number(fat) < 0)) {
+      return res.status(400).json({ message: 'Fat phải là số không âm.' });
     }
 
     const food = new Food({

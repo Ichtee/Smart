@@ -10,10 +10,10 @@ const workoutExerciseSchema = new mongoose.Schema({
   exerciseName: { type: String, required: true },
   muscle: { type: String, required: true, default: 'chest' },
   secondaryMuscles: [{ type: String }],
-  sets: { type: Number, required: true, default: 3 },
-  repsRange: { type: String, required: true, default: '8-12' },
+  sets: { type: Number, required: true, default: 3, min: [1, 'Số hiệp tối thiểu là 1'], max: [50, 'Số hiệp tối đa là 50'] },
+  repsRange: { type: String, required: true, default: '10' },
   rir: { type: String, default: '1' },
-  restTimeSeconds: { type: Number, default: 180 },
+  restTimeSeconds: { type: Number, default: 180, min: [0, 'Thời gian nghỉ không thể âm'], max: [600, 'Thời gian nghỉ tối đa 10 phút'] },
   isOptional: { type: Boolean, default: false },
   requiresWarmup: { type: Boolean, default: false },
   warmupNotes: { type: String, default: '' },
@@ -48,7 +48,9 @@ const routineSchema = new mongoose.Schema({
   },
   frequencyDaysPerWeek: {
     type: Number,
-    default: 3
+    default: 3,
+    min: [1, 'Tần suất tối thiểu 1 ngày/tuần'],
+    max: [7, 'Tần suất tối đa 7 ngày/tuần']
   },
   generalNotes: [{
     type: String
