@@ -932,14 +932,12 @@ export default function Workouts() {
       isSaved: true
     });
 
-    // 4. Start 3-minute rest timer when marking exercise as COMPLETED directly, stop it when UNTICKING
-    if (forcedState === undefined) {
-      if (shouldBeComp) {
-        const completedEx = allExercises.find(ex => ex.id === id || ex._id === id || ex._id?.toString() === id);
-        startRestTimer(id, completedEx?.name || 'Bài tập');
-      } else if (restTimerExerciseId === id) {
-        skipRestTimer();
-      }
+    // 4. Start 3-minute rest timer when marking exercise as COMPLETED, stop/hide timer when UNTICKING
+    if (shouldBeComp && forcedState === undefined) {
+      const completedEx = allExercises.find(ex => ex.id === id || ex._id === id || ex._id?.toString() === id);
+      startRestTimer(id, completedEx?.name || 'Bài tập');
+    } else if (!shouldBeComp && restTimerExerciseId === id) {
+      skipRestTimer();
     }
   };
 
@@ -969,9 +967,11 @@ export default function Workouts() {
       localStorage.setItem(`smart_sets_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(updatedSetsMap));
     } catch (e) {}
 
-    // Trigger clock timer when checking a set
+    // Trigger clock timer when checking a set, STOP/HIDE timer when UNTICKING set
     if (!isSetDone) {
       startRestTimer(exId, `${exName} #${setIndex + 1}`);
+    } else if (restTimerExerciseId === exId) {
+      skipRestTimer();
     }
 
     // Check if ALL sets (0..totalSets-1) are completed
