@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Header from '@/components/Header';
+import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { API_URL } from '@/utils/api';
 import { User, Activity, Target, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
@@ -182,19 +182,17 @@ export default function Profile() {
   }
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-background text-foreground p-4 md:p-8 relative overflow-hidden font-sans">
-      {/* Smart Glow */}
-      <div className="pointer-events-none absolute inset-0 bg-hero-glow" />
-
-      <div className="max-w-7xl mx-auto relative z-10 space-y-6">
-        <Header />
+    <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">
+      <Sidebar />
+      <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-8 overflow-y-auto pb-28 md:pb-10">
+        <div className="max-w-[1600px] w-full mx-auto space-y-6">
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground flex items-center gap-3">
               <User className="size-8 text-primary" /> Hồ sơ cá nhân
             </h1>
-            <p className="text-muted-foreground text-xs font-semibold mt-1">Quản lý thông tin và các chỉ số hình thể của bạn để có lộ trình tập luyện tốt nhất.</p>
+            <p className="text-muted-foreground text-xs sm:text-sm font-semibold mt-1">Quản lý thông tin và các chỉ số hình thể của bạn để có lộ trình tập luyện tốt nhất.</p>
           </div>
         </div>
 
@@ -398,8 +396,8 @@ export default function Profile() {
             </div>
           </div>
         </div>
-
       </div>
-    </div>
-  );
+    </main>
+  </div>
+);
 }

@@ -130,6 +130,12 @@ export default function Header() {
         <Link href="/profile" className="px-3.5 py-1.5 rounded-full bg-secondary hover:bg-surface-elevated border border-border text-foreground transition flex items-center gap-1.5 shrink-0">
           <User className="size-3.5 text-primary" /> Hồ sơ
         </Link>
+        <button 
+          onClick={handleLogout}
+          className="px-3.5 py-1.5 rounded-full bg-destructive/10 hover:bg-destructive/20 border border-destructive/30 text-destructive font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer"
+        >
+          <LogOut className="size-3.5" /> Đăng xuất
+        </button>
       </div>
     </header>
   );

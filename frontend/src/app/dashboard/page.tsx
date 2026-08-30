@@ -1,139 +1,680 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Header from '@/components/Header';
-import { Utensils, Dumbbell, TrendingUp, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
+import Sidebar from '@/components/Sidebar';
+import GoogleTranslate from '@/components/GoogleTranslate';
+import { API_URL } from '@/utils/api';
+import { Bell, ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Trophy, Dumbbell, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+
+const MUSCLE_NAMES_VI: Record<string, string> = {
+  chest: 'Ngực (Chest)', 'upper-back': 'Lưng trên', 'lower-back': 'Lưng dưới', lats: 'Cơ xô (Lats)',
+  trapezius: 'Cầu vai (Traps)', 'front-deltoids': 'Vai trước (Delts)', 'back-deltoids': 'Vai sau',
+  biceps: 'Tay trước (Biceps)', triceps: 'Tay sau (Triceps)', forearm: 'Cẳng tay',
+  quadriceps: 'Đùi trước (Quads)', hamstring: 'Đùi sau', adductor: 'Cơ khép', adductors: 'Cơ khép',
+  calves: 'Bắp chân', gluteal: 'Mông (Glutes)', abs: 'Bụng (Abs)', obliques: 'Cơ liên sườn', neck: 'Cổ'
+};
 
 export default function Dashboard() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [userName, setUserName] = useState('Alex');
   const [userRole, setUserRole] = useState<string>('');
 
+  // User Profile
+  const [profile, setProfile] = useState<{
+    height?: number;
+    weight?: number;
+    age?: number;
+    gender?: string;
+    activityLevel?: string;
+    goal?: string;
+    lastActiveRoutineName?: string;
+    lastActiveRoutineId?: string;
+  }>({});
+
+  // Calendar Month State
+  const [calendarDate, setCalendarDate] = useState(new Date());
+
+  // Real Logged Data
+  const [streakDates, setStreakDates] = useState<string[]>([]);
+  const [todayMeals, setTodayMeals] = useState<any[]>([]);
+  const [todayWaterGlasses, setTodayWaterGlasses] = useState(0);
+  const [weeklyCalories, setWeeklyCalories] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  const [activeRoutineSchedule, setActiveRoutineSchedule] = useState<any[]>([]);
+
+  // ── Diary (from progress page) ──────────────────────────────────────────
+  const [workoutLogs, setWorkoutLogs] = useState<Record<string, any>>({});
+  const [nutritionLogs, setNutritionLogs] = useState<Record<string, any>>({});
+  const [selectedDiaryDate, setSelectedDiaryDate] = useState<string | null>(null);
+  const [selectedDateMeals, setSelectedDateMeals] = useState<Record<string, any[]>>({
+    'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': []
+  });
+  const [selectedDateWater, setSelectedDateWater] = useState(0);
+  const [isExerciseListCollapsed, setIsExerciseListCollapsed] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const getWeekDaysMonToSun = useCallback((refDate: Date = new Date()) => {
+    const d = new Date(refDate);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
+
+    return Array.from({ length: 7 }, (_, i) => {
+      const dayDate = new Date(monday);
+      dayDate.setDate(monday.getDate() + i);
+      const y = dayDate.getFullYear();
+      const m = String(dayDate.getMonth() + 1).padStart(2, '0');
+      const dayNum = String(dayDate.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dayNum}`;
+    });
+  }, []);
+
   useEffect(() => {
-    // Auth check
     const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
-    } else {
+      return;
+    }
+
+    const authHeaders = { 'Authorization': `Bearer ${token}` };
+
+    const loadDashboardData = async () => {
       try {
         const userStr = localStorage.getItem('user');
         if (userStr) {
           const user = JSON.parse(userStr);
+          if (user.name) setUserName(user.name);
           if (user.role) setUserRole(user.role);
         }
-      } catch (e) {}
-      setIsLoading(false);
+
+        const [profileRes, streakRes, nutTodayRes, allNutRes, allWorkoutRes] = await Promise.allSettled([
+          fetch(`${API_URL}/api/users/profile`, { headers: authHeaders }),
+          fetch(`${API_URL}/api/workouts/streak`, { headers: authHeaders }),
+          fetch(`${API_URL}/api/nutrition?date=${todayStr}`, { headers: authHeaders }),
+          fetch(`${API_URL}/api/nutrition/logs`, { headers: authHeaders }),
+          fetch(`${API_URL}/api/workouts/logs`, { headers: authHeaders }),
+        ]);
+
+        if (profileRes.status === 'fulfilled' && profileRes.value.ok) {
+          const profData = await profileRes.value.json();
+          setProfile(profData);
+          if (profData.lastActiveRoutineId) {
+            fetch(`${API_URL}/api/routines`, { headers: authHeaders })
+              .then(res => res.json())
+              .then(routines => {
+                const found = routines.find((r: any) => r._id === profData.lastActiveRoutineId || r.id === profData.lastActiveRoutineId);
+                if (found && found.schedule) setActiveRoutineSchedule(found.schedule);
+              })
+              .catch(() => {});
+          }
+        }
+
+        if (streakRes.status === 'fulfilled' && streakRes.value.ok) {
+          const streakData = await streakRes.value.json();
+          if (streakData.streakDates) setStreakDates(streakData.streakDates);
+        } else {
+          const localHistory = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
+          setStreakDates(localHistory);
+        }
+
+        if (nutTodayRes.status === 'fulfilled' && nutTodayRes.value.ok) {
+          const nutData = await nutTodayRes.value.json();
+          if (nutData) {
+            setTodayWaterGlasses(nutData.waterGlasses || 0);
+            const mealsList = Object.values(nutData.meals || {}).flat();
+            setTodayMeals(mealsList as any[]);
+          }
+        } else {
+          const localWater = localStorage.getItem(`smart_water_${todayStr}`);
+          setTodayWaterGlasses(localWater ? parseInt(localWater, 10) || 0 : 0);
+          const localMealsStr = localStorage.getItem(`smart_meals_${todayStr}`);
+          if (localMealsStr) setTodayMeals(Object.values(JSON.parse(localMealsStr)).flat() as any[]);
+        }
+
+        const weekDates = getWeekDaysMonToSun(new Date());
+
+        let logsMap: Record<string, any> = {};
+        if (allNutRes.status === 'fulfilled' && allNutRes.value.ok) {
+          logsMap = await allNutRes.value.json();
+          setNutritionLogs(logsMap);
+        }
+
+        const weekCals = weekDates.map(dStr => {
+          const log = logsMap[dStr];
+          if (log && typeof log.dayCalories === 'number' && log.dayCalories > 0) {
+            return log.dayCalories;
+          }
+          if (log && log.meals) {
+            const sum = (Object.values(log.meals).flat() as any[]).reduce((a: number, b: any) => a + (b.calories || 0), 0);
+            if (sum > 0) return sum;
+          }
+          const savedMeals = localStorage.getItem(`smart_meals_${dStr}`);
+          if (savedMeals) {
+            try {
+              const sum = (Object.values(JSON.parse(savedMeals)).flat() as any[]).reduce((a: number, b: any) => a + (b.calories || 0), 0);
+              if (sum > 0) return sum;
+            } catch {}
+          }
+          const savedCal = localStorage.getItem(`smart_daily_cal_${dStr}`);
+          if (savedCal) return parseInt(savedCal, 10) || 0;
+          return 0;
+        });
+        setWeeklyCalories(weekCals);
+
+        if (allWorkoutRes.status === 'fulfilled' && allWorkoutRes.value.ok) {
+          const wMap = await allWorkoutRes.value.json();
+          setWorkoutLogs(wMap);
+        } else {
+          const saved = localStorage.getItem('smart_workout_logs');
+          if (saved) setWorkoutLogs(JSON.parse(saved));
+        }
+
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, [router, todayStr, getWeekDaysMonToSun]);
+
+  useEffect(() => {
+    if (!selectedDiaryDate) return;
+    let cancelled = false;
+    const token = localStorage.getItem('token');
+    const syncNut = async () => {
+      if (token) {
+        try {
+          const res = await fetch(`${API_URL}/api/nutrition?date=${selectedDiaryDate}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok && !cancelled) {
+            const data = await res.json();
+            setSelectedDateMeals(data.meals || { 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] });
+            setSelectedDateWater(data.waterGlasses || 0);
+            return;
+          }
+        } catch {}
+      }
+      const saved = localStorage.getItem(`smart_meals_${selectedDiaryDate}`);
+      if (!cancelled) {
+        setSelectedDateMeals(saved ? JSON.parse(saved) : { 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] });
+        const w = localStorage.getItem(`smart_water_${selectedDiaryDate}`);
+        setSelectedDateWater(w ? parseInt(w) || 0 : 0);
+      }
+    };
+    syncNut();
+    return () => { cancelled = true; };
+  }, [selectedDiaryDate]);
+
+  const handleDeleteWorkoutLog = useCallback(async (targetDate: string) => {
+    if (!confirm(`Xóa nhật ký tập ngày ${targetDate}?`)) return;
+    const token = localStorage.getItem('token');
+    if (token) {
+      await fetch(`${API_URL}/api/workouts?date=${targetDate}`, {
+        method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(() => {});
     }
-  }, [router]);
+    const logs = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
+    delete logs[targetDate];
+    localStorage.setItem('smart_workout_logs', JSON.stringify(logs));
+    setWorkoutLogs(prev => { const c = { ...prev }; delete c[targetDate]; return c; });
+    setStreakDates(prev => prev.filter(d => d !== targetDate));
+  }, []);
 
-  if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center text-foreground font-sans">Đang tải...</div>;
+  const targetCalories = useMemo(() => {
+    const w = Number(profile.weight) || 65;
+    const h = Number(profile.height) || 170;
+    const a = Number(profile.age) || 25;
+    let bmr = (10 * w) + (6.25 * h) - (5 * a);
+    if (profile.gender === 'Nam') bmr += 5;
+    else bmr -= 161;
+    let mult = 1.2;
+    switch (profile.activityLevel) {
+      case 'Ít vận động': mult = 1.2; break;
+      case 'Vận động nhẹ': mult = 1.375; break;
+      case 'Vận động vừa': mult = 1.55; break;
+      case 'Vận động nhiều': mult = 1.725; break;
+      case 'Vận động cực nhiều': mult = 1.9; break;
+    }
+    const tdee = Math.round(bmr * mult);
+    if (profile.goal === 'Giảm mỡ') return Math.max(1200, tdee - 500);
+    if (profile.goal === 'Tăng cơ' || profile.goal === 'Tăng cân') return tdee + 300;
+    return tdee;
+  }, [profile]);
 
-  return (
-    <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 md:p-8 relative overflow-x-hidden font-sans">
-      {/* Smart Ambient Glow */}
-      <div className="pointer-events-none absolute inset-0 bg-hero-glow" />
+  const consumedCalories = useMemo(() => {
+    return todayMeals.reduce((sum, item) => sum + (item.calories || 0), 0);
+  }, [todayMeals]);
 
-      <div className="max-w-6xl mx-auto relative z-10 space-y-6">
-        <Header />
+  const targetProteinGrams = Math.round((targetCalories * 0.30) / 4);
+  const targetCarbsGrams = Math.round((targetCalories * 0.50) / 4);
+  const targetFatGrams = Math.round((targetCalories * 0.20) / 9);
+  const consumedProteinGrams = Math.round((consumedCalories * 0.30) / 4);
+  const consumedCarbsGrams = Math.round((consumedCalories * 0.50) / 4);
+  const consumedFatGrams = Math.round((consumedCalories * 0.20) / 9);
+  const proteinPct = Math.min(100, Math.round((consumedProteinGrams / (targetProteinGrams || 1)) * 100));
+  const carbsPct = Math.min(100, Math.round((consumedCarbsGrams / (targetCarbsGrams || 1)) * 100));
+  const fatPct = Math.min(100, Math.round((consumedFatGrams / (targetFatGrams || 1)) * 100));
 
-        {/* Welcome Section */}
-        <div className="p-6 md:p-8 bg-card border border-border rounded-3xl shadow-2xl relative overflow-hidden">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1 text-xs text-muted-foreground mb-3">
-                <Sparkles className="size-3.5 text-primary" />
-                Hệ Thống Luyện Tập & Quản Lý Thông Minh
-              </div>
-              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-                Chào mừng trở lại! 👋
-              </h1>
-              <p className="text-muted-foreground text-sm font-medium mt-1">
-                Theo dõi dinh dưỡng, tối ưu lịch tập và bứt phá mục tiêu của bạn hôm nay.
-              </p>
-            </div>
+  const calendarDays = useMemo(() => {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    let startDayIdx = firstDay.getDay() - 1;
+    if (startDayIdx === -1) startDayIdx = 6;
+    const days: Array<{ day: number | null; dateStr: string; isActive: boolean; isToday: boolean }> = [];
+    for (let i = 0; i < startDayIdx; i++) {
+      days.push({ day: null, dateStr: '', isActive: false, isToday: false });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const isActive = streakDates.includes(dStr);
+      const isToday = dStr === todayStr;
+      days.push({ day: d, dateStr: dStr, isActive, isToday });
+    }
+    return days;
+  }, [calendarDate, streakDates, todayStr]);
 
-            {userRole === 'admin' && (
-              <button 
-                onClick={() => router.push('/dashboard/admin')}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary/10 border border-primary/30 text-primary font-semibold text-xs hover:bg-primary/20 transition cursor-pointer self-start md:self-auto"
-              >
-                <ShieldCheck className="size-4" /> Quản trị Admin
-              </button>
-            )}
-          </div>
-        </div>
+  const monthYearLabel = calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const prevMonth = () => { setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)); };
+  const nextMonth = () => { setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)); };
 
-        {/* Main Dashboard Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          
-          {/* Card 1: Food Diary */}
-          <div 
-            onClick={() => router.push('/nutrition')}
-            className="group bg-card border border-border p-6 rounded-3xl hover:border-primary/40 hover:bg-surface-elevated transition-all cursor-pointer shadow-xl flex flex-col justify-between"
-          >
-            <div>
-              <div className="size-14 bg-primary/10 border border-primary/20 text-primary rounded-2xl flex items-center justify-center mb-5 group-hover:scale-105 transition shrink-0">
-                <Utensils className="size-7" />
-              </div>
-              <h3 className="text-xl font-bold tracking-tight mb-2 text-foreground group-hover:text-primary transition-colors">
-                Nhật ký ăn uống
-              </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Ghi lại bữa ăn, theo dõi calo, đạm, carb và chất béo tự động hàng ngày.
-              </p>
-            </div>
-            <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-primary">
-              <span>Mở nhật ký</span>
-              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </div>
+  const completedThisWeek = useMemo(() => {
+    const weekDates = getWeekDaysMonToSun(new Date());
+    let count = 0;
+    for (const dStr of weekDates) {
+      if (streakDates.includes(dStr)) count++;
+    }
+    return count;
+  }, [streakDates, getWeekDaysMonToSun]);
 
-          {/* Card 2: Workout Schedule */}
-          <div 
-            onClick={() => router.push('/workouts')}
-            className="group bg-card border border-border p-6 rounded-3xl hover:border-primary/40 hover:bg-surface-elevated transition-all cursor-pointer shadow-xl flex flex-col justify-between"
-          >
-            <div>
-              <div className="size-14 bg-primary/10 border border-primary/20 text-primary rounded-2xl flex items-center justify-center mb-5 group-hover:scale-105 transition shrink-0">
-                <Dumbbell className="size-7" />
-              </div>
-              <h3 className="text-xl font-bold tracking-tight mb-2 text-foreground group-hover:text-primary transition-colors">
-                Lịch tập luyện
-              </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Lên kế hoạch buổi tập, theo dõi các nhóm cơ 3D/2D và chỉ số sức mạnh.
-              </p>
-            </div>
-            <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-primary">
-              <span>Xem lịch tập</span>
-              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </div>
-
-          {/* Card 3: Progress */}
-          <div 
-            onClick={() => router.push('/progress')}
-            className="group bg-card border border-border p-6 rounded-3xl hover:border-primary/40 hover:bg-surface-elevated transition-all cursor-pointer shadow-xl flex flex-col justify-between"
-          >
-            <div>
-              <div className="size-14 bg-primary/10 border border-primary/20 text-primary rounded-2xl flex items-center justify-center mb-5 group-hover:scale-105 transition shrink-0">
-                <TrendingUp className="size-7" />
-              </div>
-              <h3 className="text-xl font-bold tracking-tight mb-2 text-foreground group-hover:text-primary transition-colors">
-                Báo cáo tiến độ
-              </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Xem biểu đồ thay đổi cân nặng, tỷ lệ mỡ và báo cáo thống kê hàng tuần.
-              </p>
-            </div>
-            <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-primary">
-              <span>Xem báo cáo</span>
-              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </div>
-
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center text-foreground font-sans">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-base font-bold text-muted-foreground">Đang tải Dashboard...</span>
         </div>
       </div>
+    );
+  }
+
+  const todayDateString = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+  const maxCalInWeek = Math.max(targetCalories, ...weeklyCalories, 100);
+  const svgPoints = weeklyCalories.map((val, idx) => {
+    const x = (idx / 6) * 460 + 20;
+    const y = 120 - (val / maxCalInWeek) * 90;
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">
+      <Sidebar />
+      <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-8 overflow-y-auto pb-28 md:pb-10">
+        <header className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-border">
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground">Dashboard</h1>
+            <span className="text-muted-foreground text-base md:text-lg font-semibold">| Welcome Back, {userName}!</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <GoogleTranslate />
+            {userRole === 'admin' && (
+              <button onClick={() => router.push('/dashboard/admin')} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 text-primary font-bold text-sm hover:bg-primary/20 transition cursor-pointer">
+                <ShieldCheck className="size-5" /> Admin Panel
+              </button>
+            )}
+            <button className="relative p-3 rounded-full bg-card hover:bg-surface-elevated border border-border transition text-foreground cursor-pointer">
+              <Bell className="size-5 text-muted-foreground" />
+              <span className="absolute top-2 right-2 size-2.5 rounded-full bg-primary animate-pulse" />
+            </button>
+            <button onClick={() => router.push('/profile')} className="size-11 rounded-full bg-primary/15 border border-primary/30 text-primary flex items-center justify-center font-extrabold text-base cursor-pointer hover:scale-105 transition">
+              <User className="size-5" />
+            </button>
+          </div>
+        </header>
+
+        <div className="bg-card border border-border p-6 md:p-8 rounded-3xl shadow-2xl space-y-6">
+          <h2 className="text-lg md:text-2xl font-black text-foreground">Activity & Training Metrics</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-secondary/50 p-5 rounded-2xl border border-border space-y-3">
+              <div className="flex items-center justify-between text-sm md:text-base font-bold">
+                <span className="text-muted-foreground flex items-center gap-2"><Dumbbell className="size-5 text-primary" /> Workouts (Tuần)</span>
+                <span className="text-foreground font-black">{completedThisWeek} / 7</span>
+              </div>
+              <div className="w-full bg-secondary h-3 rounded-full overflow-hidden">
+                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, Math.round((completedThisWeek / 7) * 100))}%` }} />
+              </div>
+            </div>
+            <div className="bg-secondary/50 p-5 rounded-2xl border border-border space-y-3">
+              <div className="flex items-center justify-between text-sm md:text-base font-bold">
+                <span className="text-muted-foreground flex items-center gap-2"><Flame className="size-5 text-primary" /> Workout Streak</span>
+                <span className="text-primary font-black">{streakDates.length} ngày</span>
+              </div>
+              <div className="w-full bg-secondary h-3 rounded-full overflow-hidden">
+                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, streakDates.length * 10)}%` }} />
+              </div>
+            </div>
+            <div className="bg-secondary/50 p-5 rounded-2xl border border-border flex items-center justify-between">
+              <div>
+                <p className="text-sm md:text-base font-bold text-muted-foreground flex items-center gap-2"><Droplets className="size-5 text-primary" /> Uống Nước</p>
+                <p className="text-2xl md:text-3xl font-black text-foreground mt-1">{todayWaterGlasses * 250} <span className="text-xs md:text-sm font-semibold text-muted-foreground">ml</span></p>
+              </div>
+              <div className="relative size-14 flex items-center justify-center">
+                <svg className="size-full -rotate-90" viewBox="0 0 36 36">
+                  <path className="text-secondary" strokeWidth="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path className="text-primary" strokeDasharray={`${Math.min(100, Math.round(((todayWaterGlasses * 250) / 2000) * 100))}, 100`} strokeWidth="4" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+              </div>
+            </div>
+            <div className="bg-secondary/50 p-5 rounded-2xl border border-border flex items-center justify-between">
+              <div>
+                <p className="text-sm md:text-base font-bold text-muted-foreground flex items-center gap-2"><Trophy className="size-5 text-primary" /> Lịch Tập Hiện Tại</p>
+                <p className="text-base md:text-lg font-black text-foreground mt-1 truncate max-w-[180px]">{profile.lastActiveRoutineName || 'Lịch tập tự do'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+          {/* Left Column (Columns 1-7) */}
+          <div className="lg:col-span-7 space-y-8">
+
+            {/* CARD 1: UNIFIED INTERACTIVE WORKOUT & NUTRITION CALENDAR */}
+            <div className="bg-card border border-border p-6 md:p-8 rounded-3xl shadow-2xl space-y-6">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-lg md:text-2xl font-black text-foreground flex items-center gap-3">
+                  <Calendar className="size-6 text-primary" /> Workout & Nutrition Calendar
+                </h2>
+                <div className="flex items-center gap-3 text-sm md:text-base font-bold text-muted-foreground">
+                  <button onClick={prevMonth} className="p-1.5 hover:text-foreground cursor-pointer rounded-lg hover:bg-secondary transition"><ChevronLeft className="size-5" /></button>
+                  <span className="font-extrabold text-foreground">{monthYearLabel}</span>
+                  <button onClick={nextMonth} className="p-1.5 hover:text-foreground cursor-pointer rounded-lg hover:bg-secondary transition"><ChevronRight className="size-5" /></button>
+                </div>
+              </div>
+
+              {/* Days Header */}
+              <div className="grid grid-cols-7 gap-1.5 text-center text-xs md:text-sm font-bold text-muted-foreground uppercase">
+                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+              </div>
+
+              {/* Interactive Date Grid */}
+              <div className="grid grid-cols-7 gap-1.5">
+                {calendarDays.map((item, idx) => {
+                  if (item.day === null) {
+                    return <div key={`empty-${idx}`} className="min-h-[56px] rounded-2xl bg-secondary/10 border border-border/20 opacity-30" />;
+                  }
+
+                  const isSelected = selectedDiaryDate === item.dateStr;
+                  const nutLog = nutritionLogs[item.dateStr];
+                  const dayCal = nutLog ? (nutLog.dayCalories || 0) : 0;
+                  const hasPhoto = nutLog ? (nutLog.photoCount || 0) > 0 : false;
+
+                  return (
+                    <button
+                      key={item.dateStr}
+                      onClick={() => { setSelectedDiaryDate(item.dateStr); setIsExerciseListCollapsed(false); }}
+                      className={`p-2 rounded-2xl flex flex-col items-center justify-between transition-all border cursor-pointer min-h-[58px] ${
+                        isSelected ? 'ring-2 ring-primary shadow-[0_0_15px_rgba(var(--primary-rgb,0,229,255),0.4)] scale-105 z-10' : ''
+                      } ${
+                        item.isToday
+                          ? 'bg-primary/10 border-primary text-primary font-black'
+                          : item.isActive
+                            ? 'bg-primary/10 border-primary/50 text-primary'
+                            : 'bg-secondary/40 border-border text-foreground hover:bg-secondary/70'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full text-xs md:text-sm">
+                        <span className="font-extrabold">{item.day}</span>
+                        <div className="flex items-center gap-0.5">
+                          {hasPhoto && <span className="text-[10px]" title="Có ảnh món ăn">📷</span>}
+                          <span className="text-xs">{item.isActive ? '✓' : item.isToday ? '🎯' : ''}</span>
+                        </div>
+                      </div>
+
+                      {dayCal > 0 ? (
+                        <span className="text-[10px] md:text-xs font-black text-primary mt-1">{dayCal} kcal</span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground/40 mt-1">-</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-border text-xs md:text-sm text-muted-foreground font-semibold">
+                <div className="flex items-center gap-2">
+                  <span className="size-3 rounded-full bg-primary" />
+                  <span>Đã tập (Logged workout)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="size-3 rounded-lg bg-primary/20 border border-primary text-primary flex items-center justify-center text-[10px] font-bold">🎯</span>
+                  <span>Hôm nay (Today)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs">📷</span>
+                  <span>Có ảnh bữa ăn</span>
+                </div>
+              </div>
+            </div>
+
+            {/* SELECTED DAY DETAIL LOG BLOCK */}
+            {selectedDiaryDate ? (
+              <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-2xl space-y-5 animate-in fade-in duration-300">
+                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-border pb-4">
+                  <h3 className="text-base md:text-xl font-black text-foreground flex items-center gap-2">
+                    📋 Chi tiết nhật ký ngày <span className="text-primary">{selectedDiaryDate}</span>
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    {streakDates.includes(selectedDiaryDate) && (
+                      <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/30 text-xs font-bold rounded-xl">✓ Đã hoàn thành buổi tập</span>
+                    )}
+                    {workoutLogs[selectedDiaryDate] && (
+                      <button
+                        onClick={() => handleDeleteWorkoutLog(selectedDiaryDate)}
+                        className="px-3 py-1 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/30 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1"
+                      >
+                        <Trash2 className="size-3.5" /> Xóa nhật ký
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Workout Details */}
+                {(() => {
+                  const log = workoutLogs[selectedDiaryDate];
+                  if (!log) return (
+                    <div className="p-5 text-center bg-secondary/40 rounded-2xl border border-border text-muted-foreground text-sm">
+                      {streakDates.includes(selectedDiaryDate)
+                        ? <p>✓ Ngày này bạn đã hoàn thành buổi tập!</p>
+                        : <p>🧘 Không có buổi tập nào được ghi nhận cho ngày này.</p>}
+                    </div>
+                  );
+                  const completedEx = (log.exercises || []).filter((ex: any) => ex.completed !== false);
+                  return (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-secondary/50 p-4 rounded-2xl border border-border">
+                          <span className="text-xs text-muted-foreground font-medium block">Lịch tập (Routine)</span>
+                          <strong className="text-primary font-black text-sm md:text-base mt-0.5 block">🏋️ {log.routineName || 'Tự do'}</strong>
+                        </div>
+                        <div className="bg-secondary/50 p-4 rounded-2xl border border-border">
+                          <span className="text-xs text-muted-foreground font-medium block">Buổi tập (Day)</span>
+                          <strong className="text-green-400 font-black text-sm md:text-base mt-0.5 block">🎯 {log.dayName || '-'}</strong>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Bài tập đã thực hiện ({completedEx.length})</span>
+                          <button
+                            onClick={() => setIsExerciseListCollapsed(p => !p)}
+                            className="px-3 py-1 bg-secondary hover:bg-secondary/80 rounded-xl text-xs font-bold text-primary border border-border transition flex items-center gap-1 cursor-pointer"
+                          >
+                            {isExerciseListCollapsed ? <><ChevronDown className="size-3.5" />Mở rộng</> : <><ChevronUp className="size-3.5" />Thu gọn</>}
+                          </button>
+                        </div>
+                        {!isExerciseListCollapsed && (
+                          completedEx.length > 0 ? (
+                            <div className="space-y-2">
+                              {completedEx.map((ex: any, idx: number) => (
+                                <div key={idx} className="p-3.5 bg-secondary/50 border border-border rounded-2xl flex items-center justify-between gap-3 text-sm">
+                                  <div className="space-y-0.5 min-w-0">
+                                    <span className="font-extrabold text-foreground block truncate">{idx+1}. {ex.name}</span>
+                                    {ex.muscle && <span className="text-primary text-xs font-semibold block">🎯 {MUSCLE_NAMES_VI[ex.muscle.toLowerCase()] || ex.muscle}</span>}
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0 text-xs">
+                                    <span className="bg-background px-3 py-1 rounded-xl border border-border font-bold">Hiệp: <strong className="text-primary">{ex.sets}</strong></span>
+                                    <span className="bg-background px-3 py-1 rounded-xl border border-border font-bold">Lần: <strong className="text-green-400">{String(ex.reps || '10').match(/\d+/)?.[0] || '10'}</strong></span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : <p className="text-sm text-muted-foreground italic">Chưa hoàn thành bài tập nào.</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Nutrition Details for Selected Day */}
+                <div className="pt-4 border-t border-border space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-black text-foreground flex items-center gap-2">🥗 Nhật ký ăn uống ngày <span className="text-primary">{selectedDiaryDate}</span></h4>
+                    <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-xl border border-primary/20">
+                      {Object.values(selectedDateMeals).flat().reduce((s: number, i: any) => s + (i.calories || 0), 0)} kcal
+                    </span>
+                  </div>
+                  {selectedDateWater > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-semibold">
+                      <Droplets className="size-4 text-primary" /> Nước uống: <strong className="text-primary">{selectedDateWater * 250} ml</strong> ({selectedDateWater} ly)
+                    </div>
+                  )}
+                  {Object.values(selectedDateMeals).flat().length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[{name:'Bữa Sáng',icon:'🍳'},{name:'Bữa Trưa',icon:'🍱'},{name:'Bữa Tối',icon:'🥩'},{name:'Ăn Vặt',icon:'🍎'}].map(cat => {
+                        const list = selectedDateMeals[cat.name] || [];
+                        if (list.length === 0) return null;
+                        const catCal = list.reduce((s: number, i: any) => s + (i.calories || 0), 0);
+                        return (
+                          <div key={cat.name} className="bg-secondary/50 p-4 rounded-2xl border border-border space-y-2">
+                            <div className="flex items-center justify-between text-sm font-bold border-b border-border pb-2">
+                              <span>{cat.icon} {cat.name}</span>
+                              <span className="text-primary">{catCal} kcal</span>
+                            </div>
+                            <div className="space-y-1.5">
+                              {list.map((item: any) => (
+                                <div key={item.id} className="flex items-center justify-between bg-background p-2 rounded-xl text-xs">
+                                  <div className="flex items-center gap-2">
+                                    {item.image && (
+                                      <img src={item.image} alt={item.name} onClick={() => setPreviewImage(item.image)} className="w-8 h-8 rounded-lg object-cover cursor-pointer border border-border hover:border-primary transition" />
+                                    )}
+                                    <span className="text-foreground font-medium">{item.name}</span>
+                                  </div>
+                                  <span className="font-bold text-primary">{item.calories} kcal</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center bg-secondary/40 rounded-2xl border border-border text-muted-foreground text-sm">
+                      Chưa ghi nhận khẩu phần ăn nào cho ngày này.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+          </div>
+
+          {/* Right Column (Columns 8-12) */}
+          <div className="lg:col-span-5 space-y-8">
+
+            {/* CARD 5: BMR / TDEE & GOAL ADVICE */}
+            <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-2xl space-y-5">
+              <div className="flex items-center justify-between border-b border-border pb-4">
+                <h3 className="text-base md:text-lg font-black text-foreground flex items-center gap-2">📊 Chỉ Số Chuyển Hóa</h3>
+                <button onClick={() => router.push('/profile')} className="text-xs text-primary hover:underline font-bold">Cập nhật Hồ sơ ↗</button>
+              </div>
+              {(() => {
+                const w = Number(profile.weight) || 65;
+                const h = Number(profile.height) || 170;
+                const a = Number(profile.age) || 25;
+                let bmr = (10 * w) + (6.25 * h) - (5 * a);
+                if (profile.gender === 'Nam') bmr += 5; else bmr -= 161;
+                bmr = Math.round(bmr);
+                const tdee = Math.round(bmr * 1.375);
+                const goal = profile.goal || 'Tăng cơ';
+                const target = goal === 'Giảm mỡ' ? Math.max(1200, tdee - 500) : (goal === 'Tăng cơ' || goal === 'Tăng cân') ? tdee + 300 : tdee;
+                const pct = Math.min(100, Math.round((consumedCalories / target) * 100));
+                return (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-secondary/50 p-4 rounded-2xl border border-border">
+                        <span className="text-xs text-muted-foreground block">Chiều cao / Cân nặng</span>
+                        <strong className="text-foreground text-base font-black mt-1 block">{h} cm / {w} kg</strong>
+                      </div>
+                      <div className="bg-secondary/50 p-4 rounded-2xl border border-border">
+                        <span className="text-xs text-muted-foreground block">Mục tiêu</span>
+                        <strong className="text-primary text-base font-black mt-1 block">{goal}</strong>
+                      </div>
+                    </div>
+
+                    <div className="bg-secondary/50 p-5 rounded-2xl border border-border space-y-2">
+                      <h4 className="text-xs font-bold text-primary uppercase tracking-wider">Gợi ý Calo theo mục tiêu</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between"><span className="text-muted-foreground">🏋️ Tăng cơ</span><strong className="text-green-400">{tdee + 300} kcal</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">🔥 Giảm mỡ</span><strong className="text-primary">{Math.max(1200, tdee - 500)} kcal</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">⚖️ Giữ dáng</span><strong className="text-yellow-400">{tdee} kcal</strong></div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-secondary/50 p-4 rounded-2xl border border-border text-center">
+                        <span className="text-xs text-muted-foreground block">BMR</span>
+                        <strong className="text-foreground text-xl font-black">{bmr.toLocaleString()}</strong>
+                        <span className="text-xs text-muted-foreground block">kcal/ngày</span>
+                      </div>
+                      <div className="bg-secondary/50 p-4 rounded-2xl border border-border text-center">
+                        <span className="text-xs text-muted-foreground block">TDEE</span>
+                        <strong className="text-primary text-xl font-black">{tdee.toLocaleString()}</strong>
+                        <span className="text-xs text-muted-foreground block">kcal/ngày</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+          </div>
+
+        </div>
+
+      </main>
+
+      {/* Image preview modal */}
+      {previewImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setPreviewImage(null)} />
+          <div className="relative bg-card border border-border rounded-3xl p-4 max-w-xl w-full shadow-2xl z-10">
+            <button onClick={() => setPreviewImage(null)} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground text-xl font-bold bg-secondary rounded-full w-8 h-8 flex items-center justify-center border border-border">&times;</button>
+            <img src={previewImage} alt="Ảnh món ăn" className="w-full h-auto max-h-[75vh] object-contain rounded-2xl" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

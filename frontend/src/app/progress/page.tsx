@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import Header from '@/components/Header';
+import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { API_URL } from '@/utils/api';
 
@@ -29,6 +29,9 @@ const MUSCLE_NAMES_VI: Record<string, string> = {
 
 export default function ProgressPage() {
   const router = useRouter();
+  useEffect(() => {
+    router.replace('/dashboard');
+  }, [router]);
   const [loading, setLoading] = useState(true);
 
   // User Profile State
@@ -455,13 +458,10 @@ export default function ProgressPage() {
   }
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-[#0B0F19] text-white p-3 sm:p-6 md:p-8 relative overflow-x-hidden font-sans">
-      {/* Ambient Neon Glow Effects */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none transform-gpu" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none transform-gpu" />
-
-      <div className="max-w-7xl mx-auto relative z-10 space-y-6">
-        <Header />
+    <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">
+      <Sidebar />
+      <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 space-y-6 overflow-y-auto pb-24 md:pb-8">
+        <div className="max-w-7xl w-full mx-auto space-y-6">
 
         {/* Top Header Banner */}
         <div className="p-4 sm:p-6 bg-[#131B2E]/90 backdrop-blur-2xl border border-slate-800/80 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1056,6 +1056,7 @@ export default function ProgressPage() {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import Header from '@/components/Header';
+import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { API_URL } from '@/utils/api';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
@@ -525,20 +525,17 @@ export default function Nutrition() {
   }
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-[#0B0F19] text-white p-4 md:p-8 relative overflow-hidden font-sans">
-      {/* Smart Ambient Glow Effects */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none transform-gpu" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none transform-gpu" />
-
-      <div className="max-w-7xl mx-auto relative z-10 space-y-6 sm:space-y-8">
-        <Header />
+    <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">
+      <Sidebar />
+      <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-8 overflow-y-auto pb-28 md:pb-10">
+        <div className="max-w-[1600px] w-full mx-auto space-y-6 sm:space-y-8">
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
           <div>
-            <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3">
               <span className="text-[#00E5FF]">🥗</span> Nhật ký ăn uống & Dinh dưỡng
             </h1>
-            <p className="text-slate-400 text-[11px] sm:text-xs font-semibold mt-1">Theo dõi và ghi chép chi tiết lượng Calo và Nước nạp vào cơ thể.</p>
+            <p className="text-slate-400 text-xs sm:text-sm font-semibold mt-1">Theo dõi và ghi chép chi tiết lượng Calo và Nước nạp vào cơ thể.</p>
           </div>
 
           {/* Date Picker Navigation Bar */}
@@ -1439,7 +1436,7 @@ export default function Nutrition() {
         onClose={() => setIsBarcodeModalOpen(false)}
         onDetectedProduct={handleDetectedProduct}
       />
-
+      </main>
     </div>
   );
 }
