@@ -1,33 +1,26 @@
-import { Apple, Dumbbell, LineChart, Target } from "lucide-react";
+import { Apple, Dumbbell, LineChart } from "lucide-react";
 
 const features = [
   {
     icon: Apple,
-    title: "Nhật ký ăn uống thông minh",
+    title: "Dinh dưỡng & Quét mã vạch",
     description:
-      "Ghi lại mọi bữa ăn với cơ sở dữ liệu món Việt phong phú. Tự động tính calo, đạm, carb và chất béo theo khẩu phần của bạn.",
-    tags: ["12.000+ món ăn", "Mã vạch quét nhanh"],
+      "Theo dõi lượng Calo, Protein, Carbs và Fat hàng ngày. Tích hợp camera quét mã vạch Barcode thực tế giúp tra cứu và lưu thực phẩm tức thì.",
+    tags: ["Quét Barcode Camera", "Tính Calo & Macro", "Thực phẩm tùy chỉnh"],
   },
   {
     icon: Dumbbell,
-    title: "Lịch tập luyện cá nhân",
+    title: "Lịch tập & Bản đồ cơ bắp 3D",
     description:
-      "Lên kế hoạch buổi tập, ghi nhận số set/rep và theo dõi cường độ. Đồng bộ với đồng hồ thông minh để có dữ liệu chính xác nhất.",
-    tags: ["38 bài tập mẫu", "12 chế độ tập"],
+      "Lên kế hoạch tập luyện cá nhân hóa (PPL, Fullbody...). Tích hợp bản đồ giải phẫu cơ bắp trực quan hóa các nhóm cơ được tác động.",
+    tags: ["Bản đồ cơ bắp 3D", "Lịch tập PPL / Upper-Lower", "Ghi Set, Reps & Mức tạ"],
   },
   {
     icon: LineChart,
-    title: "Theo dõi tiến độ trực quan",
+    title: "Thống kê tiến độ & BMR/TDEE",
     description:
-      "Biểu đồ cân nặng, tỷ lệ mỡ, cơ bắp và BMI giúp bạn nhìn thấy sự thay đổi qua từng tuần, từng tháng.",
-    tags: ["7 chỉ số sức khỏe", "Báo cáo hàng tuần"],
-  },
-  {
-    icon: Target,
-    title: "Mục tiêu & thói quen",
-    description:
-      "Đặt mục tiêu giảm cân, tăng cơ hay duy trì sức khỏe. Smart nhắc nhở và điều chỉnh kế hoạch để bạn không bỏ cuộc giữa chừng.",
-    tags: ["Nhắc nhở thông minh", "Thưởng thành tích"],
+      "Tự động tính toán BMR & TDEE theo mục tiêu thể hình. Biểu đồ theo dõi sự thay đổi Cân nặng, chỉ số BMI và lịch sử tập luyện.",
+    tags: ["Tính BMR & TDEE", "Biểu đồ Cân nặng & BMI", "Lịch sử tập luyện"],
   },
 ];
 
@@ -37,18 +30,17 @@ export function Features() {
       <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
         <div className="max-w-[44ch]">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Tính năng
+            Tính năng nổi bật
           </p>
           <h2 className="mt-4 text-balance text-3xl font-bold tracking-tight text-foreground md:text-5xl">
-            Mọi thứ bạn cần để kiểm soát cơ thể
+            Kiểm soát sức khỏe & tập luyện thông minh
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Không cần ứng dụng rời rạc. Smart tập hợp dinh dưỡng, tập luyện và
-            tiến độ vào một nơi duy nhất.
+            Smart kết hợp theo dõi dinh dưỡng, phân tích nhóm cơ tập luyện và đo lường tiến độ vào một nền tảng duy nhất.
           </p>
         </div>
 
-        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature, index) => (
             <div
               key={feature.title}
@@ -81,3 +73,5 @@ export function Features() {
     </section>
   );
 }
+
+

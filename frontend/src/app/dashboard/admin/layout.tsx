@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       });
     } catch (e) {}
     localStorage.clear();
-    router.push('/login');
+    router.push('/');
   };
 
   const navItems = [

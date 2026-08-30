@@ -39,7 +39,7 @@ export default function Header() {
       });
     } catch (e) {}
     localStorage.clear();
-    router.push('/login');
+    router.push('/');
   };
 
   return (

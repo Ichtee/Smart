@@ -25,7 +25,7 @@ export default function Sidebar() {
       });
     } catch (e) {}
     localStorage.clear();
-    router.push('/login');
+    router.push('/');
   };
 
   return (

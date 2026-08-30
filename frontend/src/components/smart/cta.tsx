@@ -21,7 +21,7 @@ export function CTA() {
               Bắt đầu hành trình của bạn hôm nay
             </h2>
             <p className="mx-auto mt-5 max-w-[44ch] text-balance text-lg text-muted-foreground">
-              30 ngày miễn phí. Không cần thẻ tín dụng. Hủy bất cứ lúc nào.
+              Miễn phí hoàn toàn. Đăng ký tài khoản và quản lý tập luyện ngay tức thì.
             </p>
 
             <form onSubmit={handleSubmit} className="mx-auto mt-9 flex max-w-md flex-col gap-3 sm:flex-row">
@@ -40,7 +40,7 @@ export function CTA() {
             </form>
 
             <p className="mt-5 text-xs text-muted-foreground">
-              Dùng thử không ràng buộc · Hỗ trợ tiếng Việt
+              Bảo mật tài khoản với JWT Cookie & Email Verification
             </p>
           </div>
         </div>
@@ -48,3 +48,4 @@ export function CTA() {
     </section>
   );
 }
+

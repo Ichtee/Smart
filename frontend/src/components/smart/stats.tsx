@@ -1,8 +1,14 @@
-const stats = [
-  { value: "120K+", label: "thành viên tại Việt Nam" },
-  { value: "4.9", suffix: "/5", label: "đánh giá trung bình" },
-  { value: "18M+", label: "bữa ăn đã ghi nhận" },
-  { value: "2.4M", label: "bài tập mỗi tuần" },
+interface StatItem {
+  value: string;
+  suffix?: string;
+  label: string;
+}
+
+const stats: StatItem[] = [
+  { value: "100%", label: "Miễn phí trải nghiệm" },
+  { value: "Camera", label: "Quét mã vạch Barcode" },
+  { value: "3D Map", label: "Giải phẫu nhóm cơ" },
+  { value: "BMR/TDEE", label: "Tính toán tự động" },
 ];
 
 export function Stats() {
@@ -33,3 +39,5 @@ export function Stats() {
     </section>
   );
 }
+
+
