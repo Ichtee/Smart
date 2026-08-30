@@ -23,11 +23,23 @@ const VALID_MODEL_MUSCLES = new Set([
 const normalizeMuscleId = (id: string): string => {
   if (!id) return '';
   const s = id.toLowerCase().trim();
-  if (s === 'adductors' || s === 'adductor') return 'adductor';
-  if (s === 'delts' || s === 'deltoids' || s === 'front-deltoids' || s === 'front deltoids') return 'front-deltoids';
-  if (s === 'rear delts' || s === 'back-deltoids' || s === 'back deltoids') return 'back-deltoids';
-  if (s === 'upper back' || s === 'upper-back') return 'upper-back';
-  if (s === 'lower back' || s === 'lower-back') return 'lower-back';
+  if (s === 'adductors' || s === 'adductor' || s === 'cơ khép') return 'adductor';
+  if (s === 'delts' || s === 'deltoids' || s === 'front-deltoids' || s === 'front deltoids' || s === 'shoulders' || s === 'vai' || s === 'vai trước') return 'front-deltoids';
+  if (s === 'rear delts' || s === 'back-deltoids' || s === 'back deltoids' || s === 'vai sau' || s === 'rear deltoids') return 'back-deltoids';
+  if (s === 'upper back' || s === 'upper-back' || s === 'lưng trên' || s === 'lưng') return 'upper-back';
+  if (s === 'lower back' || s === 'lower-back' || s === 'lưng dưới') return 'lower-back';
+  if (s === 'lats' || s === 'latissimus' || s === 'cơ xô' || s === 'xô') return 'lats';
+  if (s === 'traps' || s === 'trapezius' || s === 'cầu vai') return 'trapezius';
+  if (s === 'chest' || s === 'ngực') return 'chest';
+  if (s === 'biceps' || s === 'tay trước') return 'biceps';
+  if (s === 'triceps' || s === 'tay sau') return 'triceps';
+  if (s === 'forearm' || s === 'forearms' || s === 'cẳng tay') return 'forearm';
+  if (s === 'quads' || s === 'quadriceps' || s === 'đùi trước') return 'quadriceps';
+  if (s === 'hamstrings' || s === 'hamstring' || s === 'đùi sau') return 'hamstring';
+  if (s === 'glutes' || s === 'gluteal' || s === 'mông') return 'gluteal';
+  if (s === 'calves' || s === 'bắp chân') return 'calves';
+  if (s === 'abs' || s === 'bụng' || s === 'cơ bụng') return 'abs';
+  if (s === 'obliques' || s === 'cơ liên sườn') return 'obliques';
   return s;
 };
 
@@ -582,10 +594,15 @@ export default function Workouts() {
           if (res.ok) {
             const apiLog = await res.json();
             if (apiLog) {
-              selectedIds = apiLog.selectedIds || [];
-              completedIds = apiLog.completedIds || [];
-              detailsMap = apiLog.detailsMap || {};
-              isSavedSession = !!apiLog.isSaved;
+              const logRoutineMatches = !apiLog.routineId || apiLog.routineId === activeRoutineId || activeRoutineId === 'none';
+              if (logRoutineMatches && apiLog.isSaved && (apiLog.selectedIds || []).length > 0) {
+                selectedIds = apiLog.selectedIds || [];
+                completedIds = apiLog.completedIds || [];
+                detailsMap = apiLog.detailsMap || {};
+                isSavedSession = true;
+              } else {
+                isSavedSession = false;
+              }
               loadedFromApi = true;
             }
           }
@@ -1400,7 +1417,7 @@ export default function Workouts() {
                                   : 'bg-[#18233C] text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
                             }`}
                         >
-                          <span>{MUSCLE_NAMES_VI[target.id] || target.id}</span>
+                          <span>{MUSCLE_NAMES_VI[normTargetId] || MUSCLE_NAMES_VI[target.id] || target.id}</span>
 
                           <span className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-black ${selectedMuscle === normTargetId
                               ? 'bg-slate-950 text-[#00E5FF]'
