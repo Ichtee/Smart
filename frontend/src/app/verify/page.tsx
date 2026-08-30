@@ -2,7 +2,9 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Logo } from '@/components/smart/logo';
 import { API_URL } from '@/utils/api';
+import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
 function VerifyContent() {
   const searchParams = useSearchParams();
@@ -44,25 +46,31 @@ function VerifyContent() {
   }, [token]);
 
   return (
-    <div className="bg-[#131B2E]/90 backdrop-blur-2xl p-8 md:p-10 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800/80 text-center relative z-10">
+    <div className="bg-card border border-border p-8 md:p-10 rounded-3xl shadow-2xl w-full max-w-md text-center relative z-10">
+      <div className="flex flex-col items-center text-center mb-6">
+        <Link href="/">
+          <Logo size="lg" />
+        </Link>
+      </div>
+
       {status === 'loading' && (
         <div className="space-y-4">
-          <div className="w-12 h-12 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <h1 className="text-2xl font-extrabold text-white">Đang xác thực...</h1>
-          <p className="text-slate-400 text-sm">Vui lòng chờ trong giây lát để hệ thống kiểm tra tài khoản của bạn.</p>
+          <Loader2 className="size-12 text-primary animate-spin mx-auto mb-4" />
+          <h1 className="text-xl font-bold text-foreground">Đang xác thực...</h1>
+          <p className="text-muted-foreground text-sm">Vui lòng chờ trong giây lát để hệ thống kiểm tra tài khoản của bạn.</p>
         </div>
       )}
 
       {status === 'success' && (
         <div className="space-y-6">
-          <div className="w-16 h-16 bg-[#00FF87]/10 border border-[#00FF87]/30 text-[#00FF87] rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
-            ✓
+          <div className="size-16 bg-primary/10 border border-primary/30 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="size-8" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-[#00FF87] mb-2">Thành công!</h1>
-            <p className="text-slate-300 text-sm leading-relaxed">{message}</p>
+            <h1 className="text-2xl font-bold text-primary mb-2">Thành công!</h1>
+            <p className="text-foreground text-sm leading-relaxed">{message}</p>
           </div>
-          <Link href="/login" className="block w-full py-3.5 rounded-xl bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black text-sm transition-all shadow-lg shadow-[#00E5FF]/20">
+          <Link href="/login" className="block w-full py-3.5 rounded-full bg-primary hover:brightness-110 text-primary-foreground font-semibold text-sm transition-all shadow-lg glow-primary">
             Tiếp tục đăng nhập
           </Link>
         </div>
@@ -70,14 +78,14 @@ function VerifyContent() {
 
       {status === 'error' && (
         <div className="space-y-6">
-          <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
-            ✗
+          <div className="size-16 bg-destructive/10 border border-destructive/30 text-destructive rounded-full flex items-center justify-center mx-auto mb-4">
+            <XCircle className="size-8" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-rose-400 mb-2">Xác thực thất bại</h1>
-            <p className="text-slate-300 text-sm leading-relaxed">{message}</p>
+            <h1 className="text-2xl font-bold text-destructive mb-2">Xác thực thất bại</h1>
+            <p className="text-foreground text-sm leading-relaxed">{message}</p>
           </div>
-          <Link href="/login" className="block w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm transition-all">
+          <Link href="/login" className="block w-full py-3.5 rounded-full bg-secondary hover:bg-surface-elevated text-foreground font-semibold text-sm transition-all border border-border">
             Quay lại trang đăng nhập
           </Link>
         </div>
@@ -88,12 +96,10 @@ function VerifyContent() {
 
 export default function VerifyEmail() {
   return (
-    <div suppressHydrationWarning className="min-h-screen flex items-center justify-center bg-[#0B0F19] text-white px-4 relative overflow-hidden font-sans">
-      {/* FitPulse Glow */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none" />
+    <div suppressHydrationWarning className="min-h-screen flex items-center justify-center bg-background text-foreground px-4 relative overflow-hidden font-sans">
+      <div className="pointer-events-none absolute inset-0 bg-hero-glow" />
 
-      <Suspense fallback={<div className="text-slate-400 text-sm">Đang tải...</div>}>
+      <Suspense fallback={<div className="text-muted-foreground text-sm font-sans">Đang tải...</div>}>
         <VerifyContent />
       </Suspense>
     </div>

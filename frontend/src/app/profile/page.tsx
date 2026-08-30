@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import { useRouter } from 'next/navigation';
 import { API_URL } from '@/utils/api';
+import { User, Activity, Target, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function Profile() {
   const router = useRouter();
@@ -165,104 +166,104 @@ export default function Profile() {
       bmiColor = 'text-emerald-400';
     } else if (bmi >= 25 && bmi < 29.9) {
       bmiCategory = 'Thừa cân';
-      bmiColor = 'text-yellow-400';
+      bmiColor = 'text-amber-400';
     } else {
       bmiCategory = 'Béo phì';
-      bmiColor = 'text-red-400';
+      bmiColor = 'text-rose-400';
     }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0B0F19] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center text-foreground font-sans">
+        <Loader2 className="size-8 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-[#0B0F19] text-white p-4 md:p-8 relative overflow-hidden font-sans">
-      {/* Background glow effects */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-500/10 blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-cyan-500/10 blur-[140px] pointer-events-none" />
+    <div suppressHydrationWarning className="min-h-screen bg-background text-foreground p-4 md:p-8 relative overflow-hidden font-sans">
+      {/* Smart Glow */}
+      <div className="pointer-events-none absolute inset-0 bg-hero-glow" />
 
       <div className="max-w-7xl mx-auto relative z-10 space-y-6">
         <Header />
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
-              <span className="text-[#00E5FF]">👤</span> Hồ sơ cá nhân
+            <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
+              <User className="size-8 text-primary" /> Hồ sơ cá nhân
             </h1>
-            <p className="text-slate-400 text-xs font-semibold mt-1">Quản lý thông tin và các chỉ số hình thể của bạn để có lộ trình tập luyện tốt nhất.</p>
+            <p className="text-muted-foreground text-xs font-semibold mt-1">Quản lý thông tin và các chỉ số hình thể của bạn để có lộ trình tập luyện tốt nhất.</p>
           </div>
         </div>
 
         {message.text && (
-          <div className={`p-4 rounded-2xl border ${message.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'} text-xs font-bold`}>
-            {message.text}
+          <div className={`p-4 rounded-2xl border flex items-center gap-2 ${message.type === 'success' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-destructive/10 border-destructive/30 text-destructive'} text-xs font-semibold`}>
+            {message.type === 'success' ? <CheckCircle2 className="size-4 shrink-0" /> : <AlertCircle className="size-4 shrink-0" />}
+            <span>{message.text}</span>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Form */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
+            <form onSubmit={handleSubmit} className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
 
               <div>
-                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-black">1</span>
+                <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                  <span className="size-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center text-sm font-black">1</span>
                   Thông tin tài khoản
                 </h2>
                 <div className="grid grid-cols-2 gap-3 sm:gap-6">
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Họ và tên</label>
+                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Họ và tên</label>
                     <input
                       type="text"
                       name="name"
                       maxLength={50}
                       value={formData.name}
                       onChange={handleChange}
-                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                      className="w-full bg-background border border-input rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tên đăng nhập</label>
+                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tên đăng nhập</label>
                     <input
                       type="text"
                       value={formData.username}
-                      className="w-full bg-[#0B101D]/50 border border-slate-800/50 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-500 cursor-not-allowed"
+                      className="w-full bg-secondary/50 border border-border/50 rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-muted-foreground cursor-not-allowed"
                       disabled
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email</label>
+                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Email</label>
                     <input
                       type="email"
                       value={formData.email}
-                      className="w-full bg-[#0B101D]/50 border border-slate-800/50 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-500 cursor-not-allowed"
+                      className="w-full bg-secondary/50 border border-border/50 rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-muted-foreground cursor-not-allowed"
                       disabled
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="h-px w-full bg-slate-800/80"></div>
+              <div className="h-px w-full bg-border"></div>
 
               <div>
-                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-sm font-black">2</span>
+                <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                  <span className="size-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center text-sm font-black">2</span>
                   Chỉ số hình thể
                 </h2>
                 <div className="grid grid-cols-2 gap-3 sm:gap-6">
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Giới tính</label>
+                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Giới tính</label>
                     <select
                       name="gender"
                       value={formData.gender}
                       onChange={handleChange}
-                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                      className="w-full bg-background border border-input rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                     >
                       <option value="">Chưa cập nhật</option>
                       <option value="Nam">Nam</option>
@@ -271,7 +272,7 @@ export default function Profile() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tuổi</label>
+                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tuổi</label>
                     <input
                       type="number"
                       name="age"
@@ -281,11 +282,11 @@ export default function Profile() {
                       onChange={handleChange}
                       onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                       placeholder="VD: 25"
-                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                      className="w-full bg-background border border-input rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Chiều cao (cm)</label>
+                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Chiều cao (cm)</label>
                     <input
                       type="number"
                       name="height"
@@ -295,11 +296,11 @@ export default function Profile() {
                       onChange={handleChange}
                       onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                       placeholder="VD: 170"
-                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                      className="w-full bg-background border border-input rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Cân nặng (kg)</label>
+                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Cân nặng (kg)</label>
                     <input
                       type="number"
                       name="weight"
@@ -309,16 +310,16 @@ export default function Profile() {
                       onChange={handleChange}
                       onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
                       placeholder="VD: 65"
-                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                      className="w-full bg-background border border-input rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mục tiêu tập luyện</label>
+                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mục tiêu tập luyện</label>
                     <select
                       name="goal"
                       value={formData.goal}
                       onChange={handleChange}
-                      className="w-full bg-[#0B101D] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                      className="w-full bg-background border border-input rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                     >
                       <option value="">Chưa cập nhật</option>
                       <option value="Tăng cơ">Tăng cơ (Muscle Gain)</option>
@@ -335,15 +336,18 @@ export default function Profile() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-8 py-3 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-[#00E5FF]/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-8 py-3.5 bg-primary hover:brightness-110 text-primary-foreground font-bold text-xs rounded-full shadow-lg glow-primary transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {saving ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+                      <Loader2 className="size-4 animate-spin" />
                       Đang lưu...
                     </>
                   ) : (
-                    'Lưu thay đổi'
+                    <>
+                      <Save className="size-4" />
+                      Lưu thay đổi
+                    </>
                   )}
                 </button>
               </div>
@@ -352,42 +356,42 @@ export default function Profile() {
 
           {/* Right Column - Stats Card */}
           <div className="lg:col-span-1">
-            <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden group hover:border-emerald-500/20 transition-colors duration-500 sticky top-6">
-              <div className="absolute top-0 right-0 p-32 bg-emerald-500/10 blur-[80px] rounded-full group-hover:bg-emerald-500/20 transition-colors duration-700"></div>
+            <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden group hover:border-primary/30 transition-colors duration-500 sticky top-6">
+              <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-50" />
 
               <div className="relative z-10 flex flex-col items-center">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 p-1 mb-6 shadow-xl shadow-emerald-500/20">
-                  <div className="w-full h-full bg-[#0B0F19] rounded-full flex items-center justify-center text-4xl font-extrabold text-white uppercase">
+                <div className="size-24 rounded-full bg-primary/20 p-1 mb-6 shadow-xl border border-primary/40">
+                  <div className="w-full h-full bg-background rounded-full flex items-center justify-center text-4xl font-extrabold text-foreground uppercase">
                     {formData.name ? formData.name.charAt(0) : '?'}
                   </div>
                 </div>
 
-                <h3 className="text-xl font-bold text-white mb-1">{formData.name || 'Người dùng'}</h3>
-                <p className="text-[#00E5FF]/80 text-xs font-bold mb-8 uppercase tracking-wider">Thành viên Smart</p>
+                <h3 className="text-xl font-bold text-foreground mb-1">{formData.name || 'Người dùng'}</h3>
+                <p className="text-primary text-xs font-semibold mb-8 uppercase tracking-wider">Thành viên Smart</p>
 
-                <div className="w-full bg-[#0B101D] rounded-2xl p-6 border border-slate-800">
-                  <h4 className="text-slate-400 text-xs font-bold mb-4 uppercase tracking-wider text-center">Chỉ số BMI</h4>
+                <div className="w-full bg-background rounded-2xl p-6 border border-border">
+                  <h4 className="text-muted-foreground text-xs font-semibold mb-4 uppercase tracking-wider text-center">Chỉ số BMI</h4>
 
                   {bmi > 0 ? (
                     <div className="flex flex-col items-center">
-                      <div className={`text-5xl font-mono font-black ${bmiColor} mb-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]`}>
+                      <div className={`text-5xl font-mono font-black ${bmiColor} mb-2`}>
                         {bmi.toFixed(1)}
                       </div>
-                      <div className={`px-4 py-1.5 rounded-full bg-[#18233C] text-xs font-extrabold ${bmiColor} border border-slate-800`}>
+                      <div className={`px-4 py-1.5 rounded-full bg-secondary text-xs font-bold ${bmiColor} border border-border`}>
                         {bmiCategory}
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center text-slate-500 text-xs">
+                    <div className="text-center text-muted-foreground text-xs">
                       Vui lòng nhập chiều cao và cân nặng để tính BMI
                     </div>
                   )}
                 </div>
 
                 {formData.goal && (
-                  <div className="w-full mt-4 bg-[#0B101D] rounded-2xl p-5 border border-slate-800 flex items-center justify-between">
-                    <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Mục tiêu</span>
-                    <span className="text-[#00E5FF] font-extrabold text-sm">{formData.goal}</span>
+                  <div className="w-full mt-4 bg-background rounded-2xl p-5 border border-border flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Mục tiêu</span>
+                    <span className="text-primary font-bold text-sm">{formData.goal}</span>
                   </div>
                 )}
               </div>

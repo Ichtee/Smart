@@ -1,7 +1,9 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { Logo } from '@/components/smart/logo';
 import { API_URL } from '@/utils/api';
+import { ArrowLeft, CheckCircle2, AlertCircle, Send } from 'lucide-react';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -38,54 +40,52 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div suppressHydrationWarning className="min-h-screen flex items-center justify-center bg-[#0B0F19] text-white px-4 relative overflow-hidden font-sans">
-      {/* Background glows */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none" />
+    <div suppressHydrationWarning className="min-h-screen flex items-center justify-center bg-background text-foreground px-4 relative overflow-hidden font-sans">
+      {/* Smart Glow */}
+      <div className="pointer-events-none absolute inset-0 bg-hero-glow" />
 
-      <div className="bg-[#131B2E]/90 backdrop-blur-2xl p-8 md:p-10 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800/80 relative z-10">
+      <div className="bg-card border border-border p-8 md:p-10 rounded-3xl shadow-2xl w-full max-w-md relative z-10">
 
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#00E5FF] to-[#00FF87] p-0.5 mx-auto mb-3 shadow-lg shadow-[#00E5FF]/20 flex items-center justify-center">
-            <div className="w-full h-full bg-[#0B0F19] rounded-[14px] flex items-center justify-center">
-              <span className="text-xl font-black text-[#00E5FF]">🔑</span>
-            </div>
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-white">Quên mật khẩu?</h1>
-          <p className="text-xs text-slate-400 font-semibold mt-1">Nhập email và chúng tôi sẽ gửi link đặt lại mật khẩu</p>
+        <div className="flex flex-col items-center text-center mb-8">
+          <Link href="/">
+            <Logo size="lg" />
+          </Link>
+          <h1 className="text-xl font-bold tracking-tight text-foreground mt-4">Quên mật khẩu?</h1>
+          <p className="text-xs text-muted-foreground font-medium mt-1">Nhập email và chúng tôi sẽ gửi link đặt lại mật khẩu</p>
         </div>
 
         {status === 'success' ? (
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-[#00FF87]/10 border border-[#00FF87]/30 flex items-center justify-center mx-auto">
-              <span className="text-3xl">✅</span>
+            <div className="size-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto text-primary">
+              <CheckCircle2 className="size-8" />
             </div>
-            <p className="text-sm text-slate-300 font-medium leading-relaxed">
-              Nếu email <span className="text-[#00E5FF] font-bold">{email}</span> tồn tại trong hệ thống, bạn sẽ nhận được link đặt lại mật khẩu trong vài phút.
+            <p className="text-sm text-foreground font-medium leading-relaxed">
+              Nếu email <span className="text-primary font-semibold">{email}</span> tồn tại trong hệ thống, bạn sẽ nhận được link đặt lại mật khẩu trong vài phút.
             </p>
-            <p className="text-xs text-slate-500">Kiểm tra cả hộp thư Spam nếu không thấy.</p>
-            <Link href="/login" className="block w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm transition text-center mt-4">
-              ← Quay lại đăng nhập
+            <p className="text-xs text-muted-foreground">Kiểm tra cả hộp thư Spam nếu không thấy.</p>
+            <Link href="/login" className="inline-flex items-center justify-center gap-2 w-full py-3.5 rounded-full bg-secondary hover:bg-surface-elevated text-foreground font-semibold text-sm transition text-center mt-4 border border-border">
+              <ArrowLeft className="size-4" /> Quay lại đăng nhập
             </Link>
           </div>
         ) : (
           <>
             {status === 'error' && (
-              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3.5 rounded-2xl mb-6 text-xs font-bold">
-                {message}
+              <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/30 text-destructive p-3.5 rounded-2xl mb-6 text-xs font-semibold">
+                <AlertCircle className="size-4 shrink-0" />
+                <span>{message}</span>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                   Địa chỉ Email
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0B101D] border border-slate-800 rounded-xl focus:outline-none focus:border-[#00E5FF] transition text-sm text-white font-medium placeholder:text-slate-600"
+                  className="w-full px-4 py-3.5 bg-background border border-input rounded-2xl focus:outline-none focus:border-primary transition text-sm text-foreground placeholder:text-muted-foreground"
                   placeholder="Nhập email của bạn..."
                   required
                 />
@@ -93,15 +93,16 @@ export default function ForgotPassword() {
               <button
                 type="submit"
                 disabled={status === 'loading'}
-                className="w-full py-3.5 rounded-xl bg-[#00E5FF] hover:bg-cyan-300 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-black text-sm transition-all shadow-lg shadow-[#00E5FF]/20 mt-2"
+                className="group w-full py-3.5 rounded-full bg-primary hover:brightness-110 disabled:opacity-50 text-primary-foreground font-semibold text-sm transition-all shadow-lg glow-primary flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
                 {status === 'loading' ? 'Đang gửi...' : 'Gửi link đặt lại mật khẩu'}
+                {status !== 'loading' && <Send className="size-4 transition-transform group-hover:translate-x-0.5" />}
               </button>
             </form>
 
-            <p className="mt-6 text-center text-slate-400 text-xs font-medium">
+            <p className="mt-6 text-center text-muted-foreground text-xs font-medium">
               Nhớ mật khẩu rồi?{' '}
-              <Link href="/login" className="text-[#00E5FF] font-bold hover:underline">
+              <Link href="/login" className="text-primary font-semibold hover:underline">
                 Đăng nhập
               </Link>
             </p>

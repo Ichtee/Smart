@@ -2,7 +2,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Logo } from '@/components/smart/logo';
 import { API_URL } from '@/utils/api';
+import { ArrowRight, AlertCircle, Mail, CheckCircle2 } from 'lucide-react';
 
 export default function Login() {
   const router = useRouter();
@@ -100,28 +102,23 @@ export default function Login() {
   };
 
   return (
-    <div suppressHydrationWarning className="min-h-screen flex items-center justify-center bg-[#0B0F19] text-white px-4 relative overflow-hidden font-sans">
-      {/* FitPulse Glow */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none" />
+    <div suppressHydrationWarning className="min-h-screen flex items-center justify-center bg-background text-foreground px-4 relative overflow-hidden font-sans">
+      {/* Smart Glow */}
+      <div className="pointer-events-none absolute inset-0 bg-hero-glow" />
 
-      <div className="bg-[#131B2E]/90 backdrop-blur-2xl p-8 md:p-10 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800/80 relative z-10">
+      <div className="bg-card border border-border p-8 md:p-10 rounded-3xl shadow-2xl w-full max-w-md relative z-10">
 
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#00E5FF] to-[#00FF87] p-0.5 mx-auto mb-3 shadow-lg shadow-[#00E5FF]/20 flex items-center justify-center">
-            <div className="w-full h-full bg-[#0B0F19] rounded-[14px] flex items-center justify-center">
-              <span className="text-xl font-black text-[#00E5FF]">⚡</span>
-            </div>
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">
-            Smart
-          </h1>
-          <p className="text-xs text-slate-400 font-semibold mt-1">Đăng nhập tài khoản hệ thống</p>
+        <div className="flex flex-col items-center text-center mb-8">
+          <Link href="/">
+            <Logo size="lg" />
+          </Link>
+          <p className="text-xs text-muted-foreground font-medium mt-3">Đăng nhập hệ thống Smart Fitness</p>
         </div>
 
         {error && (
-          <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3.5 rounded-2xl mb-6 text-xs font-bold">
-            {error}
+          <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/30 text-destructive p-3.5 rounded-2xl mb-6 text-xs font-semibold">
+            <AlertCircle className="size-4 shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
@@ -131,16 +128,19 @@ export default function Login() {
               Tài khoản này chưa được kích hoạt qua email. Nếu quá 10 phút chưa xác thực, tài khoản sẽ bị tự động xóa.
             </p>
             {resendStatus === 'success' ? (
-              <p className="text-[#00FF87] font-bold">{resendMessage}</p>
+              <p className="text-emerald-400 font-bold flex items-center gap-1.5">
+                <CheckCircle2 className="size-4" /> {resendMessage}
+              </p>
             ) : (
               <div className="flex flex-col space-y-2">
-                {resendStatus === 'error' && <p className="text-rose-400 font-bold">{resendMessage}</p>}
+                {resendStatus === 'error' && <p className="text-destructive font-bold">{resendMessage}</p>}
                 <button
                   type="button"
                   onClick={handleResendVerification}
                   disabled={resendStatus === 'loading'}
-                  className="px-3 py-2 bg-[#00E5FF]/10 text-[#00E5FF] hover:bg-[#00E5FF]/20 disabled:opacity-50 transition font-bold rounded-lg self-start"
+                  className="px-3.5 py-2 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 transition font-semibold rounded-full self-start cursor-pointer flex items-center gap-1.5"
                 >
+                  <Mail className="size-3.5" />
                   {resendStatus === 'loading' ? 'Đang gửi lại...' : 'Gửi lại email xác thực'}
                 </button>
               </div>
@@ -150,20 +150,20 @@ export default function Login() {
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tên đăng nhập / Email</label>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tên đăng nhập / Email</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 bg-[#0B101D] border border-slate-800 rounded-xl focus:outline-none focus:border-[#00E5FF] transition text-sm text-white font-medium placeholder:text-slate-600"
+              className="w-full px-4 py-3.5 bg-background border border-input rounded-2xl focus:outline-none focus:border-primary transition text-sm text-foreground placeholder:text-muted-foreground"
               placeholder="Nhập username hoặc email..."
               required
             />
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Mật khẩu</label>
-              <Link href="/forgot-password" className="text-xs text-[#00E5FF] font-semibold hover:underline">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mật khẩu</label>
+              <Link href="/forgot-password" className="text-xs text-primary font-medium hover:underline">
                 Quên mật khẩu?
               </Link>
             </div>
@@ -171,21 +171,22 @@ export default function Login() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-[#0B101D] border border-slate-800 rounded-xl focus:outline-none focus:border-[#00E5FF] transition text-sm text-white font-medium placeholder:text-slate-600"
+              className="w-full px-4 py-3.5 bg-background border border-input rounded-2xl focus:outline-none focus:border-primary transition text-sm text-foreground placeholder:text-muted-foreground"
               placeholder="Nhập mật khẩu..."
               required
             />
           </div>
           <button
             type="submit"
-            className="w-full py-3.5 rounded-xl bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black text-sm transition-all shadow-lg shadow-[#00E5FF]/20 mt-2"
+            className="group w-full py-3.5 rounded-full bg-primary hover:brightness-110 text-primary-foreground font-semibold text-sm transition-all shadow-lg glow-primary flex items-center justify-center gap-2 cursor-pointer mt-2"
           >
             Đăng nhập
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </button>
         </form>
 
-        <p className="mt-8 text-center text-slate-400 text-xs font-medium">
-          Chưa có tài khoản? <Link href="/register" className="text-[#00E5FF] font-bold hover:underline">Đăng ký ngay</Link>
+        <p className="mt-8 text-center text-muted-foreground text-xs font-medium">
+          Chưa có tài khoản? <Link href="/register" className="text-primary font-semibold hover:underline">Đăng ký ngay</Link>
         </p>
       </div>
     </div>
