@@ -252,60 +252,76 @@ export default function Workouts() {
 
     setIsFetching(true);
     setFetchError(false);
+
+    const headers: HeadersInit = {
+      'Authorization': `Bearer ${token}`
+    };
+
+    let routinesData: any[] = [];
+    let exercisesData: any[] = [];
+
     try {
-      const [routinesRes, exercisesRes] = await Promise.all([
-        fetch(`${API_URL}/api/routines`, { cache: 'no-store' }),
-        fetch(`${API_URL}/api/exercises`, { cache: 'no-store' })
+      const [routinesRes, exercisesRes] = await Promise.allSettled([
+        fetch(`${API_URL}/api/routines`, { headers, credentials: 'include', cache: 'no-store' }),
+        fetch(`${API_URL}/api/exercises`, { headers, credentials: 'include', cache: 'no-store' })
       ]);
 
-      if (!routinesRes.ok || !exercisesRes.ok) {
-        throw new Error('Non-ok HTTP status');
+      if (routinesRes.status === 'fulfilled' && routinesRes.value.ok) {
+        routinesData = await routinesRes.value.json();
       }
 
-      const routinesData = await routinesRes.json();
-      const exercisesData = await exercisesRes.json();
+      if (exercisesRes.status === 'fulfilled' && exercisesRes.value.ok) {
+        exercisesData = await exercisesRes.value.json();
+      }
+    } catch (err) {
+      console.warn('Network fetch issue, using fallbacks:', err);
+    }
 
-      const newMap: Record<string, any> = { ...DEFAULT_ROUTINES };
+    const newMap: Record<string, any> = { ...DEFAULT_ROUTINES };
+    if (Array.isArray(routinesData)) {
       routinesData.forEach((r: any) => {
-        newMap[r.id] = r;
+        if (r && r.id) newMap[r.id] = r;
       });
-      setRoutinesMap(newMap);
+    }
+    setRoutinesMap(newMap);
 
-      let userActiveRoutineId = '';
-      let userActiveDayIdx: number | null = null;
+    let userActiveRoutineId = '';
+    let userActiveDayIdx: number | null = null;
 
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (token) {
-        try {
-          const profileRes = await fetch(`${API_URL}/api/users/profile`, {
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-            credentials: 'include'
-          });
-          if (profileRes.ok) {
-            const userProfile = await profileRes.json();
-            if (userProfile.lastActiveRoutineId) userActiveRoutineId = userProfile.lastActiveRoutineId;
-            if (userProfile.lastActiveDayIndex !== undefined && userProfile.lastActiveDayIndex !== null) {
-              userActiveDayIdx = userProfile.lastActiveDayIndex;
-            }
+    if (token) {
+      try {
+        const profileRes = await fetch(`${API_URL}/api/users/profile`, {
+          headers,
+          credentials: 'include'
+        });
+        if (profileRes.ok) {
+          const userProfile = await profileRes.json();
+          if (userProfile.lastActiveRoutineId) userActiveRoutineId = userProfile.lastActiveRoutineId;
+          if (userProfile.lastActiveDayIndex !== undefined && userProfile.lastActiveDayIndex !== null) {
+            userActiveDayIdx = userProfile.lastActiveDayIndex;
           }
-        } catch (e) { }
-      }
-
-      if (userActiveRoutineId && newMap[userActiveRoutineId]) {
-        setActiveRoutineId(userActiveRoutineId);
-      } else {
-        const lastTrainedRoutineId = localStorage.getItem('smart_last_trained_routine_id');
-        const savedRoutineId = localStorage.getItem('smart_last_active_routine_id');
-
-        if (lastTrainedRoutineId && newMap[lastTrainedRoutineId]) {
-          setActiveRoutineId(lastTrainedRoutineId);
-        } else if (savedRoutineId && newMap[savedRoutineId]) {
-          setActiveRoutineId(savedRoutineId);
-        } else if (routinesData.length > 0) {
-          setActiveRoutineId(routinesData[0].id);
         }
-      }
+      } catch (e) {}
+    }
 
+    if (userActiveRoutineId && newMap[userActiveRoutineId]) {
+      setActiveRoutineId(userActiveRoutineId);
+    } else {
+      const lastTrainedRoutineId = localStorage.getItem('smart_last_trained_routine_id');
+      const savedRoutineId = localStorage.getItem('smart_last_active_routine_id');
+
+      if (lastTrainedRoutineId && newMap[lastTrainedRoutineId]) {
+        setActiveRoutineId(lastTrainedRoutineId);
+      } else if (savedRoutineId && newMap[savedRoutineId]) {
+        setActiveRoutineId(savedRoutineId);
+      } else if (routinesData.length > 0) {
+        setActiveRoutineId(routinesData[0].id);
+      } else {
+        setActiveRoutineId('ppl');
+      }
+    }
+
+    if (Array.isArray(exercisesData) && exercisesData.length > 0) {
       const mapped = exercisesData.map((ex: any) => ({
         id: ex._id,
         muscle: ex.muscle,
@@ -319,12 +335,8 @@ export default function Workouts() {
         defaultReps: ex.defaultReps || '10',
       }));
       setAllExercises(mapped);
-      setIsFetching(false);
-    } catch (err) {
-      console.error('Failed to fetch routines/exercises:', err);
-      setFetchError(true);
-      setIsFetching(false);
     }
+    setIsFetching(false);
   };
 
   const pushUserProfileUpdate = async (data: Record<string, any>) => {
