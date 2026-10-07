@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ResetPasswordForm from './ResetPasswordForm';
 import { API_URL } from '@/utils/api';
@@ -185,6 +185,7 @@ describe('ResetPasswordForm: resetting', () => {
     const busy = await screen.findByRole('button', { name: 'Đang lưu...' });
     expect(busy).toBeDisabled();
     await user.click(busy);
+    fireEvent.submit(busy.closest('form')!);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     finish(json({ message: 'ok' }));
     await screen.findByText(/Đang chuyển hướng/);

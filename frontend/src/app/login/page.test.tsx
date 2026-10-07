@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Login from './page';
 import { API_URL } from '@/utils/api';
@@ -109,6 +109,7 @@ describe('Login: signing in', () => {
 
     expect(localStorage.getItem('token')).toBe('jwt-123');
     expect(JSON.parse(localStorage.getItem('user')!)).toEqual({ id: 'u1', name: 'Dana Pham', email: 'dana@example.com', username: 'dana' });
+    expect(order).toContain('clear-cache');
     expect(order.indexOf('clear-cache')).toBeLessThan(order.indexOf('set:token'));
   });
 
@@ -168,6 +169,7 @@ describe('Login: signing in', () => {
     const busy = await screen.findByRole('button', { name: 'Đang đăng nhập...' });
     expect(busy).toBeDisabled();
     await user.click(busy);
+    fireEvent.submit(busy.closest('form')!); // Enter key / programmatic submit bypasses the disabled button
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     finish(json({ message: 'Invalid credentials' }, 401));
