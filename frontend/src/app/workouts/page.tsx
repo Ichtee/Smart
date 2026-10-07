@@ -417,8 +417,9 @@ export default function Workouts() {
   const activeRoutine = routinesMap[activeRoutineId];
 
   const handleSelectDayTab = (index: number) => {
+    // No profile PUT here: it fired on every tab click and burned rate limit.
+    // lastActiveDayIndex is persisted when the workout is saved (handleSaveWorkout).
     setCurrentDayIndex(index);
-    pushUserProfileUpdate({ lastActiveDayIndex: index });
     setSelectedMuscle(null);
   };
 

@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
-import { API_URL } from '@/utils/api';
+import { API_URL, apiFetch, isUnauthorized } from '@/utils/api';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 
 interface MealItem {
@@ -16,6 +16,8 @@ interface MealItem {
 export default function Nutrition() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState(false);
+  const [profileRetryTick, setProfileRetryTick] = useState(0);
   const [targetCalories, setTargetCalories] = useState(2000);
   const [tdee, setTdee] = useState(2000);
   const [calorieDeficit, setCalorieDeficit] = useState(0);
@@ -301,10 +303,8 @@ export default function Nutrition() {
           return;
         }
 
-        const res = await fetch(`${API_URL}/api/users/profile`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-          credentials: 'include'
-        });
+        setProfileError(false);
+        const res = await apiFetch('/api/users/profile');
 
         if (res.ok) {
           const user = await res.json();
@@ -350,19 +350,23 @@ export default function Nutrition() {
           setTdee(Math.round(tdeeValue));
           setCalorieDeficit(deficit);
           setTargetCalories(Math.round(calories));
-        } else {
+        } else if (isUnauthorized(res)) {
           localStorage.removeItem('token');
           router.push('/login');
+        } else {
+          // 429 / 5xx: session is still valid, just let the user retry
+          setProfileError(true);
         }
       } catch (err) {
         console.error('Failed to fetch profile', err);
+        setProfileError(true);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [router]);
+  }, [router, profileRetryTick]);
 
   // Date navigation helpers using local date arithmetic
   const changeDateByDays = (days: number) => {
@@ -529,6 +533,18 @@ export default function Nutrition() {
       <Sidebar />
       <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-8 overflow-y-auto pb-28 md:pb-10">
         <div className="max-w-[1600px] w-full mx-auto space-y-6 sm:space-y-8">
+
+        {profileError && (
+          <div className="bg-rose-500/10 border border-rose-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-rose-300">
+            <p className="font-extrabold text-white">Không tải được hồ sơ, mục tiêu Calo đang dùng giá trị mặc định.</p>
+            <button
+              onClick={() => { setLoading(true); setProfileRetryTick(t => t + 1); }}
+              className="px-4 py-2 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black rounded-xl text-xs transition shrink-0 cursor-pointer"
+            >
+              🔄 Thử lại
+            </button>
+          </div>
+        )}
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
           <div>

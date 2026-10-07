@@ -252,12 +252,6 @@ const resendVerification = async (req, res) => {
       return res.status(400).json({ message: 'Please provide your email address or username' });
     }
 
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
-      return res.status(500).json({
-        message: 'Server chưa được cấu hình GMAIL_USER và GMAIL_PASS trên Render Environment Variables!'
-      });
-    }
-
     const searchStr = email.trim();
     const user = await User.findOne({
       $or: [{ email: searchStr.toLowerCase() }, { email: searchStr }, { username: searchStr }],
@@ -444,6 +438,11 @@ const updateUserRoleAndStatus = async (req, res) => {
 
       if (req.body.isEmailVerified !== undefined) {
         user.isEmailVerified = req.body.isEmailVerified;
+        if (user.isEmailVerified) {
+          // Clear token fields so the TTL index never auto-deletes a verified account
+          user.verificationToken = undefined;
+          user.verificationTokenExpires = undefined;
+        }
       }
 
       const updatedUser = await user.save();

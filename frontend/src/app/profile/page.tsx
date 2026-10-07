@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
-import { API_URL } from '@/utils/api';
+import { API_URL, apiFetch, isUnauthorized } from '@/utils/api';
 import { User, Activity, Target, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function Profile() {
@@ -31,10 +31,7 @@ export default function Profile() {
           return;
         }
 
-        const res = await fetch(`${API_URL}/api/users/profile`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-          credentials: 'include'
-        });
+        const res = await apiFetch('/api/users/profile');
 
         if (res.ok) {
           const data = await res.json();
@@ -48,12 +45,15 @@ export default function Profile() {
             weight: data.weight || '',
             goal: data.goal || ''
           });
-        } else {
+        } else if (isUnauthorized(res)) {
           localStorage.removeItem('token');
           router.push('/login');
+        } else {
+          setMessage({ text: 'Máy chủ đang bận, không tải được hồ sơ. Vui lòng tải lại trang sau giây lát.', type: 'error' });
         }
       } catch (err) {
         console.error('Failed to fetch profile', err);
+        setMessage({ text: 'Không thể kết nối tới máy chủ. Vui lòng tải lại trang.', type: 'error' });
       } finally {
         setLoading(false);
       }

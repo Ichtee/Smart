@@ -48,8 +48,8 @@ app.use(cors({
   credentials: true,
 }));
 
-// Limit request body to 10kb to prevent payload-based DoS
-app.use(express.json({ limit: '10kb' }));
+// Limit request body to 100kb (routine schedules with many exercises exceed 10kb)
+app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
 
 // Apply general rate limiter to all API routes

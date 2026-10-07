@@ -1,9 +1,29 @@
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
 
-// General API rate limit: 100 requests per 15 minutes per IP
+// Key by authenticated user when the JWT is valid (cheap verify, no DB hit), otherwise by IP.
+// Users behind the same NAT no longer share one bucket.
+const userOrIpKey = (req) => {
+  const header = req.headers.authorization;
+  const token = (req.cookies && req.cookies.token) ||
+    (header && header.startsWith('Bearer ') ? header.split(' ')[1] : null);
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded && decoded.id) return `user:${decoded.id}`;
+    } catch (e) {
+      // invalid token -> fall back to IP
+    }
+  }
+  return ipKeyGenerator(req.ip);
+};
+
+// General API rate limit: 1000 requests per 15 minutes per user (or IP when anonymous)
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 1000,
+  keyGenerator: userOrIpKey,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests, please try again later.' },
