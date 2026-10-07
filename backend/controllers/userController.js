@@ -323,6 +323,8 @@ const completeRegistration = async (req, res) => {
   }
 };
 
+const RESEND_MESSAGE = 'Nếu tài khoản đang chờ xác thực, email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư.';
+
 // @desc    Resend verification email
 // @route   POST /api/users/resend-verification
 // @access  Public
@@ -339,8 +341,10 @@ const resendVerification = async (req, res) => {
       isEmailVerified: false
     });
 
+    // Same answer whether or not a pending account matches, so this cannot be used to find out
+    // which emails/usernames are waiting for verification.
     if (!user) {
-      return res.status(404).json({ message: 'Không tìm thấy tài khoản chưa xác thực phù hợp với thông tin này.' });
+      return res.status(200).json({ message: RESEND_MESSAGE });
     }
 
     // Generate new token and extend expiry by 10 minutes
@@ -366,7 +370,7 @@ const resendVerification = async (req, res) => {
       });
     }
 
-    res.status(200).json({ message: 'Email xác thực đã được gửi lại thành công! Vui lòng kiểm tra hộp thư.' });
+    res.status(200).json({ message: RESEND_MESSAGE });
   } catch (error) {
     console.error('resendVerification error:', error);
     res.status(500).json({ message: 'Server error resending verification email' });
@@ -458,9 +462,8 @@ const updateProfile = async (req, res) => {
 
       if (req.body.password) {
         const { password: newPassword, currentPassword } = req.body;
-        if (typeof newPassword !== 'string' || newPassword !== newPassword.trim() || newPassword.length < 8 || newPassword.length > 100) {
-          return res.status(400).json({ message: 'Mật khẩu mới phải từ 8 đến 100 ký tự và không có khoảng trắng ở đầu/cuối.' });
-        }
+        const newPasswordError = passwordRuleError(newPassword);
+        if (newPasswordError) return res.status(400).json({ message: newPasswordError });
         // 400 (not 401) on purpose: the client treats 401 as "session expired" and logs out
         if (typeof currentPassword !== 'string' || !currentPassword) {
           return res.status(400).json({ message: 'Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu.' });
@@ -660,12 +663,8 @@ const resetPassword = async (req, res) => {
     if (!token) {
       return res.status(400).json({ message: 'Vui lòng cung cấp mã reset token hợp lệ.' });
     }
-    if (!password) {
-      return res.status(400).json({ message: 'Vui lòng nhập mật khẩu mới' });
-    }
-    if (password.length < 8) {
-      return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 8 ký tự' });
-    }
+    const passwordError = passwordRuleError(password);
+    if (passwordError) return res.status(400).json({ message: passwordError });
 
     const user = await User.findOne({
       resetPasswordToken: token,

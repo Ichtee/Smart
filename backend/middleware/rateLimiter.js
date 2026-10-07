@@ -55,4 +55,15 @@ const registerLimiter = rateLimit({
   message: { message: 'Too many accounts created from this IP. Please try again after an hour.' },
 });
 
-module.exports = { generalLimiter, loginLimiter, registerLimiter, userOrIpKey };
+// Emailed-link endpoints (resend verification, finish sign-up, reset password): 10 per 15 minutes per IP.
+// Resending is the one that can be turned into email spam against someone else's inbox.
+const emailFlowLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  skip: skipInTests,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests. Please try again after 15 minutes.' },
+});
+
+module.exports = { generalLimiter, loginLimiter, registerLimiter, emailFlowLimiter, userOrIpKey };

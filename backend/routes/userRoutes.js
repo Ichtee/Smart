@@ -2,17 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { registerUser, loginUser, logoutUser, checkVerificationToken, completeRegistration, resendVerification, getProfile, updateProfile, getAllUsers, deleteUser, updateUserRoleAndStatus, forgotPassword, resetPassword } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
-const { loginLimiter, registerLimiter } = require('../middleware/rateLimiter');
+const { loginLimiter, registerLimiter, emailFlowLimiter } = require('../middleware/rateLimiter');
 
 router.post('/register', registerLimiter, registerUser);
 router.post('/login', loginLimiter, loginUser);
 router.post('/logout', logoutUser);
 router.get('/verify/:token', checkVerificationToken);
-router.post('/verify/:token', completeRegistration);
-router.post('/resend-verification', resendVerification);
+router.post('/verify/:token', emailFlowLimiter, completeRegistration);
+router.post('/resend-verification', emailFlowLimiter, resendVerification);
 router.post('/forgot-password', loginLimiter, forgotPassword);
-router.post('/reset-password/:token', resetPassword);
-router.post('/reset-password', resetPassword);
+router.post('/reset-password/:token', emailFlowLimiter, resetPassword);
+router.post('/reset-password', emailFlowLimiter, resetPassword);
 
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);

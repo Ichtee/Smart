@@ -554,10 +554,13 @@ describe('POST /api/users/resend-verification', () => {
     expect(tokenFromLink(lastEmail().body.template_params.verify_url)).toBe(fresh.verificationToken);
   });
 
-  test('404 for an unknown account or one that is already verified; 400 without input', async () => {
+  test('answers the same for an unknown or already verified account (nothing to find out), sends nothing; 400 without input', async () => {
     const { user } = await createUser();
-    expect((await request(app).post('/api/users/resend-verification').send({ email: 'nobody@example.com' })).status).toBe(404);
-    expect((await request(app).post('/api/users/resend-verification').send({ email: user.email })).status).toBe(404);
+    const unknown = await request(app).post('/api/users/resend-verification').send({ email: 'nobody@example.com' });
+    const verified = await request(app).post('/api/users/resend-verification').send({ email: user.email });
+    expect(unknown.status).toBe(200);
+    expect(verified.status).toBe(200);
+    expect(verified.body).toEqual(unknown.body);
     expect((await request(app).post('/api/users/resend-verification').send({})).status).toBe(400);
     expect((await request(app).post('/api/users/resend-verification').send({ email: { $ne: null } })).status).toBe(400);
     expect(global.fetch).not.toHaveBeenCalled();
@@ -596,6 +599,13 @@ describe('token authentication middleware', () => {
       const cookie = res.headers['set-cookie'].find(c => c.startsWith('token='));
       expect((await request(app).get('/api/users/profile').set('Cookie', cookie.split(';')[0])).status).toBe(200);
       expect((await loginAs(user, 'brandNewPass1')).status).toBe(200);
+    });
+
+    test.each(['short', ' paddedPass1', 'x'.repeat(101)])('reset applies the same password rules as sign-up and profile: %j is refused', async (password) => {
+      await createUser({ resetPasswordToken: 'rules-token', resetPasswordExpires: new Date(Date.now() + 60000) });
+      const res = await request(app).post('/api/users/reset-password/rules-token').send({ password });
+      expect(res.status).toBe(400);
+      expect((await User.findOne({ resetPasswordToken: 'rules-token' }))).not.toBeNull(); // token still usable
     });
 
     test('a profile edit without a password change keeps the old token valid', async () => {
