@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Baked into every JWT; bumping it signs the account out everywhere (password change/reset, lock).
+  tokenVersion: {
+    type: Number,
+    default: 0
+  },
   verificationToken: {
     type: String
   },

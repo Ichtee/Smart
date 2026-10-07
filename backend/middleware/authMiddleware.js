@@ -1,6 +1,11 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+// A token is only good while the account is verified and the token carries its current version
+// (tokens issued before versions existed have none, which counts as 0).
+const sessionIsCurrent = (decoded, user) =>
+  user.isEmailVerified === true && (decoded.v || 0) === (user.tokenVersion || 0);
+
 const protect = async (req, res, next) => {
   let token;
 
@@ -24,6 +29,10 @@ const protect = async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: 'User no longer exists' });
     }
+    if (!sessionIsCurrent(decoded, req.user)) {
+      req.user = null;
+      return res.status(401).json({ message: 'Session expired, please log in again' });
+    }
 
     return next();
   } catch (error) {
@@ -39,7 +48,8 @@ const optionalAuth = async (req, res, next) => {
   if (token) {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select('-password');
+      const user = await User.findById(decoded.id).select('-password');
+      req.user = user && sessionIsCurrent(decoded, user) ? user : null;
     } catch (error) {
       req.user = null;
     }

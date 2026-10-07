@@ -85,14 +85,21 @@ const sendEmail = async ({ to, to_name, verify_url, subject, template_id }) => {
   }
 };
 
-const generateToken = (id) => {
+const generateToken = (user) => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET environment variable is not set');
   }
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+  return jwt.sign({ id: user._id, v: user.tokenVersion || 0 }, process.env.JWT_SECRET, {
     expiresIn: '7d',
   });
 };
+
+const sessionCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+});
 
 const registerUser = async (req, res) => {
   try {
@@ -232,16 +239,9 @@ const loginUser = async (req, res) => {
     }
 
     if (await bcrypt.compare(password, user.password)) {
-      const token = generateToken(user._id);
+      const token = generateToken(user);
 
-      const cookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      };
-
-      res.cookie('token', token, cookieOptions).json({
+      res.cookie('token', token, sessionCookieOptions()).json({
         _id: user.id,
         name: user.name,
         username: user.username,
@@ -470,6 +470,7 @@ const updateProfile = async (req, res) => {
         }
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(newPassword, salt);
+        user.tokenVersion = (user.tokenVersion || 0) + 1; // signs out every other session
       }
 
       const updatedUser = await user.save();
@@ -477,7 +478,9 @@ const updateProfile = async (req, res) => {
         ? (await recordWeight(updatedUser._id, newWeight, req.body.metricDate)) ?? updatedUser.weight
         : updatedUser.weight;
 
-      res.json({
+      const freshToken = generateToken(updatedUser);
+      // the cookie wins over the Bearer header in protect, so it has to carry the new version too
+      res.cookie('token', freshToken, sessionCookieOptions()).json({
         _id: updatedUser.id,
         name: updatedUser.name,
         username: updatedUser.username,
@@ -492,7 +495,7 @@ const updateProfile = async (req, res) => {
         lastActiveRoutineId: updatedUser.lastActiveRoutineId,
         lastActiveRoutineName: updatedUser.lastActiveRoutineName,
         lastActiveDayIndex: updatedUser.lastActiveDayIndex,
-        token: generateToken(updatedUser._id),
+        token: freshToken,
       });
     } else {
       res.status(404).json({ message: 'User not found' });
@@ -566,6 +569,9 @@ const updateUserRoleAndStatus = async (req, res) => {
       if (req.body.isEmailVerified !== undefined) {
         if (req.body.isEmailVerified && !user.password) {
           return res.status(400).json({ message: 'Tài khoản này chưa đặt mật khẩu: người dùng cần hoàn tất đăng ký qua link trong email.' });
+        }
+        if (user.isEmailVerified && !req.body.isEmailVerified) {
+          user.tokenVersion = (user.tokenVersion || 0) + 1; // lock: end the sessions that already exist
         }
         user.isEmailVerified = req.body.isEmailVerified;
         if (user.isEmailVerified) {
@@ -673,6 +679,7 @@ const resetPassword = async (req, res) => {
     // Set new password
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
+    user.tokenVersion = (user.tokenVersion || 0) + 1; // whoever held the old password is signed out
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();

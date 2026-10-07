@@ -582,6 +582,56 @@ describe('token authentication middleware', () => {
     const res = await request(app).get('/api/users/profile').set(auth);
     expect(res.status).toBe(401);
   });
+
+  describe('sessions are revoked when the account changes hands', () => {
+    const loginAs = (u, password) => request(app).post('/api/users/login').send({ username: u.username, password });
+    const profile = (auth) => request(app).get('/api/users/profile').set(auth);
+
+    test('changing the password signs out the old token but not the one it returns', async () => {
+      const { user, auth, password } = await createUser();
+      const res = await request(app).put('/api/users/profile').set(auth).send({ currentPassword: password, password: 'brandNewPass1' });
+      expect(res.status).toBe(200);
+      expect((await profile(auth)).status).toBe(401);
+      expect((await profile({ Authorization: `Bearer ${res.body.token}` })).status).toBe(200);
+      const cookie = res.headers['set-cookie'].find(c => c.startsWith('token='));
+      expect((await request(app).get('/api/users/profile').set('Cookie', cookie.split(';')[0])).status).toBe(200);
+      expect((await loginAs(user, 'brandNewPass1')).status).toBe(200);
+    });
+
+    test('a profile edit without a password change keeps the old token valid', async () => {
+      const { auth } = await createUser();
+      expect((await request(app).put('/api/users/profile').set(auth).send({ goal: 'Giảm mỡ' })).status).toBe(200);
+      expect((await profile(auth)).status).toBe(200);
+    });
+
+    test('resetting the password signs out tokens issued before', async () => {
+      const { user, auth } = await createUser({ resetPasswordToken: 'reset-me', resetPasswordExpires: new Date(Date.now() + 60000) });
+      expect((await profile(auth)).status).toBe(200);
+      expect((await request(app).post('/api/users/reset-password/reset-me').send({ password: 'afterReset123' })).status).toBe(200);
+      expect((await profile(auth)).status).toBe(401);
+      const login = await loginAs(user, 'afterReset123');
+      expect(login.status).toBe(200);
+      expect((await profile({ Authorization: `Bearer ${login.body.token}` })).status).toBe(200);
+    });
+
+    test('an admin un-verifying an account ends its existing sessions', async () => {
+      const { auth: adminAuth } = await createUser({ role: 'admin' });
+      const { user, auth } = await createUser();
+      expect((await profile(auth)).status).toBe(200);
+      const res = await request(app).put(`/api/users/${user._id}`).set(adminAuth).send({ isEmailVerified: false });
+      expect(res.status).toBe(200);
+      expect((await profile(auth)).status).toBe(401);
+      // verifying again does not resurrect the old token
+      await request(app).put(`/api/users/${user._id}`).set(adminAuth).send({ isEmailVerified: true });
+      expect((await profile(auth)).status).toBe(401);
+      expect((await loginAs(user, 'password123')).status).toBe(200);
+    });
+
+    test('a token of an unverified account is refused', async () => {
+      const { auth } = await createUser({ isEmailVerified: false });
+      expect((await profile(auth)).status).toBe(401);
+    });
+  });
 });
 
 describe('profile', () => {
