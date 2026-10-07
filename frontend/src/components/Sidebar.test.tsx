@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Sidebar from './Sidebar';
+import { clearApiCache } from '@/hooks/useApi';
 
 const nav = vi.hoisted(() => ({ push: vi.fn(), path: '/records' }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: nav.push }), usePathname: () => nav.path }));
@@ -40,5 +41,6 @@ describe('Sidebar', () => {
     await userEvent.click(screen.getAllByRole('button', { name: /Đăng xuất/ })[0]);
     expect(localStorage.getItem('token')).toBeNull();
     expect(nav.push).toHaveBeenCalledWith('/');
+    expect(clearApiCache).toHaveBeenCalled();
   });
 });

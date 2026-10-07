@@ -80,6 +80,41 @@ describe('computeWeeklyVolume', () => {
     expect(computeWeeklyVolume(logs, from, to).muscles).toEqual([]);
   });
 
+  test('the week of the last day is included, even when that day is a Monday', () => {
+    expect(computeWeeklyVolume([], '2026-09-07', '2026-09-21').weeks).toEqual(['2026-09-07', '2026-09-14', '2026-09-21']);
+    expect(computeWeeklyVolume([], '2026-09-07', '2026-09-07').weeks).toEqual(['2026-09-07']);
+  });
+
+  test('set indexes 0..49 are valid, 50 is not', () => {
+    const at = (idx) => [logOf('2026-09-07', [ex('a', 'chest')], { a: { completedSets: idx } }, [])];
+    expect(computeWeeklyVolume(at([49]), from, to).muscles[0].total).toBe(1);
+    expect(computeWeeklyVolume(at([50]), from, to).muscles).toEqual([]);
+  });
+
+  test('planned sets for a whole-ticked exercise must be a whole number above 0, at most 50', () => {
+    const planned = (sets) => [logOf('2026-09-07', [ex('a', 'chest', { sets: undefined })], { a: { sets, completedSets: [] } }, ['a'])];
+    expect(computeWeeklyVolume(planned(0), from, to).muscles).toEqual([]);
+    expect(computeWeeklyVolume(planned(-3), from, to).muscles).toEqual([]);
+    expect(computeWeeklyVolume(planned(2.5), from, to).muscles).toEqual([]);
+    expect(computeWeeklyVolume(planned('lots'), from, to).muscles).toEqual([]);
+    expect(computeWeeklyVolume(planned(80), from, to).muscles[0].total).toBe(50);
+  });
+
+  test('normMuscle wins over the free-text muscle name, and spaces around the name are ignored', () => {
+    const logs = [logOf('2026-09-07', [
+      { id: 'a', normMuscle: 'chest', muscle: 'Ngực' },
+      { id: 'b', muscle: ' chest ' },
+    ], { a: { completedSets: [0] }, b: { completedSets: [0] } })];
+    expect(computeWeeklyVolume(logs, from, to).muscles).toEqual([{ muscle: 'chest', total: 2, weekly: [2, 0, 0] }]);
+  });
+
+  test('ids are compared as text, and a missing or null detailsMap does not crash', () => {
+    const numeric = [logOf('2026-09-07', [{ id: 1, muscle: 'chest', sets: 2 }], {}, [1])];
+    expect(computeWeeklyVolume(numeric, from, to).muscles[0].total).toBe(2);
+    const nullMap = [{ date: '2026-09-07', exercises: [{ id: 'a', muscle: 'chest', sets: 2 }], completedIds: ['a'], detailsMap: null }];
+    expect(computeWeeklyVolume(nullMap, from, to).muscles[0].total).toBe(2);
+  });
+
   test('busiest muscle first, ties alphabetical', () => {
     const logs = [logOf('2026-09-07', [ex('a', 'triceps'), ex('b', 'biceps'), ex('c', 'chest')], { a: { completedSets: [0] }, b: { completedSets: [0] }, c: { completedSets: [0, 1] } })];
     expect(computeWeeklyVolume(logs, from, to).muscles.map(m => m.muscle)).toEqual(['chest', 'biceps', 'triceps']);

@@ -753,7 +753,7 @@ const deleteMyAccount = async (req, res) => {
     }
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    if (!user.password || !(await bcrypt.compare(password, user.password))) {
+    if (!(await bcrypt.compare(password, user.password))) {
       return res.status(400).json({ message: 'Mật khẩu không đúng.' });
     }
     if (user.role === 'admin' && (await User.countDocuments({ role: 'admin' })) <= 1) {

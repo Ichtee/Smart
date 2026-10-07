@@ -55,6 +55,14 @@ describe('account data', () => {
       }
     });
 
+    test('only custom foods are exported, matching what account deletion removes', async () => {
+      const { user, auth } = await createUser();
+      await Food.create({ name: 'Món riêng', calories: 100, isCustom: true, user: user._id });
+      await Food.create({ name: 'Món hệ thống', calories: 100, isCustom: false, user: user._id });
+      const res = await request(app).get('/api/users/me/export').set(auth);
+      expect(res.body.customFoods.map(f => f.name)).toEqual(['Món riêng']);
+    });
+
     test('never includes another user\'s data', async () => {
       const a = await createUser();
       const b = await createUser();
