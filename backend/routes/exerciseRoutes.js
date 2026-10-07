@@ -66,7 +66,7 @@ router.put('/:id', protect, admin, async (req, res) => {
         muscle: muscle ? muscle.trim() : undefined,
         defaultSets, defaultReps, equipment, description, videoUrl, secondaryMuscles
       },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
     if (!exercise) return res.status(404).json({ message: 'Không tìm thấy bài tập' });
     res.json(exercise);

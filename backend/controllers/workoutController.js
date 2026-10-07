@@ -211,5 +211,6 @@ module.exports = {
   saveWorkoutLog,
   deleteWorkoutLog,
   getStreakHistory,
-  getAllWorkoutLogs
+  getAllWorkoutLogs,
+  computeStreaks
 };

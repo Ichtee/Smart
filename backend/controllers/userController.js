@@ -6,6 +6,13 @@ const WorkoutLog = require('../models/WorkoutLog');
 const NutritionLog = require('../models/NutritionLog');
 const Food = require('../models/Food');
 
+// Never expose these fields in API responses (reset/verification tokens would allow account takeover)
+const SECRET_FIELDS = '-password -verificationToken -verificationTokenExpires -resetPasswordToken -resetPasswordExpires';
+
+// Request bodies are untrusted JSON: a field expected to be text may arrive as an object/array
+// (e.g. { "$ne": null }). Reject those instead of letting them reach a query or a string method.
+const allStrings = (...values) => values.every(v => typeof v === 'string');
+
 const sendEmail = async ({ to, to_name, verify_url, subject, template_id }) => {
   const serviceId = process.env.EMAILJS_SERVICE_ID;
   const defaultTemplateId = process.env.EMAILJS_TEMPLATE_ID;
@@ -66,7 +73,7 @@ const registerUser = async (req, res) => {
   try {
     let { name, username, email, password } = req.body;
 
-    if (!name || !username || !email || !password) {
+    if (!allStrings(name, username, email, password) || !name || !username || !email || !password) {
       return res.status(400).json({ message: 'Vui lòng điền đầy đủ các thông tin bắt buộc.' });
     }
 
@@ -160,7 +167,7 @@ const loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    if (!username || !password) {
+    if (!allStrings(username, password) || !username || !password) {
       return res.status(400).json({ message: 'Please provide username and password' });
     }
 
@@ -251,7 +258,7 @@ const verifyEmail = async (req, res) => {
 const resendVerification = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) {
+    if (!allStrings(email) || !email) {
       return res.status(400).json({ message: 'Please provide your email address or username' });
     }
 
@@ -298,7 +305,7 @@ const resendVerification = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id).select(SECRET_FIELDS);
     if (user) {
       res.json(user);
     } else {
@@ -425,7 +432,7 @@ const updateProfile = async (req, res) => {
 // @access  Private/Admin
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select('-password');
+    const users = await User.find({}).select(SECRET_FIELDS);
     res.json(users);
   } catch (error) {
     console.error('getAllUsers error:', error);
@@ -508,11 +515,12 @@ const updateUserRoleAndStatus = async (req, res) => {
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) {
+    if (!allStrings(email) || !email.trim()) {
       return res.status(400).json({ message: 'Please provide an email address' });
     }
 
-    const user = await User.findOne({ email });
+    // emails are stored trimmed + lowercase (see registerUser)
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
 
     // Always return success to prevent email enumeration attacks
     if (!user) {
@@ -557,6 +565,10 @@ const resetPassword = async (req, res) => {
   try {
     const token = req.params.token || req.query.token || req.body.token;
     const { password } = req.body;
+
+    if (!allStrings(token || '', password || '')) {
+      return res.status(400).json({ message: 'Dữ liệu không hợp lệ.' });
+    }
 
     if (!token) {
       return res.status(400).json({ message: 'Vui lòng cung cấp mã reset token hợp lệ.' });

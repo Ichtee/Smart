@@ -201,7 +201,7 @@ router.put('/:id', protect, admin, async (req, res) => {
         category,
         image
       },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!food) return res.status(404).json({ message: 'Không tìm thấy món ăn' });
