@@ -5,6 +5,9 @@ const Food = require('../models/Food');
 const User = require('../models/User');
 const { protect, admin } = require('../middleware/authMiddleware');
 
+// Escape user input before using it inside a RegExp (prevents 500s on '(' and ReDoS patterns)
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const initialFoods = [
   { name: 'Phở bò', servingSize: '1 tô', calories: 450, protein: 22, carbs: 55, fat: 12, category: 'Bữa Sáng' },
   { name: 'Cơm tấm sườn bì chả', servingSize: '1 dĩa', calories: 650, protein: 30, carbs: 75, fat: 22, category: 'Bữa Trưa' },
@@ -54,7 +57,10 @@ const optionalAuth = async (req, res, next) => {
 router.get('/', optionalAuth, async (req, res) => {
   try {
     await seedFoodsIfEmpty();
-    const { search, category, onlyCustom } = req.query;
+    // Query params can arrive as arrays/objects (?search[$ne]=x) - only accept plain strings
+    const search = typeof req.query.search === 'string' ? req.query.search : '';
+    const category = typeof req.query.category === 'string' ? req.query.category : '';
+    const { onlyCustom } = req.query;
     let queryConditions = [];
 
     // Filter by user ownership (Global System Foods + User Custom Foods)
@@ -73,8 +79,8 @@ router.get('/', optionalAuth, async (req, res) => {
       mainQuery.category = category;
     }
 
-    if (search && search.trim()) {
-      mainQuery.name = { $regex: search.trim(), $options: 'i' };
+    if (search.trim()) {
+      mainQuery.name = { $regex: escapeRegex(search.trim().slice(0, 100)), $options: 'i' };
     }
 
     const foods = await Food.find(mainQuery).sort({ createdAt: -1 });
