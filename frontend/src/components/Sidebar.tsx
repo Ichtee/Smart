@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from './smart/logo';
-import { LayoutGrid, Activity, Utensils, Scale, User, LogOut } from 'lucide-react';
+import { LayoutGrid, Activity, Utensils, Scale, User, LogOut, Trophy, CalendarDays } from 'lucide-react';
 import { API_URL } from '@/utils/api';
 import { clearApiCache } from '@/hooks/useApi';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,8 @@ export default function Sidebar() {
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
     { label: 'Activity', href: '/workouts', icon: Activity },
+    { label: 'Routines', href: '/routines', icon: CalendarDays },
+    { label: 'Records', href: '/records', icon: Trophy },
     { label: 'Nutrition', href: '/nutrition', icon: Utensils },
     { label: 'Body', href: '/body', icon: Scale },
     { label: 'Profile', href: '/profile', icon: User },
@@ -88,7 +90,7 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-1 p-1 rounded-xl text-[10px] font-bold transition-colors ${
+              className={`flex flex-col items-center gap-1 p-1 flex-1 min-w-0 rounded-xl text-[10px] font-bold transition-colors ${
                 isActive ? 'text-primary font-extrabold' : 'text-muted-foreground'
               }`}
             >
@@ -99,7 +101,7 @@ export default function Sidebar() {
         })}
         <button
           onClick={handleLogout}
-          className="flex flex-col items-center gap-1 p-1 rounded-xl text-[10px] font-bold text-destructive hover:text-destructive/80 transition-colors cursor-pointer"
+          className="flex flex-col items-center gap-1 p-1 flex-1 min-w-0 rounded-xl text-[10px] font-bold text-destructive hover:text-destructive/80 transition-colors cursor-pointer"
         >
           <LogOut className="size-5" />
           <span>Đăng xuất</span>
