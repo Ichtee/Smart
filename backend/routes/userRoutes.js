@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser, logoutUser, checkVerificationToken, completeRegistration, resendVerification, getProfile, updateProfile, getAllUsers, deleteUser, updateUserRoleAndStatus, forgotPassword, resetPassword } = require('../controllers/userController');
+const { registerUser, loginUser, logoutUser, checkVerificationToken, completeRegistration, resendVerification, getProfile, updateProfile, getAllUsers, deleteUser, deleteMyAccount, exportMyData, updateUserRoleAndStatus, forgotPassword, resetPassword } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
 const { loginLimiter, registerLimiter, emailFlowLimiter } = require('../middleware/rateLimiter');
 
@@ -16,6 +16,8 @@ router.post('/reset-password', emailFlowLimiter, resetPassword);
 
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
+router.get('/me/export', protect, exportMyData);
+router.delete('/me', protect, loginLimiter, deleteMyAccount);
 
 // Admin routes
 router.get('/', protect, admin, getAllUsers);

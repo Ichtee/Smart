@@ -15,6 +15,7 @@ vi.mock('@/components/Sidebar', () => ({ default: () => <nav data-testid="sideba
 vi.mock('@/hooks/useApi', () => ({
   useProfile: vi.fn(),
   refreshProfile: vi.fn(async () => undefined),
+  clearApiCache: vi.fn(),
   isUnauthorizedError: (e: unknown) => (e as { status?: number })?.status === 401,
 }));
 vi.mock('@/utils/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/utils/api')>()), apiFetch: vi.fn() }));

@@ -13,6 +13,26 @@ const { recordWeight } = require('../utils/bodyMetrics');
 // Never expose these fields in API responses (reset/verification tokens would allow account takeover)
 const SECRET_FIELDS = '-password -verificationToken -verificationTokenExpires -resetPasswordToken -resetPasswordExpires';
 
+// Remove the account first, then its data: a failure in between leaves harmless orphans
+// instead of an account whose history was wiped.
+const removeAccountAndData = async (userId) => {
+  await User.deleteOne({ _id: userId });
+  await Promise.all([
+    WorkoutLog.deleteMany({ user: userId }),
+    NutritionLog.deleteMany({ user: userId }),
+    BodyMetric.deleteMany({ user: userId }),
+    Routine.deleteMany({ owner: userId }),
+    Food.deleteMany({ user: userId, isCustom: true }),
+  ]);
+};
+
+const clearSessionCookie = (res) => res.cookie('token', '', {
+  httpOnly: true,
+  expires: new Date(0),
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  secure: process.env.NODE_ENV === 'production',
+});
+
 // Request bodies are untrusted JSON: a field expected to be text may arrive as an object/array
 // (e.g. { "$ne": null }). Reject those instead of letting them reach a query or a string method.
 const allStrings = (...values) => values.every(v => typeof v === 'string');
@@ -537,16 +557,7 @@ const deleteUser = async (req, res) => {
       if (user._id.toString() === req.user._id.toString()) {
         return res.status(400).json({ message: 'Cannot delete your own account' });
       }
-      // Remove the account first, then its data: a failure in between leaves harmless orphans
-      // instead of an account whose history was wiped.
-      await User.deleteOne({ _id: user._id });
-      await Promise.all([
-        WorkoutLog.deleteMany({ user: user._id }),
-        NutritionLog.deleteMany({ user: user._id }),
-        BodyMetric.deleteMany({ user: user._id }),
-        Routine.deleteMany({ owner: user._id }),
-        Food.deleteMany({ user: user._id, isCustom: true }),
-      ]);
+      await removeAccountAndData(user._id);
       res.json({ message: 'User removed' });
     } else {
       res.status(404).json({ message: 'User not found' });
@@ -712,14 +723,54 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// Everything the app stores about the caller, as one downloadable JSON file (no secrets).
+const exportMyData = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const [profile, workouts, nutrition, bodyMetrics, routines, customFoods] = await Promise.all([
+      User.findById(userId).select(SECRET_FIELDS + ' -tokenVersion').lean(),
+      WorkoutLog.find({ user: userId }).sort({ date: 1 }).select('-__v -user').lean(),
+      NutritionLog.find({ user: userId }).sort({ date: 1 }).select('-__v -user').lean(),
+      BodyMetric.find({ user: userId }).sort({ date: 1 }).select('-__v -user').lean(),
+      Routine.find({ owner: userId }).select('-__v -owner').lean(),
+      Food.find({ user: userId, isCustom: true }).select('-__v -user').lean(),
+    ]);
+    res.setHeader('Content-Disposition', 'attachment; filename="my-fitness-data.json"');
+    res.json({ exportedAt: new Date().toISOString(), profile, workouts, nutrition, bodyMetrics, routines, customFoods });
+  } catch (error) {
+    console.error('exportMyData error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Permanently delete the caller's own account and data. Needs the current password so a stolen
+// session alone cannot wipe an account; the last remaining admin cannot leave.
+const deleteMyAccount = async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    if (typeof password !== 'string' || !password) {
+      return res.status(400).json({ message: 'Vui lòng nhập mật khẩu để xác nhận.' });
+    }
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user.password || !(await bcrypt.compare(password, user.password))) {
+      return res.status(400).json({ message: 'Mật khẩu không đúng.' });
+    }
+    if (user.role === 'admin' && (await User.countDocuments({ role: 'admin' })) <= 1) {
+      return res.status(400).json({ message: 'Không thể xóa quản trị viên cuối cùng.' });
+    }
+    await removeAccountAndData(user._id);
+    clearSessionCookie(res);
+    res.json({ message: 'Tài khoản và dữ liệu đã được xóa.' });
+  } catch (error) {
+    console.error('deleteMyAccount error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 const logoutUser = async (req, res) => {
   try {
-    res.cookie('token', '', {
-      httpOnly: true,
-      expires: new Date(0),
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      secure: process.env.NODE_ENV === 'production',
-    });
+    clearSessionCookie(res);
     res.status(200).json({ message: 'Đăng xuất thành công!' });
   } catch (error) {
     res.status(500).json({ message: 'Server error during logout' });
@@ -737,6 +788,8 @@ module.exports = {
   updateProfile,
   getAllUsers,
   deleteUser,
+  deleteMyAccount,
+  exportMyData,
   updateUserRoleAndStatus,
   forgotPassword,
   resetPassword,

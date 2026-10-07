@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
+import AccountDataPanel from './AccountDataPanel';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/utils/api';
 import { normalizeName, validateName } from '@/utils/validation';
@@ -325,6 +326,7 @@ export default function Profile() {
                 </button>
               </div>
             </form>
+            <AccountDataPanel />
           </div>
 
           {/* Right Column - Stats Card */}
