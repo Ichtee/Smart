@@ -1,11 +1,13 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import GoogleTranslate from '@/components/GoogleTranslate';
-import { API_URL, apiFetch } from '@/utils/api';
+import { apiFetch } from '@/utils/api';
+import { fetcher, useProfile, useStreak, isUnauthorizedError } from '@/hooks/useApi';
 import { monthAndWeekRange, monthRange, monthKey } from '@/utils/dateUtils';
-import { calcTargetCalories, macroTargets, sumMacros } from '@/utils/nutritionCalc';
+import { calcBmr, calcTdee, calcTargetCalories, macroTargets, sumMacros } from '@/utils/nutritionCalc';
 import { Bell, ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Trophy, Dumbbell, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 
 const MUSCLE_NAMES_VI: Record<string, string> = {
@@ -16,47 +18,32 @@ const MUSCLE_NAMES_VI: Record<string, string> = {
   calves: 'Bắp chân', gluteal: 'Mông (Glutes)', abs: 'Bụng (Abs)', obliques: 'Cơ liên sườn', neck: 'Cổ'
 };
 
+interface ProfileData {
+  name?: string;
+  role?: string;
+  height?: number;
+  weight?: number;
+  age?: number;
+  gender?: string;
+  activityLevel?: string;
+  goal?: string;
+  lastActiveRoutineName?: string;
+  lastActiveRoutineId?: string;
+}
+
+const EMPTY_MEALS: Record<string, any[]> = { 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] };
+
 export default function Dashboard() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-  const [userName, setUserName] = useState('Alex');
-  const [userRole, setUserRole] = useState<string>('');
 
-  // User Profile
-  const [profile, setProfile] = useState<{
-    height?: number;
-    weight?: number;
-    age?: number;
-    gender?: string;
-    activityLevel?: string;
-    goal?: string;
-    lastActiveRoutineName?: string;
-    lastActiveRoutineId?: string;
-  }>({});
 
   // Calendar Month State
   const [calendarDate, setCalendarDate] = useState(new Date());
 
-  // Real Logged Data
-  const [streakDates, setStreakDates] = useState<string[]>([]);
-  const [todayMeals, setTodayMeals] = useState<any[]>([]);
-  const [todayWaterGlasses, setTodayWaterGlasses] = useState(0);
-  const [weeklyCalories, setWeeklyCalories] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
-  const [activeRoutineSchedule, setActiveRoutineSchedule] = useState<any[]>([]);
-
   // ── Diary (from progress page) ──────────────────────────────────────────
-  const [workoutLogs, setWorkoutLogs] = useState<Record<string, any>>({});
-  const [nutritionLogs, setNutritionLogs] = useState<Record<string, any>>({});
   const [selectedDiaryDate, setSelectedDiaryDate] = useState<string | null>(null);
-  const [selectedDateMeals, setSelectedDateMeals] = useState<Record<string, any[]>>({
-    'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': []
-  });
-  const [selectedDateWater, setSelectedDateWater] = useState(0);
   const [isExerciseListCollapsed, setIsExerciseListCollapsed] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-
-  // Months whose workout/nutrition logs are already in state (the /logs endpoints are date-ranged)
-  const loadedMonthsRef = useRef<Set<string>>(new Set([monthKey(new Date())]));
 
   const todayStr = useMemo(() => {
     const d = new Date();
@@ -79,187 +66,68 @@ export default function Dashboard() {
     });
   }, []);
 
+  // ── Data layer: shared SWR cache, the server is the only source of truth ─────────────
+  const { profile: profileData, error: profileError, isLoading: profileLoading, mutate: mutateProfile } = useProfile();
+  const profile: ProfileData = useMemo(() => profileData ?? {}, [profileData]);
+  const userName = profile.name || '';
+  const userRole = profile.role || '';
+  const isLoading = profileLoading && !profileData;
+
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (isUnauthorizedError(profileError)) {
+      localStorage.removeItem('token');
       router.push('/login');
-      return;
     }
+  }, [profileError, router]);
 
-    const authHeaders = { 'Authorization': `Bearer ${token}` };
+  const { streak, mutate: mutateStreak } = useStreak();
+  const streakDates: string[] = useMemo(() => streak?.streakDates ?? [], [streak]);
 
-    const loadDashboardData = async () => {
-      try {
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          if (user.name) setUserName(user.name);
-          if (user.role) setUserRole(user.role);
-        }
+  // Logs are date-ranged: the current month + week are always loaded (weekly chart, today),
+  // other months load on demand when the calendar navigates there. SWR caches each range.
+  const weekDates = useMemo(() => getWeekDaysMonToSun(new Date()), [getWeekDaysMonToSun]);
+  const currentRange = monthAndWeekRange();
+  const viewedRange = monthRange(calendarDate);
+  const viewingCurrentMonth = monthKey(calendarDate) === monthKey(new Date());
+  const logsOpts = { revalidateOnFocus: false, shouldRetryOnError: false };
+  const currentQs = `?from=${currentRange.from}&to=${currentRange.to}`;
+  const viewedQs = `?from=${viewedRange.from}&to=${viewedRange.to}`;
 
-        const logRange = monthAndWeekRange(new Date());
-        const rangeQs = `?from=${logRange.from}&to=${logRange.to}`;
-        const [profileRes, streakRes, nutTodayRes, allNutRes, allWorkoutRes] = await Promise.allSettled([
-          fetch(`${API_URL}/api/users/profile`, { headers: authHeaders }),
-          fetch(`${API_URL}/api/workouts/streak`, { headers: authHeaders }),
-          fetch(`${API_URL}/api/nutrition?date=${todayStr}`, { headers: authHeaders }),
-          fetch(`${API_URL}/api/nutrition/logs${rangeQs}`, { headers: authHeaders }),
-          fetch(`${API_URL}/api/workouts/logs${rangeQs}`, { headers: authHeaders }),
-        ]);
+  const { data: wCurrent, mutate: mutateWCurrent } = useSWR(`/api/workouts/logs${currentQs}`, fetcher, logsOpts);
+  const { data: nCurrent } = useSWR(`/api/nutrition/logs${currentQs}`, fetcher, logsOpts);
+  const { data: wViewed, mutate: mutateWViewed } = useSWR(viewingCurrentMonth ? null : `/api/workouts/logs${viewedQs}`, fetcher, logsOpts);
+  const { data: nViewed } = useSWR(viewingCurrentMonth ? null : `/api/nutrition/logs${viewedQs}`, fetcher, logsOpts);
 
-        if (profileRes.status === 'fulfilled' && profileRes.value.ok) {
-          const profData = await profileRes.value.json();
-          setProfile(profData);
-          if (profData.lastActiveRoutineId) {
-            fetch(`${API_URL}/api/routines`, { headers: authHeaders })
-              .then(res => res.json())
-              .then(routines => {
-                const found = routines.find((r: any) => r._id === profData.lastActiveRoutineId || r.id === profData.lastActiveRoutineId);
-                if (found && found.schedule) setActiveRoutineSchedule(found.schedule);
-              })
-              .catch(() => {});
-          }
-        }
+  const workoutLogs: Record<string, any> = useMemo(() => ({ ...(wViewed || {}), ...(wCurrent || {}) }), [wViewed, wCurrent]);
+  const nutritionLogs: Record<string, any> = useMemo(() => ({ ...(nViewed || {}), ...(nCurrent || {}) }), [nViewed, nCurrent]);
 
-        if (streakRes.status === 'fulfilled' && streakRes.value.ok) {
-          const streakData = await streakRes.value.json();
-          if (streakData.streakDates) setStreakDates(streakData.streakDates);
-        } else {
-          const localHistory = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
-          setStreakDates(localHistory);
-        }
+  const { data: todayNutrition } = useSWR(`/api/nutrition?date=${todayStr}`, fetcher, logsOpts);
+  const todayMeals: any[] = useMemo(() => Object.values(todayNutrition?.meals || {}).flat() as any[], [todayNutrition]);
+  const todayWaterGlasses: number = todayNutrition?.waterGlasses || 0;
 
-        if (nutTodayRes.status === 'fulfilled' && nutTodayRes.value.ok) {
-          const nutData = await nutTodayRes.value.json();
-          if (nutData) {
-            setTodayWaterGlasses(nutData.waterGlasses || 0);
-            const mealsList = Object.values(nutData.meals || {}).flat();
-            setTodayMeals(mealsList as any[]);
-          }
-        } else {
-          const localWater = localStorage.getItem(`smart_water_${todayStr}`);
-          setTodayWaterGlasses(localWater ? parseInt(localWater, 10) || 0 : 0);
-          const localMealsStr = localStorage.getItem(`smart_meals_${todayStr}`);
-          if (localMealsStr) setTodayMeals(Object.values(JSON.parse(localMealsStr)).flat() as any[]);
-        }
+  const weeklyCalories: number[] = useMemo(
+    () => weekDates.map(d => nutritionLogs[d]?.dayCalories || 0),
+    [weekDates, nutritionLogs]
+  );
 
-        const weekDates = getWeekDaysMonToSun(new Date());
-
-        let logsMap: Record<string, any> = {};
-        if (allNutRes.status === 'fulfilled' && allNutRes.value.ok) {
-          logsMap = await allNutRes.value.json();
-          setNutritionLogs(logsMap);
-        }
-
-        const weekCals = weekDates.map(dStr => {
-          const log = logsMap[dStr];
-          if (log && typeof log.dayCalories === 'number' && log.dayCalories > 0) {
-            return log.dayCalories;
-          }
-          if (log && log.meals) {
-            const sum = (Object.values(log.meals).flat() as any[]).reduce((a: number, b: any) => a + (b.calories || 0), 0);
-            if (sum > 0) return sum;
-          }
-          const savedMeals = localStorage.getItem(`smart_meals_${dStr}`);
-          if (savedMeals) {
-            try {
-              const sum = (Object.values(JSON.parse(savedMeals)).flat() as any[]).reduce((a: number, b: any) => a + (b.calories || 0), 0);
-              if (sum > 0) return sum;
-            } catch {}
-          }
-          const savedCal = localStorage.getItem(`smart_daily_cal_${dStr}`);
-          if (savedCal) return parseInt(savedCal, 10) || 0;
-          return 0;
-        });
-        setWeeklyCalories(weekCals);
-
-        if (allWorkoutRes.status === 'fulfilled' && allWorkoutRes.value.ok) {
-          const wMap = await allWorkoutRes.value.json();
-          setWorkoutLogs(wMap);
-        } else {
-          const saved = localStorage.getItem('smart_workout_logs');
-          if (saved) setWorkoutLogs(JSON.parse(saved));
-        }
-
-      } catch (err) {
-        console.error('Failed to load dashboard data:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadDashboardData();
-  }, [router, todayStr, getWeekDaysMonToSun]);
-
-  // Calendar navigation: load logs for a month the first time it is shown
-  useEffect(() => {
-    const key = monthKey(calendarDate);
-    if (loadedMonthsRef.current.has(key)) return;
-    if (!localStorage.getItem('token')) return;
-    const { from, to } = monthRange(calendarDate);
-    let cancelled = false;
-    (async () => {
-      try {
-        const [wRes, nRes] = await Promise.all([
-          apiFetch(`/api/workouts/logs?from=${from}&to=${to}`),
-          apiFetch(`/api/nutrition/logs?from=${from}&to=${to}`),
-        ]);
-        if (cancelled || !wRes.ok || !nRes.ok) return; // leave unmarked so a later visit retries
-        const [wMap, nMap] = await Promise.all([wRes.json(), nRes.json()]);
-        if (cancelled) return;
-        setWorkoutLogs(prev => ({ ...prev, ...wMap }));
-        setNutritionLogs(prev => ({ ...prev, ...nMap }));
-        loadedMonthsRef.current.add(key);
-      } catch {
-        // network error: retry next time the month is shown
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [calendarDate]);
-
-  useEffect(() => {
-    if (!selectedDiaryDate) return;
-    let cancelled = false;
-    const token = localStorage.getItem('token');
-    const syncNut = async () => {
-      if (token) {
-        try {
-          const res = await fetch(`${API_URL}/api/nutrition?date=${selectedDiaryDate}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (res.ok && !cancelled) {
-            const data = await res.json();
-            setSelectedDateMeals(data.meals || { 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] });
-            setSelectedDateWater(data.waterGlasses || 0);
-            return;
-          }
-        } catch {}
-      }
-      const saved = localStorage.getItem(`smart_meals_${selectedDiaryDate}`);
-      if (!cancelled) {
-        setSelectedDateMeals(saved ? JSON.parse(saved) : { 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] });
-        const w = localStorage.getItem(`smart_water_${selectedDiaryDate}`);
-        setSelectedDateWater(w ? parseInt(w) || 0 : 0);
-      }
-    };
-    syncNut();
-    return () => { cancelled = true; };
-  }, [selectedDiaryDate]);
+  const { data: diaryNutrition } = useSWR(
+    selectedDiaryDate ? `/api/nutrition?date=${selectedDiaryDate}` : null,
+    fetcher,
+    logsOpts
+  );
+  const selectedDateMeals: Record<string, any[]> = diaryNutrition?.meals || EMPTY_MEALS;
+  const selectedDateWater: number = diaryNutrition?.waterGlasses || 0;
 
   const handleDeleteWorkoutLog = useCallback(async (targetDate: string) => {
     if (!confirm(`Xóa nhật ký tập ngày ${targetDate}?`)) return;
-    const token = localStorage.getItem('token');
-    if (token) {
-      await fetch(`${API_URL}/api/workouts?date=${targetDate}`, {
-        method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
-      }).catch(() => {});
+    try {
+      const res = await apiFetch(`/api/workouts?date=${targetDate}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await Promise.all([mutateWCurrent(), mutateWViewed(), mutateStreak()]);
+    } catch {
+      alert('Không xóa được nhật ký tập. Vui lòng thử lại.');
     }
-    const logs = JSON.parse(localStorage.getItem('smart_workout_logs') || '{}');
-    delete logs[targetDate];
-    localStorage.setItem('smart_workout_logs', JSON.stringify(logs));
-    setWorkoutLogs(prev => { const c = { ...prev }; delete c[targetDate]; return c; });
-    setStreakDates(prev => prev.filter(d => d !== targetDate));
-  }, []);
+  }, [mutateWCurrent, mutateWViewed, mutateStreak]);
 
   const targetCalories = useMemo(() => calcTargetCalories(profile), [profile]);
 
@@ -330,6 +198,13 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">
       <Sidebar />
       <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-8 overflow-y-auto pb-28 md:pb-10">
+        {!!profileError && !isUnauthorizedError(profileError) && (
+          <div className="bg-rose-500/10 border border-rose-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-rose-300">
+            <p className="font-extrabold text-white">Không tải được hồ sơ. Một số chỉ số đang hiển thị giá trị mặc định.</p>
+            <button onClick={() => { mutateProfile(); }} className="px-4 py-2 bg-primary text-primary-foreground font-black rounded-xl text-xs shrink-0 cursor-pointer">🔄 Thử lại</button>
+          </div>
+        )}
+
         <header className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-border">
           <div className="flex items-center gap-4">
             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground">Dashboard</h1>
@@ -623,13 +498,10 @@ export default function Dashboard() {
               {(() => {
                 const w = Number(profile.weight) || 65;
                 const h = Number(profile.height) || 170;
-                const a = Number(profile.age) || 25;
-                let bmr = (10 * w) + (6.25 * h) - (5 * a);
-                if (profile.gender === 'Nam') bmr += 5; else bmr -= 161;
-                bmr = Math.round(bmr);
-                const tdee = Math.round(bmr * 1.375);
-                const goal = profile.goal || 'Tăng cơ';
-                const target = goal === 'Giảm mỡ' ? Math.max(1200, tdee - 500) : (goal === 'Tăng cơ' || goal === 'Tăng cân') ? tdee + 300 : tdee;
+                const bmr = calcBmr(profile);
+                const tdee = calcTdee(profile);
+                const goal = profile.goal || 'Giữ dáng';
+                const target = calcTargetCalories(profile);
                 const pct = Math.min(100, Math.round((consumedCalories / target) * 100));
                 return (
                   <div className="space-y-4">
