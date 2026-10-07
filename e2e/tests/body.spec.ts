@@ -50,6 +50,7 @@ test.describe('body measurements', () => {
     await page.getByRole('button', { name: 'Lưu số đo' }).click();
     await expect(formAlert(page)).toContainText('Cân nặng');
     await page.getByLabel(/Cân nặng/).fill('70');
+    await page.getByRole('checkbox', { name: /số đo tỷ lệ mỡ từ máy/ }).check();
     await page.getByLabel(/Tỷ lệ mỡ/).fill('90');
     await page.getByRole('button', { name: 'Lưu số đo' }).click();
     await expect(formAlert(page)).toContainText('mỡ');

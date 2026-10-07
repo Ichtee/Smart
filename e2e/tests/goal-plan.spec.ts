@@ -37,7 +37,7 @@ test.describe('goal plan: goal x pace, target weight and body fat', () => {
     expect(saved).toMatchObject({ goal: 'Giảm mỡ', goalPace: 'Nhanh', targetWeight: 65 });
   });
 
-  test('a Navy estimate on the body page becomes the profile body fat, and the BMR switches to Katch-McArdle', async ({ page }) => {
+  test('body fat computed from waist + neck (US Navy) becomes the profile body fat, and the BMR switches to Katch-McArdle', async ({ page }) => {
     const user = await createActiveUser();
     await completeProfile(user, { weight: 70, height: 175, gender: 'Nam', goal: 'Giảm mỡ' });
     const { body } = await loginApi(user.username, user.password);
@@ -49,7 +49,6 @@ test.describe('goal plan: goal x pace, target weight and body fat', () => {
     await page.getByLabel(/Vòng eo/).fill('85');
     await page.getByLabel(/Vòng cổ/).fill('38');
     await expect(page.getByTestId('navy-estimate')).toContainText('16.9%');
-    await page.getByRole('button', { name: 'Dùng giá trị này' }).click();
     await page.getByRole('button', { name: 'Lưu số đo' }).click();
     await expect(page.getByText('Đã lưu số đo!')).toBeVisible();
     await expect(page.getByTestId('body-composition')).toContainText('16.9%');

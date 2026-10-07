@@ -37,7 +37,8 @@ const setup = async (history: unknown[] = HISTORY) => {
   const field = (re: RegExp | string) => screen.getByLabelText(re) as HTMLInputElement;
   const save = () => user.click(screen.getByRole('button', { name: /Lưu số đo|Đang lưu/ }));
   const retype = async (re: RegExp | string, v: string) => { await user.clear(field(re)); if (v) await user.type(field(re), v); };
-  return { user, field, save, retype };
+  const useDevice = () => user.click(screen.getByRole('checkbox', { name: /số đo tỷ lệ mỡ từ máy/ }));
+  return { user, field, save, retype, useDevice };
 };
 
 beforeEach(() => {
@@ -116,8 +117,9 @@ describe('Body page: showing the history', () => {
 
 describe('Body page: saving', () => {
   test('POSTs numbers with the chosen date, then refreshes the history and the profile', async () => {
-    const { retype, save } = await setup();
+    const { retype, save, useDevice } = await setup();
     await retype(/Cân nặng/, '71.8');
+    await useDevice();
     await retype(/Tỷ lệ mỡ/, '18');
     await retype(/Vòng eo/, '80');
     await save();
@@ -133,7 +135,8 @@ describe('Body page: saving', () => {
   });
 
   test('blank optional fields are not sent; the optional boxes are cleared afterwards', async () => {
-    const { retype, save, field } = await setup();
+    const { retype, save, field, useDevice } = await setup();
+    await useDevice();
     await retype(/Tỷ lệ mỡ/, '18');
     await save();
     await screen.findByRole('status');
@@ -161,7 +164,8 @@ describe('Body page: saving', () => {
     ['waist', /Vòng eo/, '29', 'eo'],
     ['waist', /Vòng eo/, '251', 'eo'],
   ])('%s = %j is refused with a message and nothing is sent', async (_n, label, value, text) => {
-    const { retype, save } = await setup();
+    const { retype, save, useDevice } = await setup();
+    if (text === 'mỡ') await useDevice();
     await retype(label, value);
     await save();
     expect(await screen.findByRole('alert')).toHaveTextContent(text);
@@ -303,17 +307,49 @@ describe('Body page: body composition and the US Navy estimate', () => {
     expect(screen.queryByTestId('body-composition')).not.toBeInTheDocument();
   });
 
-  test('waist + neck give a Navy estimate that can be copied into the body-fat field', async () => {
+  test('body fat is not typed by default: waist + neck compute it (US Navy) and it is saved with the entry', async () => {
     vi.mocked(useProfile).mockReturnValue({ profile: man } as unknown as ReturnType<typeof useProfile>);
-    const { user, field } = await setup();
+    const { user, field, save } = await setup();
+    expect(screen.queryByLabelText(/Tỷ lệ mỡ/)).not.toBeInTheDocument();
     expect(screen.queryByTestId('navy-estimate')).not.toBeInTheDocument();
+    expect(screen.getByTestId('navy-hint')).toHaveTextContent('tính tự động khi nhập vòng eo (ngang rốn), vòng cổ.');
     expect(screen.queryByLabelText(/Vòng hông/)).not.toBeInTheDocument(); // men: no hip
     await user.type(field(/Vòng eo/), '85');
     await user.type(field(/Vòng cổ/), '38');
     expect(screen.getByTestId('navy-estimate')).toHaveTextContent('16.9%');
-    await user.click(screen.getByRole('button', { name: 'Dùng giá trị này' }));
-    expect(field(/Tỷ lệ mỡ/).value).toBe('16.9');
+    await save();
+    await waitFor(() => expect(apiFetch).toHaveBeenCalled());
+    expect(JSON.parse(String(vi.mocked(apiFetch).mock.calls[0][1]!.body))).toEqual({ date: todayStr(), weight: 72.5, bodyFat: 16.9, waist: 85, neck: 38 });
+  });
+
+  test('a waist not larger than the neck cannot be computed and saves no body fat', async () => {
+    vi.mocked(useProfile).mockReturnValue({ profile: man } as unknown as ReturnType<typeof useProfile>);
+    const { user, field, save } = await setup();
+    await user.type(field(/Vòng eo/), '35');
+    await user.type(field(/Vòng cổ/), '38');
+    expect(screen.getByTestId('navy-hint')).toHaveTextContent('Không tính được');
+    await save();
+    await waitFor(() => expect(apiFetch).toHaveBeenCalled());
+    expect(JSON.parse(String(vi.mocked(apiFetch).mock.calls[0][1]!.body))).not.toHaveProperty('bodyFat');
+  });
+
+  test('without a height in the profile it says what is missing', async () => {
+    vi.mocked(useProfile).mockReturnValue({ profile: { ...man, height: null } } as unknown as ReturnType<typeof useProfile>);
+    await setup();
+    expect(screen.getByTestId('navy-hint')).toHaveTextContent('cần chiều cao trong hồ sơ');
+  });
+
+  test('a device reading replaces the computed value', async () => {
+    vi.mocked(useProfile).mockReturnValue({ profile: man } as unknown as ReturnType<typeof useProfile>);
+    const { user, field, save, useDevice } = await setup();
+    await user.type(field(/Vòng eo/), '85');
+    await user.type(field(/Vòng cổ/), '38');
+    await useDevice();
     expect(screen.queryByTestId('navy-estimate')).not.toBeInTheDocument();
+    await user.type(field(/Tỷ lệ mỡ từ máy đo/), '21.4');
+    await save();
+    await waitFor(() => expect(apiFetch).toHaveBeenCalled());
+    expect(JSON.parse(String(vi.mocked(apiFetch).mock.calls[0][1]!.body))).toMatchObject({ bodyFat: 21.4, waist: 85, neck: 38 });
   });
 
   test('women also enter the hip, and the measurements are sent with the weight', async () => {
@@ -326,6 +362,6 @@ describe('Body page: body composition and the US Navy estimate', () => {
     expect(screen.getByTestId('navy-estimate')).toHaveTextContent('24.6%');
     await save();
     await waitFor(() => expect(apiFetch).toHaveBeenCalled());
-    expect(JSON.parse(String(vi.mocked(apiFetch).mock.calls[0][1]!.body))).toMatchObject({ waist: 72, neck: 34, hip: 92 });
+    expect(JSON.parse(String(vi.mocked(apiFetch).mock.calls[0][1]!.body))).toMatchObject({ bodyFat: 24.6, waist: 72, neck: 34, hip: 92 });
   });
 });

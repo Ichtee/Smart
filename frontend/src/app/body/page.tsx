@@ -37,6 +37,8 @@ export default function BodyPage() {
 
   const [date, setDate] = useState(today);
   const [form, setForm] = useState({ weight: '', bodyFat: '', waist: '', neck: '', hip: '' });
+  // body fat is computed from the circumferences (US Navy) unless the user has a reading from a device
+  const [fromDevice, setFromDevice] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -66,7 +68,8 @@ export default function BodyPage() {
       setMessage({ text: 'Vui lòng chọn một ngày không nằm trong tương lai.', type: 'error' });
       return;
     }
-    const problem = validateMetricForm(form);
+    const entry = { ...form, bodyFat: fromDevice ? form.bodyFat : navyEstimate === null ? '' : String(navyEstimate) };
+    const problem = validateMetricForm(entry);
     if (problem) {
       setMessage({ text: problem, type: 'error' });
       return;
@@ -77,7 +80,7 @@ export default function BodyPage() {
       const res = await apiFetch('/api/body-metrics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(metricBody(date, form)),
+        body: JSON.stringify(metricBody(date, entry)),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -108,10 +111,10 @@ export default function BodyPage() {
 
   const history = useMemo(() => [...metrics].reverse(), [metrics]);
   const isWoman = profile?.gender === 'Nữ';
-  // US Navy estimate from the circumferences being typed, offered while the body-fat field is empty
-  const navyEstimate = form.bodyFat.trim() === ''
-    ? navyBodyFat({ gender: profile?.gender, height: profile?.height, waist: form.waist, neck: form.neck, hip: form.hip })
-    : null;
+  // the formula needs the height and a gender of Nam / Nữ from the profile
+  const navyMissing = !(Number(profile?.height) > 0) ? 'chiều cao' : profile?.gender !== 'Nam' && profile?.gender !== 'Nữ' ? 'giới tính Nam hoặc Nữ' : null;
+  const navyFilled = form.waist.trim() !== '' && form.neck.trim() !== '' && (!isWoman || form.hip.trim() !== '');
+  const navyEstimate = navyBodyFat({ gender: profile?.gender, height: profile?.height, waist: form.waist, neck: form.neck, hip: form.hip });
 
   if (isLoading && !data) {
     return (
@@ -189,10 +192,6 @@ export default function BodyPage() {
                 <input id="body-weight" type="number" inputMode="decimal" step="0.1" value={form.weight} onChange={setField('weight')} className={inputClass} />
               </div>
               <div>
-                <label htmlFor="body-fat" className={labelClass}>Tỷ lệ mỡ (%) — tùy chọn</label>
-                <input id="body-fat" type="number" inputMode="decimal" step="0.1" value={form.bodyFat} onChange={setField('bodyFat')} className={inputClass} />
-              </div>
-              <div>
                 <label htmlFor="body-waist" className={labelClass}>Vòng eo (cm) — tùy chọn</label>
                 <input id="body-waist" type="number" inputMode="decimal" step="0.1" value={form.waist} onChange={setField('waist')} className={inputClass} />
               </div>
@@ -207,18 +206,35 @@ export default function BodyPage() {
                 </div>
               )}
             </div>
-            {navyEstimate !== null ? (
-              <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-3 text-xs" data-testid="navy-estimate">
-                <span>Ước tính tỷ lệ mỡ theo công thức US Navy: <strong>{navyEstimate}%</strong> (sai số khoảng ±3.5%).</span>
-                <button type="button" onClick={() => setForm(f => ({ ...f, bodyFat: String(navyEstimate) }))} className="font-bold text-primary underline cursor-pointer">Dùng giá trị này</button>
-              </div>
-            ) : (
-              form.bodyFat.trim() === '' && (
-                <p className="text-xs text-muted-foreground">
-                  Không có máy đo? Nhập vòng eo (ngang rốn), vòng cổ{isWoman ? ' và vòng hông' : ''} để ước tính tỷ lệ mỡ theo công thức US Navy.
+            <div className="space-y-3">
+              {fromDevice ? (
+                <div className="max-w-xs">
+                  <label htmlFor="body-fat" className={labelClass}>Tỷ lệ mỡ từ máy đo (%)</label>
+                  <input id="body-fat" type="number" inputMode="decimal" step="0.1" value={form.bodyFat} onChange={setField('bodyFat')} className={inputClass} />
+                </div>
+              ) : navyEstimate !== null ? (
+                <p className="rounded-2xl border border-primary/30 bg-primary/10 p-3 text-xs" data-testid="navy-estimate">
+                  Tỷ lệ mỡ (tính theo công thức US Navy): <strong>{navyEstimate}%</strong>, sai số khoảng ±3.5%. Giá trị này sẽ được lưu cùng số đo.
                 </p>
-              )
-            )}
+              ) : (
+                <p className="text-xs text-muted-foreground" data-testid="navy-hint">
+                  {navyMissing
+                    ? `Tỷ lệ mỡ được tính từ số đo vòng, cần ${navyMissing} trong hồ sơ.`
+                    : navyFilled
+                      ? 'Không tính được tỷ lệ mỡ từ các số đo này. Vòng eo phải lớn hơn vòng cổ, hãy kiểm tra lại.'
+                      : `Tỷ lệ mỡ được tính tự động khi nhập vòng eo (ngang rốn), vòng cổ${isWoman ? ' và vòng hông' : ''}.`}
+                </p>
+              )}
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer w-fit">
+                <input
+                  type="checkbox"
+                  checked={fromDevice}
+                  onChange={e => { setFromDevice(e.target.checked); setForm(f => ({ ...f, bodyFat: '' })); }}
+                  className="size-4 accent-primary"
+                />
+                Tôi có số đo tỷ lệ mỡ từ máy (InBody, cân điện tử) và muốn nhập tay
+              </label>
+            </div>
             <p className="text-xs text-muted-foreground">Ghi lại cùng một ngày sẽ thay thế số đo của ngày đó.</p>
             <button type="submit" disabled={saving} className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 disabled:opacity-50 transition-all cursor-pointer">
               {saving ? 'Đang lưu...' : 'Lưu số đo'}
