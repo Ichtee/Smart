@@ -1,4 +1,5 @@
 const WorkoutLog = require('../models/WorkoutLog');
+const { parseDateRange } = require('../utils/dateRange');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -155,8 +156,12 @@ const getStreakHistory = async (req, res) => {
 // @access  Private
 const getAllWorkoutLogs = async (req, res) => {
   try {
+    const range = parseDateRange(req.query);
+    if (range.error) return res.status(400).json({ message: range.error });
+
     const logs = await WorkoutLog.find({
       user: req.user._id,
+      date: { $gte: range.from, $lte: range.to },
       $or: [
         { isSaved: true },
         { 'completedIds.0': { $exists: true } }

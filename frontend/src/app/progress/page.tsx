@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { API_URL } from '@/utils/api';
+import { monthRange } from '@/utils/dateUtils';
 import { calcBmr, calcTdee, calcTargetCalories, sumMacros, macroTargets } from '@/utils/nutritionCalc';
 
 const MUSCLE_NAMES_VI: Record<string, string> = {
@@ -126,11 +127,13 @@ export default function ProgressPage() {
           });
         }
 
-        // Fetch Streak History, Workout Logs & Nutrition Logs from Backend API
+        // Fetch Streak History, Workout Logs & Nutrition Logs (current month) from Backend API
+        const { from: monthFrom, to: monthTo } = monthRange(new Date());
+        const rangeQs = `?from=${monthFrom}&to=${monthTo}`;
         const [streakRes, logsRes, nutLogsRes] = await Promise.all([
           fetch(`${API_URL}/api/workouts/streak`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {}, credentials: 'include' }),
-          fetch(`${API_URL}/api/workouts/logs`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {}, credentials: 'include' }),
-          fetch(`${API_URL}/api/nutrition/logs`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {}, credentials: 'include' })
+          fetch(`${API_URL}/api/workouts/logs${rangeQs}`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {}, credentials: 'include' }),
+          fetch(`${API_URL}/api/nutrition/logs${rangeQs}`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {}, credentials: 'include' })
         ]);
 
         if (streakRes.ok) {

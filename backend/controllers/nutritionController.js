@@ -1,4 +1,5 @@
 const NutritionLog = require('../models/NutritionLog');
+const { parseDateRange } = require('../utils/dateRange');
 
 // @desc    Get nutrition log for a specific date
 // @route   GET /api/nutrition
@@ -73,8 +74,12 @@ const saveNutritionLog = async (req, res) => {
 // @access  Private
 const getAllNutritionLogs = async (req, res) => {
   try {
+    const range = parseDateRange(req.query);
+    if (range.error) return res.status(400).json({ message: range.error });
+
     const logs = await NutritionLog.find({
-      user: req.user._id
+      user: req.user._id,
+      date: { $gte: range.from, $lte: range.to }
     }).sort({ date: -1 });
 
     const logsMap = {};

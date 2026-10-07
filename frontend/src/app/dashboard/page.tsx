@@ -1,9 +1,10 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import GoogleTranslate from '@/components/GoogleTranslate';
-import { API_URL } from '@/utils/api';
+import { API_URL, apiFetch } from '@/utils/api';
+import { monthAndWeekRange, monthRange, monthKey } from '@/utils/dateUtils';
 import { calcTargetCalories, macroTargets, sumMacros } from '@/utils/nutritionCalc';
 import { Bell, ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Trophy, Dumbbell, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 
@@ -54,6 +55,9 @@ export default function Dashboard() {
   const [isExerciseListCollapsed, setIsExerciseListCollapsed] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  // Months whose workout/nutrition logs are already in state (the /logs endpoints are date-ranged)
+  const loadedMonthsRef = useRef<Set<string>>(new Set([monthKey(new Date())]));
+
   const todayStr = useMemo(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -93,12 +97,14 @@ export default function Dashboard() {
           if (user.role) setUserRole(user.role);
         }
 
+        const logRange = monthAndWeekRange(new Date());
+        const rangeQs = `?from=${logRange.from}&to=${logRange.to}`;
         const [profileRes, streakRes, nutTodayRes, allNutRes, allWorkoutRes] = await Promise.allSettled([
           fetch(`${API_URL}/api/users/profile`, { headers: authHeaders }),
           fetch(`${API_URL}/api/workouts/streak`, { headers: authHeaders }),
           fetch(`${API_URL}/api/nutrition?date=${todayStr}`, { headers: authHeaders }),
-          fetch(`${API_URL}/api/nutrition/logs`, { headers: authHeaders }),
-          fetch(`${API_URL}/api/workouts/logs`, { headers: authHeaders }),
+          fetch(`${API_URL}/api/nutrition/logs${rangeQs}`, { headers: authHeaders }),
+          fetch(`${API_URL}/api/workouts/logs${rangeQs}`, { headers: authHeaders }),
         ]);
 
         if (profileRes.status === 'fulfilled' && profileRes.value.ok) {
@@ -184,6 +190,32 @@ export default function Dashboard() {
 
     loadDashboardData();
   }, [router, todayStr, getWeekDaysMonToSun]);
+
+  // Calendar navigation: load logs for a month the first time it is shown
+  useEffect(() => {
+    const key = monthKey(calendarDate);
+    if (loadedMonthsRef.current.has(key)) return;
+    if (!localStorage.getItem('token')) return;
+    const { from, to } = monthRange(calendarDate);
+    let cancelled = false;
+    (async () => {
+      try {
+        const [wRes, nRes] = await Promise.all([
+          apiFetch(`/api/workouts/logs?from=${from}&to=${to}`),
+          apiFetch(`/api/nutrition/logs?from=${from}&to=${to}`),
+        ]);
+        if (cancelled || !wRes.ok || !nRes.ok) return; // leave unmarked so a later visit retries
+        const [wMap, nMap] = await Promise.all([wRes.json(), nRes.json()]);
+        if (cancelled) return;
+        setWorkoutLogs(prev => ({ ...prev, ...wMap }));
+        setNutritionLogs(prev => ({ ...prev, ...nMap }));
+        loadedMonthsRef.current.add(key);
+      } catch {
+        // network error: retry next time the month is shown
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [calendarDate]);
 
   useEffect(() => {
     if (!selectedDiaryDate) return;
