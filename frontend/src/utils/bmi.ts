@@ -21,7 +21,7 @@ export interface BmiCategory {
  */
 export function bmiCategory(bmi: number): BmiCategory {
   if (bmi < 18.5) return { label: 'Thiếu cân', color: 'text-blue-400' };
-  if (bmi < 25) return { label: 'Bình thường', color: 'text-emerald-400' };
-  if (bmi < 30) return { label: 'Thừa cân', color: 'text-amber-400' };
-  return { label: 'Béo phì', color: 'text-rose-400' };
+  if (bmi < 25) return { label: 'Bình thường', color: 'text-success' };
+  if (bmi < 30) return { label: 'Thừa cân', color: 'text-warning' };
+  return { label: 'Béo phì', color: 'text-destructive' };
 }

@@ -24,7 +24,7 @@ export default function BodyChart({ metrics }: { metrics: BodyMetric[] }) {
           </circle>
         ))}
       </svg>
-      <figcaption className="flex justify-between text-[11px] font-semibold text-muted-foreground mt-2">
+      <figcaption className="flex justify-between text-xs font-semibold text-muted-foreground mt-2">
         <span>{first.date}</span>
         <span>{last.date}</span>
       </figcaption>

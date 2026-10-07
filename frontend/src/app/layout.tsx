@@ -1,22 +1,24 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Be_Vietnam_Pro, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 import Providers from "./Providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Body text: full Vietnamese support. Display: bold condensed face for headings and big numbers.
+const bodyFont = Be_Vietnam_Pro({
+  variable: "--font-body",
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const displayFont = Barlow_Condensed({
+  variable: "--font-display",
+  subsets: ["latin", "vietnamese"],
+  weight: ["500", "600", "700", "800"],
 });
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export const metadata: Metadata = {
@@ -32,14 +34,21 @@ export const metadata: Metadata = {
   },
 };
 
+// Runs before paint so a saved light theme does not flash dark first. Dark is the default.
+const themeScript = `try{if(localStorage.getItem('theme')==='light')document.documentElement.classList.add('light')}catch(e){}`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="vi"
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${bodyFont.variable} ${displayFont.variable} h-full antialiased`}
     >
-      <body suppressHydrationWarning className="min-h-full flex flex-col bg-[#0B0F19] text-white overflow-x-hidden">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body suppressHydrationWarning className="min-h-full flex flex-col bg-background text-foreground overflow-x-hidden">
         <Providers>
           {children}
         </Providers>

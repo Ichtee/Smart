@@ -24,7 +24,7 @@ function Sparkline({ record }: { record: ExerciseRecord }) {
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Mức tạ ${record.name} theo thời gian`} className="w-full h-auto">
       {points.length > 1 && <path d={pointsToPath(points)} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" className="text-primary" />}
       {points.map((p, i) => (
-        <circle key={p.date} cx={p.x} cy={p.y} r={record.sessions[i].pr ? 4.5 : 3} className={record.sessions[i].pr ? 'fill-amber-400' : 'fill-primary'}>
+        <circle key={p.date} cx={p.x} cy={p.y} r={record.sessions[i].pr ? 4.5 : 3} className={record.sessions[i].pr ? 'fill-warning' : 'fill-primary'}>
           <title>{`${p.date}: ${p.weight} kg${record.sessions[i].pr ? ' (kỷ lục)' : ''}`}</title>
         </circle>
       ))}
@@ -93,14 +93,14 @@ export default function RecordsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Kỷ lục</p>
-                    <p className="text-2xl font-black text-amber-400">{r.best.weight} kg</p>
-                    <p className="text-[11px] text-muted-foreground">{r.best.date}</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Kỷ lục</p>
+                    <p className="text-2xl font-black text-warning">{r.best.weight} kg</p>
+                    <p className="text-xs text-muted-foreground">{r.best.date}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Gần nhất</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gần nhất</p>
                     <p className="text-2xl font-black">{r.last.weight} kg</p>
-                    <p className="text-[11px] text-muted-foreground">{r.last.date}</p>
+                    <p className="text-xs text-muted-foreground">{r.last.date}</p>
                   </div>
                 </div>
                 <Sparkline record={r} />

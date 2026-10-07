@@ -6,7 +6,7 @@ test.describe('profile', () => {
     const user = await createActiveUser({ name: 'Dana Pham' });
     await completeProfile(user, { gender: 'Nữ', height: 165, weight: 58, age: 30, goal: 'Giữ dáng' });
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Profile');
+    await nav(page, 'Hồ sơ');
 
     await expect(page.getByLabel('Họ và tên')).toHaveValue('Dana Pham');
     await expect(page.getByLabel('Giới tính')).toHaveValue('Nữ');
@@ -23,7 +23,7 @@ test.describe('profile', () => {
     const user = await createActiveUser();
     await completeProfile(user, { height: 170, weight: 70 });
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Profile');
+    await nav(page, 'Hồ sơ');
 
     const weight = page.getByLabel(/Cân nặng/);
     for (const [kg, label] of [['50', 'Thiếu cân'], ['70', 'Bình thường'], ['80', 'Thừa cân'], ['100', 'Béo phì']] as const) {
@@ -38,7 +38,7 @@ test.describe('profile', () => {
     const user = await createActiveUser();
     await completeProfile(user);
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Profile');
+    await nav(page, 'Hồ sơ');
 
     await page.getByLabel('Họ và tên').fill('  Renamed   Person ');
     await page.getByLabel('Tuổi').fill('41');
@@ -59,11 +59,11 @@ test.describe('profile', () => {
     const user = await createActiveUser({ name: 'Before Name' });
     await completeProfile(user);
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Profile');
+    await nav(page, 'Hồ sơ');
     await page.getByLabel('Họ và tên').fill('After Name');
     await page.getByRole('button', { name: /Lưu thay đổi/ }).click();
     await expect(page.getByText('Cập nhật hồ sơ thành công!')).toBeVisible();
-    await nav(page, 'Dashboard');
+    await nav(page, 'Tổng quan');
     await expect(page.getByText(/Welcome Back/)).toBeVisible();
     expect(await greeting(page)).toContain('After Name');
   });
@@ -72,7 +72,7 @@ test.describe('profile', () => {
     const user = await createActiveUser();
     await completeProfile(user);
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Profile');
+    await nav(page, 'Hồ sơ');
     let puts = 0;
     page.on('request', r => { if (r.method() === 'PUT' && r.url().includes('/profile')) puts++; });
 

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import GoogleTranslate from './GoogleTranslate';
+import ThemeToggle from './ThemeToggle';
 import { Logo } from './smart/logo';
 import { API_URL } from '@/utils/api';
 import { clearApiCache } from '@/hooks/useApi';
@@ -69,6 +70,7 @@ export default function Header() {
 
         {/* Desktop & Mobile Controls */}
         <div className="flex items-center gap-3 shrink-0">
+          <ThemeToggle />
           {/* Google Translate */}
           <GoogleTranslate />
 
@@ -119,7 +121,7 @@ export default function Header() {
       </div>
 
       {/* Mobile Horizontal Navigation Links */}
-      <div className="flex md:hidden items-center gap-2 overflow-x-auto custom-scrollbar pb-1 pt-2 text-[11px] font-medium tracking-wide text-muted-foreground border-t border-border whitespace-nowrap">
+      <div className="flex md:hidden items-center gap-2 overflow-x-auto custom-scrollbar pb-1 pt-2 text-xs font-medium tracking-wide text-muted-foreground border-t border-border whitespace-nowrap">
         <Link href="/workouts" className="px-3.5 py-1.5 rounded-full bg-secondary hover:bg-surface-elevated border border-border text-foreground transition flex items-center gap-1.5 shrink-0">
           <Dumbbell className="size-3.5 text-primary" /> Lịch tập
         </Link>

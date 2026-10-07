@@ -228,7 +228,7 @@ export default function AdminExercises() {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <div className="text-6xl mb-4">⛔</div>
-        <h1 className="text-2xl font-bold text-rose-500 mb-2">{authError}</h1>
+        <h1 className="text-2xl font-bold text-destructive mb-2">{authError}</h1>
         <button onClick={() => router.push('/')} className="mt-6 px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">Về trang chủ</button>
       </div>
     );
@@ -243,7 +243,7 @@ export default function AdminExercises() {
           </h1>
           <p className="text-slate-400 mt-1 text-sm font-medium">Chỉnh sửa toàn bộ các trường dữ liệu bài tập (Tên, Cơ chính/phụ, Dụng cụ, Sets/Reps, Video YouTube & Kỹ thuật).</p>
         </div>
-        <span className="px-4 py-2 bg-[#131B2E] border border-cyan-500/30 text-[#00E5FF] font-extrabold text-xs rounded-2xl shadow-md">
+        <span className="px-4 py-2 bg-card border border-primary/30 text-primary font-extrabold text-xs rounded-2xl shadow-md">
           Tổng số: {exercises.length} Bài Tập
         </span>
       </div>
@@ -251,7 +251,7 @@ export default function AdminExercises() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* Form Panel (Left) */}
-        <div className="lg:col-span-5 bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-5 lg:sticky lg:top-6">
+        <div className="lg:col-span-5 bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-5 lg:sticky lg:top-6">
           <div className="flex justify-between items-center border-b border-slate-800/80 pb-4">
             <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
               <span>{editingId ? '✏️' : '➕'}</span>
@@ -260,7 +260,7 @@ export default function AdminExercises() {
             {editingId && (
               <button 
                 onClick={resetForm}
-                className="text-xs font-bold text-slate-400 hover:text-white bg-[#18233C] px-3 py-1 rounded-xl transition"
+                className="text-xs font-bold text-slate-400 hover:text-white bg-surface-elevated px-3 py-1 rounded-xl transition"
               >
                 Hủy sửa
               </button>
@@ -276,7 +276,7 @@ export default function AdminExercises() {
                 required
                 value={formData.name}
                 onChange={e => setFormData({...formData, name: e.target.value})}
-                className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-[#00E5FF] transition"
+                className="w-full bg-inset border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-primary transition"
                 placeholder="VD: Leg Extension Machine"
               />
             </div>
@@ -288,7 +288,7 @@ export default function AdminExercises() {
                 <select 
                   value={formData.muscle}
                   onChange={e => setFormData({...formData, muscle: e.target.value})}
-                  className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-[#00E5FF] transition"
+                  className="w-full bg-inset border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-primary transition"
                 >
                   {muscles.map(m => (
                     <option key={m} value={m}>{MUSCLE_NAMES_VI[m] || m}</option>
@@ -303,7 +303,7 @@ export default function AdminExercises() {
                   list="equipment-list"
                   value={formData.equipment}
                   onChange={e => setFormData({...formData, equipment: e.target.value})}
-                  className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-[#00E5FF] transition"
+                  className="w-full bg-inset border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-primary transition"
                   placeholder="VD: Machine, Cable..."
                 />
                 <datalist id="equipment-list">
@@ -321,7 +321,7 @@ export default function AdminExercises() {
                 type="text" 
                 value={formData.secondaryMuscles}
                 onChange={e => setFormData({...formData, secondaryMuscles: e.target.value})}
-                className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-purple-300 focus:outline-none focus:border-purple-400 transition"
+                className="w-full bg-inset border border-slate-800 rounded-xl p-3 text-purple-300 focus:outline-none focus:border-purple-400 transition"
                 placeholder="VD: triceps, front-deltoids"
               />
             </div>
@@ -336,7 +336,7 @@ export default function AdminExercises() {
                   min="1"
                   value={formData.defaultSets}
                   onChange={e => setFormData({...formData, defaultSets: Number(e.target.value)})}
-                  className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-[#00E5FF] transition font-bold"
+                  className="w-full bg-inset border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-primary transition font-bold"
                 />
               </div>
               <div>
@@ -346,7 +346,7 @@ export default function AdminExercises() {
                   required
                   value={formData.defaultReps}
                   onChange={e => setFormData({...formData, defaultReps: e.target.value})}
-                  className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-[#00E5FF] focus:outline-none focus:border-[#00E5FF] transition font-bold"
+                  className="w-full bg-inset border border-slate-800 rounded-xl p-3 text-primary focus:outline-none focus:border-primary transition font-bold"
                   placeholder="VD: 10"
                 />
               </div>
@@ -359,7 +359,7 @@ export default function AdminExercises() {
                 type="url" 
                 value={formData.videoUrl}
                 onChange={e => setFormData({...formData, videoUrl: e.target.value})}
-                className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-rose-300 focus:outline-none focus:border-rose-500 transition"
+                className="w-full bg-inset border border-slate-800 rounded-xl p-3 text-destructive focus:outline-none focus:border-destructive transition"
                 placeholder="https://www.youtube.com/watch?v=..."
               />
             </div>
@@ -371,20 +371,20 @@ export default function AdminExercises() {
                 rows={3}
                 value={formData.description}
                 onChange={e => setFormData({...formData, description: e.target.value})}
-                className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-slate-200 focus:outline-none focus:border-[#00E5FF] transition leading-relaxed"
+                className="w-full bg-inset border border-slate-800 rounded-xl p-3 text-slate-200 focus:outline-none focus:border-primary transition leading-relaxed"
                 placeholder="Nhập ghi chú kỹ thuật, tư thế chuẩn, lưu ý hít thở..."
               />
             </div>
 
             <div className="pt-2 flex gap-3">
-              <button type="submit" className="flex-1 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black py-3 px-4 rounded-xl transition shadow-lg shadow-[#00E5FF]/20 active:scale-95 text-xs uppercase tracking-wider">
+              <button type="submit" className="flex-1 bg-primary hover:bg-primary text-slate-950 font-black py-3 px-4 rounded-xl transition shadow-lg shadow-primary/20 active:scale-95 text-xs uppercase tracking-wider">
                 {editingId ? '💾 LƯU CẬP NHẬT' : '➕ THÊM VÀO THƯ VIỆN'}
               </button>
               {editingId && (
                 <button 
                   type="button"
                   onClick={resetForm}
-                  className="bg-[#18233C] hover:bg-slate-800 text-slate-300 font-bold py-3 px-4 rounded-xl transition text-xs"
+                  className="bg-surface-elevated hover:bg-slate-800 text-slate-300 font-bold py-3 px-4 rounded-xl transition text-xs"
                 >
                   Hủy
                 </button>
@@ -394,7 +394,7 @@ export default function AdminExercises() {
         </div>
 
         {/* Exercises Table List Panel (Right) */}
-        <div className="lg:col-span-7 bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-5">
+        <div className="lg:col-span-7 bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <span>📚</span> Danh Sách Dữ Liệu ({filteredExercises.length})
@@ -407,12 +407,12 @@ export default function AdminExercises() {
                 placeholder="🔍 Tìm bài tập..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-[#0B101D] border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#00E5FF] transition min-w-[170px]"
+                className="bg-inset border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-primary transition min-w-[170px]"
               />
               <select
                 value={filterMuscle}
                 onChange={(e) => setFilterMuscle(e.target.value)}
-                className="bg-[#0B101D] border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#00E5FF] transition"
+                className="bg-inset border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-primary transition"
               >
                 <option value="">Tất cả nhóm cơ</option>
                 {muscles.map(m => (
@@ -424,12 +424,12 @@ export default function AdminExercises() {
           
           {loading ? (
             <div className="flex justify-center items-center py-20">
-              <div className="w-8 h-8 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
             <div className="overflow-x-auto custom-scrollbar max-h-[680px]">
               <table className="w-full text-left border-collapse text-xs">
-                <thead className="sticky top-0 bg-[#0B101D] z-10 text-slate-400 font-extrabold uppercase tracking-wider border-b border-slate-800">
+                <thead className="sticky top-0 bg-inset z-10 text-slate-400 font-extrabold uppercase tracking-wider border-b border-slate-800">
                   <tr>
                     <th className="p-3.5">Bài tập</th>
                     <th className="p-3.5">Cơ chính / Dụng cụ</th>
@@ -441,55 +441,55 @@ export default function AdminExercises() {
                 <tbody className="divide-y divide-slate-800/60">
                   {filteredExercises.length > 0 ? (
                     filteredExercises.map((ex) => (
-                      <tr key={ex._id} className="hover:bg-[#18233C]/60 transition group">
+                      <tr key={ex._id} className="hover:bg-surface-elevated/60 transition group">
                         <td className="p-3.5">
-                          <div className="font-extrabold text-white text-sm group-hover:text-[#00E5FF] transition flex items-center gap-1.5">
+                          <div className="font-extrabold text-white text-sm group-hover:text-primary transition flex items-center gap-1.5">
                             <span>{ex.name}</span>
                           </div>
                           {ex.secondaryMuscles && ex.secondaryMuscles.length > 0 && (
-                            <span className="text-[10px] text-purple-300 block mt-0.5">
+                            <span className="text-xs text-purple-300 block mt-0.5">
                               ✨ Cơ phụ: {ex.secondaryMuscles.join(', ')}
                             </span>
                           )}
                         </td>
                         <td className="p-3.5">
-                          <span className="px-2.5 py-1 rounded-lg bg-emerald-950/80 text-[#00FF87] border border-emerald-500/30 font-bold inline-block">
+                          <span className="px-2.5 py-1 rounded-lg bg-success-soft/80 text-success border border-success/30 font-bold inline-block">
                             {MUSCLE_NAMES_VI[ex.muscle] || ex.muscle}
                           </span>
                           {ex.equipment && (
-                            <span className="px-2.5 py-1 rounded-lg bg-cyan-950/80 text-cyan-300 border border-cyan-500/30 font-bold inline-block ml-1 mt-1">
+                            <span className="px-2.5 py-1 rounded-lg bg-primary-soft/80 text-primary border border-primary/30 font-bold inline-block ml-1 mt-1">
                               🏋️ {ex.equipment}
                             </span>
                           )}
                         </td>
                         <td className="p-3.5 font-bold text-slate-300 whitespace-nowrap">
-                          {ex.defaultSets} Hiệp x <span className="text-[#00E5FF]">{ex.defaultReps}</span>
+                          {ex.defaultSets} Hiệp x <span className="text-primary">{ex.defaultReps}</span>
                         </td>
                         <td className="p-3.5 text-center whitespace-nowrap">
                           {ex.videoUrl ? (
-                            <span className="text-rose-400 font-bold bg-rose-950/60 border border-rose-500/30 px-2 py-0.5 rounded-md text-[10px]">
+                            <span className="text-destructive font-bold bg-destructive-soft/60 border border-destructive/30 px-2 py-0.5 rounded-md text-xs">
                               ▶️ Có Video
                             </span>
                           ) : (
-                            <span className="text-slate-600 text-[10px]">Chưa có</span>
+                            <span className="text-slate-600 text-xs">Chưa có</span>
                           )}
                         </td>
                         <td className="p-3.5 text-right whitespace-nowrap space-x-2">
                           <button
                             onClick={() => setViewingExercise(ex)}
-                            className="px-2.5 py-1 bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/40 rounded-lg font-bold transition text-[11px]"
+                            className="px-2.5 py-1 bg-primary-soft hover:bg-primary-soft text-primary border border-primary/40 rounded-lg font-bold transition text-xs"
                           >
                             👁️ Xem
                           </button>
                           <button 
                             onClick={() => handleEdit(ex)} 
-                            className="px-2.5 py-1 bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-500/40 rounded-lg font-bold transition text-[11px]"
+                            className="px-2.5 py-1 bg-warning-soft hover:bg-warning-soft text-warning border border-warning/40 rounded-lg font-bold transition text-xs"
                           >
                             ✏️ Sửa
                           </button>
                           <button 
                             onClick={() => confirmDelete(ex)} 
-                            className="px-2.5 py-1 bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-500/40 rounded-lg font-bold transition text-[11px]"
+                            className="px-2.5 py-1 bg-destructive-soft hover:bg-destructive-soft text-destructive border border-destructive/40 rounded-lg font-bold transition text-xs"
                           >
                             🗑️ Xóa
                           </button>
@@ -515,11 +515,11 @@ export default function AdminExercises() {
       {viewingExercise && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setViewingExercise(null)}></div>
-          <div className="relative bg-[#131B2E] border border-cyan-500/30 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col space-y-5 animate-in fade-in zoom-in duration-200">
+          <div className="relative bg-card border border-primary/30 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col space-y-5 animate-in fade-in zoom-in duration-200">
             
             <div className="flex justify-between items-start border-b border-slate-800 pb-4">
               <div>
-                <span className="px-3 py-1 bg-cyan-950 text-[#00E5FF] border border-cyan-500/40 rounded-full text-xs font-black uppercase tracking-wider">
+                <span className="px-3 py-1 bg-primary-soft text-primary border border-primary/40 rounded-full text-xs font-black uppercase tracking-wider">
                   Chi Tiết Bài Tập trong Catalog Admin
                 </span>
                 <h3 className="text-2xl font-black text-white mt-2 flex items-center gap-2">
@@ -527,7 +527,7 @@ export default function AdminExercises() {
                 </h3>
 
                 <div className="flex flex-wrap gap-2 text-xs mt-3">
-                  <span className="px-3 py-1 bg-emerald-950/80 text-[#00FF87] border border-emerald-500/40 rounded-xl font-extrabold">
+                  <span className="px-3 py-1 bg-success-soft/80 text-success border border-success/40 rounded-xl font-extrabold">
                     🎯 Cơ chính: {MUSCLE_NAMES_VI[viewingExercise.muscle] || viewingExercise.muscle}
                   </span>
 
@@ -538,7 +538,7 @@ export default function AdminExercises() {
                   )}
 
                   {viewingExercise.equipment && (
-                    <span className="px-3 py-1 bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 rounded-xl font-extrabold">
+                    <span className="px-3 py-1 bg-primary-soft/80 text-primary border border-primary/40 rounded-xl font-extrabold">
                       🏋️ Dụng cụ: {viewingExercise.equipment}
                     </span>
                   )}
@@ -547,7 +547,7 @@ export default function AdminExercises() {
 
               <button
                 onClick={() => setViewingExercise(null)}
-                className="w-9 h-9 rounded-full bg-[#18233C] hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xl font-bold transition border border-slate-700 shrink-0"
+                className="w-9 h-9 rounded-full bg-surface-elevated hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xl font-bold transition border border-slate-700 shrink-0"
               >
                 &times;
               </button>
@@ -557,14 +557,14 @@ export default function AdminExercises() {
               {/* YouTube Video */}
               {viewingExercise.videoUrl && (
                 <div className="space-y-2">
-                  <h4 className="font-black text-rose-400 uppercase tracking-wider flex items-center gap-2">
+                  <h4 className="font-black text-destructive uppercase tracking-wider flex items-center gap-2">
                     <span>▶️</span> Video Minh Họa YouTube
                   </h4>
                   {(() => {
                     const embedUrl = getYouTubeEmbedUrl(viewingExercise.videoUrl);
                     if (embedUrl) {
                       return (
-                        <div className="rounded-2xl overflow-hidden border border-rose-500/30 shadow-xl aspect-video bg-black">
+                        <div className="rounded-2xl overflow-hidden border border-destructive/30 shadow-xl aspect-video bg-black">
                           <iframe
                             src={embedUrl}
                             title={`Video ${viewingExercise.name}`}
@@ -581,7 +581,7 @@ export default function AdminExercises() {
               )}
 
               {/* Description */}
-              <div className="bg-[#0B101D] p-4 rounded-2xl border border-slate-800 space-y-2">
+              <div className="bg-inset p-4 rounded-2xl border border-slate-800 space-y-2">
                 <h4 className="font-black text-slate-300 uppercase tracking-wider">📖 Mô Tả Kỹ Thuật:</h4>
                 <p className="text-slate-300 leading-relaxed">{viewingExercise.description || 'Chưa có mô tả kỹ thuật.'}</p>
               </div>
@@ -593,13 +593,13 @@ export default function AdminExercises() {
                   handleEdit(viewingExercise);
                   setViewingExercise(null);
                 }}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition"
+                className="px-4 py-2 bg-warning hover:bg-warning text-slate-950 font-black text-xs rounded-xl shadow-md transition"
               >
                 ✏️ Chỉnh Sửa Dữ Liệu Này
               </button>
               <button
                 onClick={() => setViewingExercise(null)}
-                className="px-5 py-2 bg-[#18233C] hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-700 transition"
+                className="px-5 py-2 bg-surface-elevated hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-700 transition"
               >
                 Đóng
               </button>
@@ -617,21 +617,21 @@ export default function AdminExercises() {
             onClick={() => popup.type !== 'confirm' && setPopup(null)}
           ></div>
           
-          <div className={`relative bg-[#131B2E] border ${
+          <div className={`relative bg-card border ${
             popup.type === 'success' 
-              ? 'border-emerald-500/50 shadow-emerald-500/10' 
+              ? 'border-success/50 shadow-success/10' 
               : popup.type === 'error' 
-                ? 'border-rose-500/50 shadow-rose-500/10' 
-                : 'border-amber-500/50 shadow-amber-500/10'
+                ? 'border-destructive/50 shadow-destructive/10' 
+                : 'border-warning/50 shadow-warning/10'
           } rounded-3xl p-6 sm:p-8 shadow-2xl max-w-md w-full flex flex-col items-center text-center space-y-4 animate-in zoom-in-95 duration-200`}>
             
             {/* Icon Badge */}
             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-lg border ${
               popup.type === 'success'
-                ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-emerald-900/40'
+                ? 'bg-success-soft/80 text-success border-success/40 shadow-success-soft/40'
                 : popup.type === 'error'
-                  ? 'bg-rose-950/80 text-rose-400 border-rose-500/40 shadow-rose-900/40'
-                  : 'bg-amber-950/80 text-amber-400 border-amber-500/40 shadow-amber-900/40'
+                  ? 'bg-destructive-soft/80 text-destructive border-destructive/40 shadow-destructive-soft/40'
+                  : 'bg-warning-soft/80 text-warning border-warning/40 shadow-warning-soft/40'
             }`}>
               {popup.type === 'success' ? '✅' : popup.type === 'error' ? '❌' : '⚠️'}
             </div>
@@ -648,7 +648,7 @@ export default function AdminExercises() {
                 <>
                   <button
                     onClick={() => setPopup(null)}
-                    className="flex-1 py-3 bg-[#18233C] hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition"
+                    className="flex-1 py-3 bg-surface-elevated hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition"
                   >
                     Hủy
                   </button>
@@ -656,7 +656,7 @@ export default function AdminExercises() {
                     onClick={() => {
                       if (popup.onConfirm) popup.onConfirm();
                     }}
-                    className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-900/40 transition active:scale-95 uppercase tracking-wider"
+                    className="flex-1 py-3 bg-destructive hover:bg-destructive text-white font-black text-xs rounded-xl shadow-lg shadow-destructive-soft/40 transition active:scale-95 uppercase tracking-wider"
                   >
                     {popup.confirmText || 'Xác nhận'}
                   </button>
@@ -666,8 +666,8 @@ export default function AdminExercises() {
                   onClick={() => setPopup(null)}
                   className={`w-full py-3 font-black text-xs rounded-xl transition shadow-lg active:scale-95 uppercase tracking-wider ${
                     popup.type === 'success'
-                      ? 'bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 shadow-cyan-500/20'
-                      : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20'
+                      ? 'bg-primary hover:bg-primary text-slate-950 shadow-primary/20'
+                      : 'bg-destructive hover:bg-destructive text-white shadow-destructive/20'
                   }`}
                 >
                   Đồng Ý / Đóng

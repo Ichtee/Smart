@@ -112,7 +112,7 @@ export default function RoutinesPage() {
   }
 
   const input = 'w-full bg-background border border-input rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors';
-  const label = 'block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5';
+  const label = 'block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5';
   const lib = (library ?? []) as LibraryExercise[];
 
   return (
@@ -166,7 +166,7 @@ export default function RoutinesPage() {
                     <div>
                       <p className="font-black text-lg">
                         {r.name}
-                        {profile?.lastActiveRoutineId === r.id && <span className="ml-2 text-[10px] font-bold text-primary uppercase">Đang dùng</span>}
+                        {profile?.lastActiveRoutineId === r.id && <span className="ml-2 text-xs font-bold text-primary uppercase">Đang dùng</span>}
                       </p>
                       <p className="text-xs text-muted-foreground">{routineSummary(r)}</p>
                     </div>

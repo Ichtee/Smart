@@ -180,7 +180,7 @@ export default function BarcodeScannerModal({
       />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-md bg-[#131B2E] border border-cyan-500/30 rounded-3xl p-6 shadow-2xl z-10 text-white space-y-5 animate-in fade-in zoom-in duration-200">
+      <div className="relative w-full max-w-md bg-card border border-primary/30 rounded-3xl p-6 shadow-2xl z-10 text-white space-y-5 animate-in fade-in zoom-in duration-200">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -205,8 +205,8 @@ export default function BarcodeScannerModal({
 
           {loading && (
             <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center space-y-3 z-20">
-              <div className="w-10 h-10 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-xs font-semibold text-cyan-400 animate-pulse">Đang tra cứu thông tin sản phẩm...</p>
+              <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-xs font-semibold text-primary animate-pulse">Đang tra cứu thông tin sản phẩm...</p>
             </div>
           )}
 
@@ -218,13 +218,13 @@ export default function BarcodeScannerModal({
         </div>
 
         {/* Instructions */}
-        <p className="text-[11px] text-slate-400 text-center">
+        <p className="text-xs text-slate-400 text-center">
           💡 Đưa mã vạch của sản phẩm (hộp sữa, gói mì, hũ whey, đồ đóng hộp) vào giữa khung ngắm để tự động nhận diện.
         </p>
 
         {/* Error message */}
         {errorMsg && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-300 text-center space-y-1">
+          <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-xl text-xs text-destructive text-center space-y-1">
             <p className="font-semibold">{errorMsg}</p>
           </div>
         )}
@@ -240,12 +240,12 @@ export default function BarcodeScannerModal({
               placeholder="VD: 8934563123456"
               value={manualBarcode}
               onChange={(e) => setManualBarcode(e.target.value)}
-              className="flex-1 bg-[#0B101D] border border-slate-700 focus:border-[#00E5FF] rounded-xl px-3 py-2 text-xs text-white outline-none"
+              className="flex-1 bg-inset border border-slate-700 focus:border-primary rounded-xl px-3 py-2 text-xs text-white outline-none"
             />
             <button
               type="submit"
               disabled={loading || !manualBarcode.trim()}
-              className="bg-[#00E5FF] hover:bg-[#00E5FF]/80 disabled:opacity-50 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition"
+              className="bg-primary hover:bg-primary/80 disabled:opacity-50 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition"
             >
               Tra cứu
             </button>

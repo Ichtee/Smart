@@ -45,16 +45,16 @@ function SearchableExerciseSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-zinc-950 border border-slate-700 hover:border-[#00FF87] rounded-xl px-3 py-2 text-xs text-white flex items-center justify-between gap-2 text-left transition-colors shadow-sm"
+        className="w-full bg-zinc-950 border border-slate-700 hover:border-success rounded-xl px-3 py-2 text-xs text-white flex items-center justify-between gap-2 text-left transition-colors shadow-sm"
       >
-        <span className="truncate font-bold text-emerald-300">
+        <span className="truncate font-bold text-success">
           {value ? `${value} (${musclesMap[selectedExercise?.muscle || ''] || selectedExercise?.muscle || 'Thư viện'})` : '🔍 -- Tìm & Chọn bài tập --'}
         </span>
-        <span className="text-slate-400 text-[10px]">▼</span>
+        <span className="text-slate-400 text-xs">▼</span>
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[#0E1526] border border-cyan-500/50 rounded-2xl p-2.5 shadow-2xl z-[999] space-y-2 animate-in fade-in duration-150">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-inset border border-primary/50 rounded-2xl p-2.5 shadow-2xl z-[999] space-y-2 animate-in fade-in duration-150">
           <div className="relative">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs">🔍</span>
             <input
@@ -63,7 +63,7 @@ function SearchableExerciseSelect({
               placeholder="Gõ để tìm tên bài tập, dụng cụ, nhóm cơ..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-[#0B101D] border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00E5FF]"
+              className="w-full pl-8 pr-3 py-1.5 bg-inset border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-primary"
             />
           </div>
 
@@ -79,12 +79,12 @@ function SearchableExerciseSelect({
                   }}
                   className={`p-2 rounded-xl text-xs cursor-pointer transition-colors flex items-center justify-between gap-2 ${
                     ex.name === value 
-                      ? 'bg-emerald-950/80 text-[#00FF87] border border-emerald-500/40 font-bold' 
-                      : 'hover:bg-[#18233C] text-slate-200'
+                      ? 'bg-success-soft/80 text-success border border-success/40 font-bold' 
+                      : 'hover:bg-surface-elevated text-slate-200'
                   }`}
                 >
                   <span className="font-medium truncate">{ex.name}</span>
-                  <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded-full border border-cyan-500/30 shrink-0">
+                  <span className="text-xs text-primary bg-primary-soft/60 px-2 py-0.5 rounded-full border border-primary/30 shrink-0">
                     {musclesMap[ex.muscle] || ex.muscle}
                   </span>
                 </div>
@@ -136,7 +136,7 @@ function QuickAddExerciseBar({
   return (
     <div className="relative w-full" ref={wrapperRef}>
       <div className="relative">
-        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#00E5FF] text-xs">🔍</span>
+        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary text-xs">🔍</span>
         <input
           type="text"
           placeholder="🔍 Tìm nhanh bài tập để thêm (ví dụ: Squat, Bench, Cable, Dumbbell...)..."
@@ -146,7 +146,7 @@ function QuickAddExerciseBar({
             setSearch(e.target.value);
             setIsOpen(true);
           }}
-          className="w-full pl-9 pr-32 py-2.5 bg-[#0B101D] border border-cyan-500/50 focus:border-[#00E5FF] rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none shadow-lg transition-all"
+          className="w-full pl-9 pr-32 py-2.5 bg-inset border border-primary/50 focus:border-primary rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none shadow-lg transition-all"
         />
         {search && (
           <button
@@ -160,19 +160,19 @@ function QuickAddExerciseBar({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="absolute inset-y-1.5 right-1.5 px-3 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black text-xs rounded-lg transition-colors flex items-center gap-1 shadow-md"
+          className="absolute inset-y-1.5 right-1.5 px-3 bg-primary hover:bg-primary text-slate-950 font-black text-xs rounded-lg transition-colors flex items-center gap-1 shadow-md"
         >
           <span>📚</span> Xem Thư Viện
         </button>
       </div>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#0E1526] border border-cyan-500/60 rounded-2xl p-3 shadow-2xl z-[999] space-y-2 animate-in fade-in duration-150 max-h-64 overflow-y-auto custom-scrollbar">
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-inset border border-primary/60 rounded-2xl p-3 shadow-2xl z-[999] space-y-2 animate-in fade-in duration-150 max-h-64 overflow-y-auto custom-scrollbar">
           {!search.trim() ? (
             <div className="space-y-1">
-              <p className="text-[11px] font-bold text-slate-400 px-2 py-1 uppercase tracking-wider flex justify-between items-center">
+              <p className="text-xs font-bold text-slate-400 px-2 py-1 uppercase tracking-wider flex justify-between items-center">
                 <span>Tất cả bài tập trong Thư viện ({exercises.length}):</span>
-                <span className="text-[10px] text-cyan-400">Bấm để thêm bài vào ngày tập</span>
+                <span className="text-xs text-primary">Bấm để thêm bài vào ngày tập</span>
               </p>
               {exercises.map(ex => (
                 <div
@@ -182,14 +182,14 @@ function QuickAddExerciseBar({
                     setSearch('');
                     setIsOpen(false);
                   }}
-                  className="p-2 rounded-xl text-xs hover:bg-[#18233C] text-slate-200 cursor-pointer flex items-center justify-between gap-2 transition-colors group"
+                  className="p-2 rounded-xl text-xs hover:bg-surface-elevated text-slate-200 cursor-pointer flex items-center justify-between gap-2 transition-colors group"
                 >
-                  <span className="font-medium group-hover:text-[#00FF87] transition-colors">{ex.name}</span>
+                  <span className="font-medium group-hover:text-success transition-colors">{ex.name}</span>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded-full border border-cyan-500/30">
+                    <span className="text-xs text-primary bg-primary-soft/60 px-2 py-0.5 rounded-full border border-primary/30">
                       {musclesMap[ex.muscle] || ex.muscle}
                     </span>
-                    <span className="text-[10px] text-emerald-400 bg-emerald-950 px-2.5 py-0.5 rounded-lg border border-emerald-500/40 font-bold group-hover:scale-105 transition-transform">
+                    <span className="text-xs text-success bg-success-soft px-2.5 py-0.5 rounded-lg border border-success/40 font-bold group-hover:scale-105 transition-transform">
                       + Thêm
                     </span>
                   </div>
@@ -198,9 +198,9 @@ function QuickAddExerciseBar({
             </div>
           ) : filtered.length > 0 ? (
             <div className="space-y-1">
-              <p className="text-[11px] font-bold text-[#00FF87] px-2 py-1 uppercase tracking-wider flex justify-between items-center">
+              <p className="text-xs font-bold text-success px-2 py-1 uppercase tracking-wider flex justify-between items-center">
                 <span>Kết quả tìm kiếm ({filtered.length}):</span>
-                <span className="text-[10px] text-cyan-400">Bấm để thêm bài vào ngày tập</span>
+                <span className="text-xs text-primary">Bấm để thêm bài vào ngày tập</span>
               </p>
               {filtered.map(ex => (
                 <div
@@ -210,14 +210,14 @@ function QuickAddExerciseBar({
                     setSearch('');
                     setIsOpen(false);
                   }}
-                  className="p-2 rounded-xl text-xs hover:bg-[#18233C] text-slate-200 cursor-pointer flex items-center justify-between gap-2 transition-colors group"
+                  className="p-2 rounded-xl text-xs hover:bg-surface-elevated text-slate-200 cursor-pointer flex items-center justify-between gap-2 transition-colors group"
                 >
-                  <span className="font-medium group-hover:text-[#00FF87] transition-colors">{ex.name}</span>
+                  <span className="font-medium group-hover:text-success transition-colors">{ex.name}</span>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded-full border border-cyan-500/30">
+                    <span className="text-xs text-primary bg-primary-soft/60 px-2 py-0.5 rounded-full border border-primary/30">
                       {musclesMap[ex.muscle] || ex.muscle}
                     </span>
-                    <span className="text-[10px] text-emerald-400 bg-emerald-950 px-2.5 py-0.5 rounded-lg border border-emerald-500/40 font-bold group-hover:scale-105 transition-transform">
+                    <span className="text-xs text-success bg-success-soft px-2.5 py-0.5 rounded-lg border border-success/40 font-bold group-hover:scale-105 transition-transform">
                       + Thêm
                     </span>
                   </div>
@@ -499,7 +499,7 @@ export default function RoutineManagement() {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <div className="text-6xl mb-4">⛔</div>
-        <h1 className="text-2xl font-bold text-rose-500 mb-2">{authError}</h1>
+        <h1 className="text-2xl font-bold text-destructive mb-2">{authError}</h1>
         <button onClick={() => router.push('/')} className="mt-6 px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">Về trang chủ</button>
       </div>
     );
@@ -512,7 +512,7 @@ export default function RoutineManagement() {
         <p className="text-zinc-400 mt-2">Tạo và chỉnh sửa các lịch tập mẫu (Templates) để cung cấp cho người dùng hệ thống.</p>
       </div>
 
-      <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col flex-1 min-h-0">
+      <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col flex-1 min-h-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <h2 className="text-xl font-bold text-white">Danh sách Lịch tập ({filteredRoutines.length})</h2>
           
@@ -522,11 +522,11 @@ export default function RoutineManagement() {
               placeholder="Tìm kiếm mã hoặc tên..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#00E5FF] transition-colors w-full sm:w-[250px]"
+              className="bg-inset border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full sm:w-[250px]"
             />
             <button 
               onClick={handleOpenAdd}
-              className="px-4 py-2 bg-[#00E5FF] text-slate-950 font-extrabold rounded-xl hover:bg-cyan-300 transition-colors whitespace-nowrap text-sm shadow-md shadow-[#00E5FF]/20"
+              className="px-4 py-2 bg-primary text-slate-950 font-extrabold rounded-xl hover:bg-primary transition-colors whitespace-nowrap text-sm shadow-md shadow-primary/20"
             >
               + Thêm Mới
             </button>
@@ -534,7 +534,7 @@ export default function RoutineManagement() {
         </div>
         
         {loading ? (
-          <div className="flex-1 flex justify-center items-center p-8"><div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin"></div></div>
+          <div className="flex-1 flex justify-center items-center p-8"><div className="w-8 h-8 border-4 border-destructive border-t-transparent rounded-full animate-spin"></div></div>
         ) : (
           <div className="flex-1 overflow-auto custom-scrollbar pr-2">
             <table className="w-full text-left border-collapse">
@@ -549,9 +549,9 @@ export default function RoutineManagement() {
               <tbody>
                 {filteredRoutines.length > 0 ? (
                   filteredRoutines.map((routine) => (
-                    <tr key={routine.id} className="border-b border-slate-800/80 hover:bg-[#18233C]/50 transition-colors group">
+                    <tr key={routine.id} className="border-b border-slate-800/80 hover:bg-surface-elevated/50 transition-colors group">
                       <td className="p-4">
-                        <span className="bg-cyan-950 text-[#00E5FF] border border-cyan-500/30 px-3 py-1 rounded-full text-xs font-mono font-bold">
+                        <span className="bg-primary-soft text-primary border border-primary/30 px-3 py-1 rounded-full text-xs font-mono font-bold">
                           {routine.id}
                         </span>
                       </td>
@@ -565,13 +565,13 @@ export default function RoutineManagement() {
                         <div className="flex items-center justify-end gap-3">
                           <button 
                             onClick={() => handleOpenEdit(routine)} 
-                            className="text-[#00E5FF] hover:text-cyan-300 text-sm font-bold"
+                            className="text-primary hover:text-primary text-sm font-bold"
                           >
                             Sửa
                           </button>
                           <button 
                             onClick={() => handleDelete(routine.id)} 
-                            className="text-rose-400 hover:text-rose-300 text-sm font-medium"
+                            className="text-destructive hover:text-destructive text-sm font-medium"
                           >
                             Xóa
                           </button>
@@ -596,7 +596,7 @@ export default function RoutineManagement() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => !saving && setIsModalOpen(false)}></div>
-          <div className="relative bg-[#131B2E] border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+          <div className="relative bg-card border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             
             <div className="flex justify-between items-start mb-6 border-b border-slate-800 pb-4 shrink-0">
               <div>
@@ -619,7 +619,7 @@ export default function RoutineManagement() {
                       value={formData.id}
                       onChange={(e) => setFormData({...formData, id: e.target.value})}
                       placeholder="VD: ppl_6_days"
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500 disabled:opacity-50"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-destructive disabled:opacity-50"
                     />
                   </div>
                   <div>
@@ -630,7 +630,7 @@ export default function RoutineManagement() {
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
                       placeholder="VD: Push Pull Legs 6 Ngày"
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-destructive"
                     />
                   </div>
                 </div>
@@ -642,7 +642,7 @@ export default function RoutineManagement() {
                     <button 
                       type="button" 
                       onClick={addDay}
-                      className="text-xs px-3 py-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 font-bold rounded-lg transition-colors"
+                      className="text-xs px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 font-bold rounded-lg transition-colors"
                     >
                       + Thêm Ngày Mới
                     </button>
@@ -656,7 +656,7 @@ export default function RoutineManagement() {
                           <select 
                             value={dayObj.day}
                             onChange={(e) => updateDay(dayIndex, 'day', e.target.value)}
-                            className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500 w-1/3"
+                            className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-destructive w-1/3"
                             required
                           >
                             <option value="" disabled>-- Chọn Thứ --</option>
@@ -676,26 +676,26 @@ export default function RoutineManagement() {
                             placeholder="Tên buổi tập (VD: Push Day)"
                             value={dayObj.name}
                             onChange={(e) => updateDay(dayIndex, 'name', e.target.value)}
-                            className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500 flex-1"
+                            className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-destructive flex-1"
                             required
                           />
                         </div>
                         <button 
                           type="button"
                           onClick={() => removeDay(dayIndex)}
-                          className="text-zinc-500 hover:text-rose-400 text-sm font-medium transition-colors whitespace-nowrap"
+                          className="text-zinc-500 hover:text-destructive text-sm font-medium transition-colors whitespace-nowrap"
                         >
                           Xóa Ngày
                         </button>
                       </div>
 
                       {/* Auto-Calculated Target Muscle Groups */}
-                      <div className="pl-4 border-l-2 border-cyan-500/30 space-y-2">
+                      <div className="pl-4 border-l-2 border-primary/30 space-y-2">
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold text-[#00E5FF] uppercase tracking-wider flex items-center gap-1.5">
+                          <p className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
                             <span>🎯</span> Target Nhóm Cơ (Tự Động Tính Theo Bài Tập)
                           </p>
-                          <span className="text-[10px] text-cyan-400 font-bold bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded-md">
+                          <span className="text-xs text-primary font-bold bg-primary-soft/60 border border-primary/30 px-2 py-0.5 rounded-md">
                             ⚡ Tự động tổng hợp
                           </span>
                         </div>
@@ -706,9 +706,9 @@ export default function RoutineManagement() {
                             return (
                               <div className="flex flex-wrap gap-2 pt-1">
                                 {autoTargets.map((tgt: any) => (
-                                  <div key={tgt.id} className="px-3 py-1.5 bg-[#0B101D] border border-cyan-500/30 rounded-xl text-xs flex items-center gap-2 shadow-sm">
+                                  <div key={tgt.id} className="px-3 py-1.5 bg-inset border border-primary/30 rounded-xl text-xs flex items-center gap-2 shadow-sm">
                                     <span className="text-white font-extrabold">{tgt.label}</span>
-                                    <span className="px-2 py-0.5 bg-cyan-950 text-[#00E5FF] border border-cyan-500/40 rounded-full font-black text-[11px]">
+                                    <span className="px-2 py-0.5 bg-primary-soft text-primary border border-primary/40 rounded-full font-black text-xs">
                                       {tgt.count} bài
                                     </span>
                                   </div>
@@ -725,10 +725,10 @@ export default function RoutineManagement() {
                       </div>
 
                       {/* Prescribed Exercises from Catalog */}
-                      <div className="pl-4 border-l-2 border-emerald-500/30 space-y-3 pt-2">
+                      <div className="pl-4 border-l-2 border-success/30 space-y-3 pt-2">
                         <div className="flex justify-between items-center flex-wrap gap-2">
-                          <p className="text-xs font-bold text-[#00FF87] uppercase tracking-wider">Danh Sách Bài Tập Mẫu (Kèm chỉ định từ Thư viện)</p>
-                          <span className="text-[10px] text-slate-400">Đã đồng bộ với Thư viện bài tập</span>
+                          <p className="text-xs font-bold text-success uppercase tracking-wider">Danh Sách Bài Tập Mẫu (Kèm chỉ định từ Thư viện)</p>
+                          <span className="text-xs text-slate-400">Đã đồng bộ với Thư viện bài tập</span>
                         </div>
 
                         {/* Quick Search & Add Exercise Input Bar */}
@@ -768,7 +768,7 @@ export default function RoutineManagement() {
                                   className="w-16 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-center text-white font-bold"
                                 />
 
-                                <span className="text-amber-400 font-semibold">RIR:</span>
+                                <span className="text-warning font-semibold">RIR:</span>
                                 <input
                                   type="text"
                                   value={exObj.rir || '1'}
@@ -779,7 +779,7 @@ export default function RoutineManagement() {
                                 <button
                                   type="button"
                                   onClick={() => removeExerciseFromDay(dayIndex, exIndex)}
-                                  className="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs font-bold"
+                                  className="text-destructive hover:text-destructive px-2 py-1 text-xs font-bold"
                                 >
                                   Xóa
                                 </button>
@@ -791,7 +791,7 @@ export default function RoutineManagement() {
                         <button
                           type="button"
                           onClick={() => addExerciseToDay(dayIndex)}
-                          className="text-xs px-3 py-1.5 border border-dashed border-emerald-500/40 text-emerald-400 hover:border-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors w-full font-bold"
+                          className="text-xs px-3 py-1.5 border border-dashed border-success/40 text-success hover:border-success hover:bg-success/10 rounded-lg transition-colors w-full font-bold"
                         >
                           + Thêm Bài Tập Chỉ Định Từ Thư Viện
                         </button>
@@ -816,7 +816,7 @@ export default function RoutineManagement() {
                 type="button"
                 disabled={saving}
                 onClick={() => setIsModalOpen(false)}
-                className="px-6 py-2.5 bg-[#18233C] hover:bg-slate-800 text-slate-300 font-bold rounded-xl transition-colors disabled:opacity-50"
+                className="px-6 py-2.5 bg-surface-elevated hover:bg-slate-800 text-slate-300 font-bold rounded-xl transition-colors disabled:opacity-50"
               >
                 Hủy
               </button>
@@ -824,7 +824,7 @@ export default function RoutineManagement() {
                 type="submit"
                 form="routine-form"
                 disabled={saving}
-                className="px-6 py-2.5 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-extrabold rounded-xl transition-colors disabled:opacity-50 shadow-md shadow-[#00E5FF]/20"
+                className="px-6 py-2.5 bg-primary hover:bg-primary text-slate-950 font-extrabold rounded-xl transition-colors disabled:opacity-50 shadow-md shadow-primary/20"
               >
                 {saving ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Lưu Lịch Tập')}
               </button>

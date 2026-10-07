@@ -24,7 +24,7 @@ export default function MuscleTargetsBar({
   return (
     <>
       <div>
-        <p className="text-[11px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2.5">Lọc thư viện bài tập theo nhóm cơ:</p>
+        <p className="text-xs sm:text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2.5">Lọc thư viện bài tập theo nhóm cơ:</p>
         {effectiveTargets.length > 0 && activeRoutineId !== 'none' ? (
           <div className="flex flex-wrap gap-2">
             {effectiveTargets.map((target: any, index: number) => {
@@ -38,24 +38,24 @@ export default function MuscleTargetsBar({
                 <button
                   key={`${target.id}-${index}`}
                   onClick={() => setSelectedMuscle(selectedMuscle === normTargetId ? null : normTargetId)}
-                  className={`px-3 py-1.5 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-bold rounded-xl transition-all border flex items-center gap-1.5 sm:gap-2 ${selectedMuscle === normTargetId
-                      ? 'bg-[#00E5FF] text-slate-950 border-[#00E5FF] shadow-lg shadow-[#00E5FF]/20'
+                  className={`px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs sm:text-xs font-bold rounded-xl transition-all border flex items-center gap-1.5 sm:gap-2 ${selectedMuscle === normTargetId
+                      ? 'bg-primary text-slate-950 border-primary shadow-lg shadow-primary/20'
                       : isExceeded
-                        ? 'bg-rose-950/40 text-rose-300 border-rose-500/50 hover:bg-rose-900/50'
+                        ? 'bg-destructive-soft/40 text-destructive border-destructive/50 hover:bg-destructive-soft/50'
                         : isMatched
-                          ? 'bg-emerald-950/40 text-[#00FF87] border-emerald-500/40 hover:bg-emerald-900/50'
-                          : 'bg-[#18233C] text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
+                          ? 'bg-success-soft/40 text-success border-success/40 hover:bg-success-soft/50'
+                          : 'bg-surface-elevated text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
                     }`}
                 >
                   <span>{MUSCLE_NAMES_VI[normTargetId] || MUSCLE_NAMES_VI[target.id] || target.id}</span>
 
-                  <span className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-black ${selectedMuscle === normTargetId
-                      ? 'bg-slate-950 text-[#00E5FF]'
+                  <span className={`text-xs sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-black ${selectedMuscle === normTargetId
+                      ? 'bg-slate-950 text-primary'
                       : isExceeded
-                        ? 'bg-rose-500/30 text-rose-300 border border-rose-500/50'
+                        ? 'bg-destructive/30 text-destructive border border-destructive/50'
                         : isMatched
-                          ? 'bg-emerald-500/30 text-[#00FF87] border border-emerald-500/40'
-                          : 'bg-[#0B101D] text-slate-400'
+                          ? 'bg-success/30 text-success border border-success/40'
+                          : 'bg-inset text-slate-400'
                     }`}>
                     {currentCount}/{targetCount} Bài {isExceeded ? '⚠️' : isMatched ? '✓' : ''}
                   </span>
@@ -65,7 +65,7 @@ export default function MuscleTargetsBar({
           </div>
         ) : (
           sortedSchedule[safeDayIndex]?.name === 'Nghỉ ngơi' ? (
-            <p className="text-[#00FF87] font-bold text-sm">Hôm nay là ngày nghỉ, hãy để cơ thể phục hồi nhé!</p>
+            <p className="text-success font-bold text-sm">Hôm nay là ngày nghỉ, hãy để cơ thể phục hồi nhé!</p>
           ) : (
             <p className="text-xs text-slate-400">Hôm nay không có nhóm cơ nào được lên lịch.</p>
           )

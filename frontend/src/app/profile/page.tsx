@@ -185,7 +185,7 @@ export default function Profile() {
                 </h2>
                 <div className="grid grid-cols-2 gap-3 sm:gap-6">
                   <div>
-                    <label htmlFor="profile-name" className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Họ và tên</label>
+                    <label htmlFor="profile-name" className="block text-xs sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Họ và tên</label>
                     <input
                       id="profile-name"
                       type="text"
@@ -198,7 +198,7 @@ export default function Profile() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tên đăng nhập</label>
+                    <label className="block text-xs sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tên đăng nhập</label>
                     <input
                       type="text"
                       value={formData.username}
@@ -207,7 +207,7 @@ export default function Profile() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Email</label>
+                    <label className="block text-xs sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Email</label>
                     <input
                       type="email"
                       value={formData.email}
@@ -227,7 +227,7 @@ export default function Profile() {
                 </h2>
                 <div className="grid grid-cols-2 gap-3 sm:gap-6">
                   <div>
-                    <label htmlFor="profile-gender" className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Giới tính</label>
+                    <label htmlFor="profile-gender" className="block text-xs sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Giới tính</label>
                     <select
                       id="profile-gender"
                       name="gender"
@@ -242,7 +242,7 @@ export default function Profile() {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="profile-age" className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tuổi</label>
+                    <label htmlFor="profile-age" className="block text-xs sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tuổi</label>
                     <input
                       id="profile-age"
                       type="number"
@@ -257,7 +257,7 @@ export default function Profile() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="profile-height" className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Chiều cao (cm)</label>
+                    <label htmlFor="profile-height" className="block text-xs sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Chiều cao (cm)</label>
                     <input
                       id="profile-height"
                       type="number"
@@ -272,7 +272,7 @@ export default function Profile() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="profile-weight" className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Cân nặng (kg)</label>
+                    <label htmlFor="profile-weight" className="block text-xs sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Cân nặng (kg)</label>
                     <input
                       id="profile-weight"
                       type="number"
@@ -287,7 +287,7 @@ export default function Profile() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label htmlFor="profile-goal" className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mục tiêu tập luyện</label>
+                    <label htmlFor="profile-goal" className="block text-xs sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mục tiêu tập luyện</label>
                     <select
                       id="profile-goal"
                       name="goal"

@@ -147,19 +147,19 @@ export default function GoogleTranslate() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 bg-[#131B2E] border border-slate-800 hover:border-cyan-500/50 rounded-xl px-3 py-1.5 shadow-sm text-xs font-bold text-[#00E5FF] transition-all"
+        className="flex items-center gap-2 bg-card border border-slate-800 hover:border-primary/50 rounded-xl px-3 py-1.5 shadow-sm text-xs font-bold text-primary transition-all"
       >
         <span className="text-sm">🌐</span>
         <span>{selectedLang.flag} {selectedLang.name}</span>
-        <span className="text-[10px] text-slate-400">▼</span>
+        <span className="text-xs text-slate-400">▼</span>
       </button>
 
       {/* Searchable Dropdown Modal Overlay */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-[#131B2E]/95 backdrop-blur-xl border border-cyan-500/30 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in duration-150">
+        <div className="absolute right-0 mt-2 w-64 bg-card/95 backdrop-blur-xl border border-primary/30 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in duration-150">
           
           {/* Search Bar Input Header */}
-          <div className="p-2.5 border-b border-slate-800 bg-[#0B101D]">
+          <div className="p-2.5 border-b border-slate-800 bg-inset">
             <div className="relative">
               <span className="absolute inset-y-0 left-3 flex items-center text-xs text-slate-400">
                 🔍
@@ -170,7 +170,7 @@ export default function GoogleTranslate() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Tìm kiếm ngôn ngữ..."
                 autoFocus
-                className="w-full bg-[#18233C] text-xs text-white placeholder-slate-400 pl-8 pr-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-[#00E5FF] font-medium"
+                className="w-full bg-surface-elevated text-xs text-white placeholder-slate-400 pl-8 pr-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-primary font-medium"
               />
             </div>
           </div>
@@ -186,15 +186,15 @@ export default function GoogleTranslate() {
                     onClick={() => handleSelectLanguage(lang)}
                     className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
                       isSelected
-                        ? 'bg-[#00E5FF] text-slate-950 font-extrabold'
-                        : 'text-slate-200 hover:bg-[#18233C] hover:text-[#00E5FF]'
+                        ? 'bg-primary text-slate-950 font-extrabold'
+                        : 'text-slate-200 hover:bg-surface-elevated hover:text-primary'
                     }`}
                   >
                     <span className="flex items-center gap-2">
                       <span className="text-sm">{lang.flag}</span>
                       <span>{lang.name}</span>
                     </span>
-                    <span className={`text-[10px] ${isSelected ? 'text-slate-950 font-black' : 'text-slate-400'}`}>
+                    <span className={`text-xs ${isSelected ? 'text-slate-950 font-black' : 'text-slate-400'}`}>
                       {lang.native}
                     </span>
                   </button>

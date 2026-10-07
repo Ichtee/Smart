@@ -120,7 +120,7 @@ export default function UserManagement() {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <div className="text-6xl mb-4">⛔</div>
-        <h1 className="text-2xl font-bold text-rose-500 mb-2">{authError}</h1>
+        <h1 className="text-2xl font-bold text-destructive mb-2">{authError}</h1>
         <button onClick={() => router.push('/')} className="mt-6 px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">Về trang chủ</button>
       </div>
     );
@@ -133,7 +133,7 @@ export default function UserManagement() {
         <p className="text-zinc-400 mt-2">Theo dõi và quản lý tài khoản người dùng trong hệ thống.</p>
       </div>
 
-      <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col flex-1 min-h-0">
+      <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col flex-1 min-h-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <h2 className="text-xl font-bold text-white">Tổng số tài khoản ({filteredUsers.length})</h2>
           
@@ -143,13 +143,13 @@ export default function UserManagement() {
               placeholder="Tìm kiếm tên, email, username..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-[#0B101D] border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#00E5FF] transition-colors w-full sm:w-[300px]"
+              className="bg-inset border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full sm:w-[300px]"
             />
           </div>
         </div>
         
         {loading ? (
-          <div className="flex-1 flex justify-center items-center p-8"><div className="w-8 h-8 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div></div>
+          <div className="flex-1 flex justify-center items-center p-8"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>
         ) : (
           <div className="flex-1 overflow-auto custom-scrollbar pr-2">
             <table className="w-full text-left border-collapse">
@@ -165,10 +165,10 @@ export default function UserManagement() {
               <tbody>
                 {filteredUsers.length > 0 ? (
                   filteredUsers.map((user) => (
-                    <tr key={user._id} className="border-b border-slate-800/80 hover:bg-[#18233C]/50 transition-colors group">
+                    <tr key={user._id} className="border-b border-slate-800/80 hover:bg-surface-elevated/50 transition-colors group">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm uppercase ${user.role === 'admin' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-cyan-500/20 text-[#00E5FF] border border-cyan-500/30'}`}>
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm uppercase ${user.role === 'admin' ? 'bg-destructive/20 text-destructive border border-destructive/30' : 'bg-primary/20 text-primary border border-primary/30'}`}>
                             {user.name ? user.name.charAt(0) : '?'}
                           </div>
                           <div>
@@ -181,7 +181,7 @@ export default function UserManagement() {
                         <select 
                           value={user.role} 
                           onChange={(e) => handleUpdateField(user._id, 'role', e.target.value)}
-                          className={`bg-zinc-900 border rounded-lg p-1.5 text-xs font-semibold focus:outline-none ${user.role === 'admin' ? 'border-rose-500/20 text-rose-400' : 'border-zinc-700 text-zinc-300'}`}
+                          className={`bg-zinc-900 border rounded-lg p-1.5 text-xs font-semibold focus:outline-none ${user.role === 'admin' ? 'border-destructive/20 text-destructive' : 'border-zinc-700 text-zinc-300'}`}
                         >
                           <option value="user">User</option>
                           <option value="admin">Admin</option>
@@ -191,7 +191,7 @@ export default function UserManagement() {
                         <select 
                           value={user.isEmailVerified ? 'true' : 'false'} 
                           onChange={(e) => handleUpdateField(user._id, 'isEmailVerified', e.target.value === 'true')}
-                          className={`bg-zinc-900 border rounded-lg p-1.5 text-xs font-semibold focus:outline-none ${user.isEmailVerified ? 'border-emerald-500/20 text-emerald-400' : 'border-zinc-700 text-zinc-500'}`}
+                          className={`bg-zinc-900 border rounded-lg p-1.5 text-xs font-semibold focus:outline-none ${user.isEmailVerified ? 'border-success/20 text-success' : 'border-zinc-700 text-zinc-500'}`}
                         >
                           <option value="true">Đã xác thực</option>
                           <option value="false">Chưa xác thực</option>
@@ -203,13 +203,13 @@ export default function UserManagement() {
                       <td className="p-4 text-right whitespace-nowrap flex justify-end gap-4 items-center h-full pt-6">
                         <button 
                           onClick={() => confirmDeleteUser(user)} 
-                          className="text-rose-400 hover:text-rose-300 text-sm font-medium"
+                          className="text-destructive hover:text-destructive text-sm font-medium"
                         >
                           Xóa
                         </button>
                         <button 
                           onClick={() => openModal(user)} 
-                          className="text-cyan-400 hover:text-cyan-300 text-sm font-medium"
+                          className="text-primary hover:text-primary text-sm font-medium"
                         >
                           Chi tiết
                         </button>
@@ -233,7 +233,7 @@ export default function UserManagement() {
       {selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setSelectedUser(null)}></div>
-          <div className="relative bg-[#131B2E] border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-lg">
+          <div className="relative bg-card border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-lg">
             
             <div className="flex justify-between items-start mb-6 border-b border-slate-800 pb-4">
               <div>
@@ -246,7 +246,7 @@ export default function UserManagement() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
               {/* Profile Info */}
               <div className="space-y-4">
-                <h4 className="text-rose-400 font-semibold mb-2">Hồ sơ cá nhân</h4>
+                <h4 className="text-destructive font-semibold mb-2">Hồ sơ cá nhân</h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="text-zinc-500">Họ và Tên:</div>
                   <div className="text-white font-medium">{selectedUser.name}</div>
@@ -264,7 +264,7 @@ export default function UserManagement() {
 
               {/* Physical Info */}
               <div className="space-y-4">
-                <h4 className="text-cyan-400 font-semibold mb-2">Chỉ số Cơ thể</h4>
+                <h4 className="text-primary font-semibold mb-2">Chỉ số Cơ thể</h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="text-zinc-500">Tuổi:</div>
                   <div className="text-white font-medium">{selectedUser.age || '--'}</div>
@@ -299,21 +299,21 @@ export default function UserManagement() {
             onClick={() => popup.type !== 'confirm' && setPopup(null)}
           ></div>
           
-          <div className={`relative bg-[#131B2E] border ${
+          <div className={`relative bg-card border ${
             popup.type === 'success' 
-              ? 'border-emerald-500/50 shadow-emerald-500/10' 
+              ? 'border-success/50 shadow-success/10' 
               : popup.type === 'error' 
-                ? 'border-rose-500/50 shadow-rose-500/10' 
-                : 'border-amber-500/50 shadow-amber-500/10'
+                ? 'border-destructive/50 shadow-destructive/10' 
+                : 'border-warning/50 shadow-warning/10'
           } rounded-3xl p-6 sm:p-8 shadow-2xl max-w-md w-full flex flex-col items-center text-center space-y-4 animate-in zoom-in-95 duration-200`}>
             
             {/* Icon Badge */}
             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-lg border ${
               popup.type === 'success'
-                ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-emerald-900/40'
+                ? 'bg-success-soft/80 text-success border-success/40 shadow-success-soft/40'
                 : popup.type === 'error'
-                  ? 'bg-rose-950/80 text-rose-400 border-rose-500/40 shadow-rose-900/40'
-                  : 'bg-amber-950/80 text-amber-400 border-amber-500/40 shadow-amber-900/40'
+                  ? 'bg-destructive-soft/80 text-destructive border-destructive/40 shadow-destructive-soft/40'
+                  : 'bg-warning-soft/80 text-warning border-warning/40 shadow-warning-soft/40'
             }`}>
               {popup.type === 'success' ? '✅' : popup.type === 'error' ? '❌' : '⚠️'}
             </div>
@@ -330,7 +330,7 @@ export default function UserManagement() {
                 <>
                   <button
                     onClick={() => setPopup(null)}
-                    className="flex-1 py-3 bg-[#18233C] hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition"
+                    className="flex-1 py-3 bg-surface-elevated hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition"
                   >
                     Hủy
                   </button>
@@ -338,7 +338,7 @@ export default function UserManagement() {
                     onClick={() => {
                       if (popup.onConfirm) popup.onConfirm();
                     }}
-                    className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-900/40 transition active:scale-95 uppercase tracking-wider"
+                    className="flex-1 py-3 bg-destructive hover:bg-destructive text-white font-black text-xs rounded-xl shadow-lg shadow-destructive-soft/40 transition active:scale-95 uppercase tracking-wider"
                   >
                     {popup.confirmText || 'Xác nhận'}
                   </button>
@@ -348,8 +348,8 @@ export default function UserManagement() {
                   onClick={() => setPopup(null)}
                   className={`w-full py-3 font-black text-xs rounded-xl transition shadow-lg active:scale-95 uppercase tracking-wider ${
                     popup.type === 'success'
-                      ? 'bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 shadow-cyan-500/20'
-                      : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20'
+                      ? 'bg-primary hover:bg-primary text-slate-950 shadow-primary/20'
+                      : 'bg-destructive hover:bg-destructive text-white shadow-destructive/20'
                   }`}
                 >
                   Đồng Ý / Đóng

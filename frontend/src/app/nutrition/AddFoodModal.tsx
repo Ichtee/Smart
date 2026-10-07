@@ -165,22 +165,22 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
     <>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => onClose()}></div>
-          <div className="relative bg-[#131B2E] border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-card border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <span>➕</span> Thêm món vào <span className="text-[#00E5FF]">{category}</span>
+                <span>➕</span> Thêm món vào <span className="text-primary">{category}</span>
               </h3>
               <button onClick={() => onClose()} className="text-slate-500 hover:text-white text-xl font-bold">&times;</button>
             </div>
 
             {/* Modal Tabs */}
-            <div className="grid grid-cols-2 gap-2 mb-4 p-1 bg-[#0B101D] border border-slate-800 rounded-xl">
+            <div className="grid grid-cols-2 gap-2 mb-4 p-1 bg-inset border border-slate-800 rounded-xl">
               <button
                 type="button"
                 onClick={() => setActiveModalTab('search')}
                 className={`py-2 text-xs font-bold rounded-lg transition-all ${
                   activeModalTab === 'search'
-                    ? 'bg-[#00E5FF] text-slate-950 shadow-md'
+                    ? 'bg-primary text-slate-950 shadow-md'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -191,12 +191,12 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                 onClick={() => setActiveModalTab('my_foods')}
                 className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                   activeModalTab === 'my_foods'
-                    ? 'bg-[#00E5FF] text-slate-950 shadow-md'
+                    ? 'bg-primary text-slate-950 shadow-md'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <span>⭐ Món của tôi</span>
-                <span className="px-1.5 py-0.2 bg-slate-800 text-slate-200 text-[10px] rounded-full">
+                <span className="px-1.5 py-0.2 bg-slate-800 text-slate-200 text-xs rounded-full">
                   {dbFoods.filter(f => f.isCustom).length}
                 </span>
               </button>
@@ -216,14 +216,14 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
               <button
                 type="button"
                 onClick={() => setIsBarcodeModalOpen(true)}
-                className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-md shadow-emerald-500/20 active:scale-95 cursor-pointer mb-2"
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-success to-teal-400 text-slate-950 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-md shadow-success/20 active:scale-95 cursor-pointer mb-2"
               >
                 <span>📷</span> Quét mã vạch tự động
               </button>
 
               <div className="relative flex py-1 items-center">
                 <div className="flex-grow border-t border-slate-800"></div>
-                <span className="flex-shrink mx-3 text-[10px] text-slate-500 uppercase font-bold">hoặc nhập thủ công</span>
+                <span className="flex-shrink mx-3 text-xs text-slate-500 uppercase font-bold">hoặc nhập thủ công</span>
                 <div className="flex-grow border-t border-slate-800"></div>
               </div>
               
@@ -231,7 +231,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
               <div className="relative">
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
                   <span>Tên món ăn *</span>
-                  <span className="text-[10px] text-[#00E5FF] font-semibold">🔍 Tìm từ cơ sở dữ liệu</span>
+                  <span className="text-xs text-primary font-semibold">🔍 Tìm từ cơ sở dữ liệu</span>
                 </label>
                 <input
                   type="text"
@@ -244,12 +244,12 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                     setShowDbDropdown(true);
                   }}
                   placeholder="VD: Phở bò, Ức gà, Cơm tấm..."
-                  className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
+                  className="w-full bg-inset border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-primary"
                 />
 
                 {/* Live Food Database Dropdown Results */}
                 {showDbDropdown && dbFoods.length > 0 && foodName.trim() && (
-                  <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-[#131B2E] border border-slate-700 rounded-2xl shadow-2xl max-h-48 overflow-y-auto divide-y divide-slate-800">
+                  <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-card border border-slate-700 rounded-2xl shadow-2xl max-h-48 overflow-y-auto divide-y divide-slate-800">
                     {dbFoods
                       .filter(f => f.name.toLowerCase().includes(foodName.toLowerCase().trim()))
                       .slice(0, 8)
@@ -265,16 +265,16 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                             if (item.image) setFoodImage(item.image);
                             setShowDbDropdown(false);
                           }}
-                          className="p-3 hover:bg-[#18233C] cursor-pointer transition-colors flex items-center justify-between text-xs"
+                          className="p-3 hover:bg-surface-elevated cursor-pointer transition-colors flex items-center justify-between text-xs"
                         >
                           <div className="flex items-center gap-2.5">
                             <span className="text-base">🥗</span>
                             <div>
                               <p className="font-bold text-white">{item.name}</p>
-                              <p className="text-[10px] text-slate-400 font-medium">{item.servingSize}</p>
+                              <p className="text-xs text-slate-400 font-medium">{item.servingSize}</p>
                             </div>
                           </div>
-                          <span className="font-black text-[#00E5FF]">{item.calories} kcal</span>
+                          <span className="font-black text-primary">{item.calories} kcal</span>
                         </div>
                       ))}
                   </div>
@@ -291,7 +291,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                     value={servingSize}
                     onChange={(e) => setServingSize(e.target.value)}
                     placeholder="VD: Gói 200g, 100g, 1 tô..."
-                    className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
+                    className="w-full bg-inset border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-primary"
                   />
                 </div>
                 <div>
@@ -304,17 +304,17 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                     value={baseCalories}
                     onChange={(e) => { setBaseCalories(e.target.value); setBaseMacros(null); }}
                     placeholder="VD: 400"
-                    className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
+                    className="w-full bg-inset border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-primary"
                   />
                 </div>
               </div>
 
               {/* 3. Bộ nhân số lượng (Portion Multiplier) */}
-              <div className="bg-[#0B101D] p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+              <div className="bg-inset p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Số lượng / Khẩu phần ăn</label>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-slate-400 font-medium">Hệ số:</span>
+                    <span className="text-xs text-slate-400 font-medium">Hệ số:</span>
                     <input
                       type="number"
                       step="0.1"
@@ -322,7 +322,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                       max="50"
                       value={portionMultiplier}
                       onChange={(e) => setPortionMultiplier(e.target.value)}
-                      className="w-14 bg-[#131B2E] border border-slate-700 text-[#00E5FF] font-black text-center text-xs py-1 rounded-lg focus:outline-none focus:border-[#00E5FF]"
+                      className="w-14 bg-card border border-slate-700 text-primary font-black text-center text-xs py-1 rounded-lg focus:outline-none focus:border-primary"
                     />
                   </div>
                 </div>
@@ -344,8 +344,8 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                         onClick={() => setPortionMultiplier(btn.val.toString())}
                         className={`py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-[#00E5FF] text-slate-950 shadow-md shadow-[#00E5FF]/20'
-                            : 'bg-[#18233C] text-slate-300 hover:bg-slate-800 border border-slate-800'
+                            ? 'bg-primary text-slate-950 shadow-md shadow-primary/20'
+                            : 'bg-surface-elevated text-slate-300 hover:bg-slate-800 border border-slate-800'
                         }`}
                       >
                         {btn.label}
@@ -356,26 +356,26 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
               </div>
 
               {/* 4. Tổng Calo tính toán tự động */}
-              <div className="p-3.5 bg-[#0E1526] border border-[#00E5FF]/40 rounded-2xl flex items-center justify-between shadow-sm">
+              <div className="p-3.5 bg-inset border border-primary/40 rounded-2xl flex items-center justify-between shadow-sm">
                 <div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">TỔNG CALO NẠP VÀO</span>
+                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">TỔNG CALO NẠP VÀO</span>
                   <span className="text-xs text-slate-300 font-medium">
                     {portionMultiplier || '1'} x ({servingSize || '1 phần'})
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-xl font-black text-[#00E5FF]">{computedTotalCalories}</span>
+                  <span className="text-xl font-black text-primary">{computedTotalCalories}</span>
                   <span className="text-xs text-slate-400 font-bold ml-1">kcal</span>
                 </div>
               </div>
 
               {/* Checkbox: Save to My Custom Foods */}
-              <label className="flex items-center gap-2.5 p-3 bg-[#0B101D] border border-slate-800/80 rounded-xl cursor-pointer hover:border-slate-700 transition">
+              <label className="flex items-center gap-2.5 p-3 bg-inset border border-slate-800/80 rounded-xl cursor-pointer hover:border-slate-700 transition">
                 <input
                   type="checkbox"
                   checked={saveAsCustomFood}
                   onChange={(e) => setSaveAsCustomFood(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#00E5FF] bg-slate-900 border-slate-700 focus:ring-0 cursor-pointer"
+                  className="w-4 h-4 rounded text-primary bg-slate-900 border-slate-700 focus:ring-0 cursor-pointer"
                 />
                 <span className="text-xs text-slate-300 font-semibold flex items-center gap-1.5">
                   <span>⭐</span> Lưu vào <b className="text-white font-bold">"Món ăn của tôi"</b> để dùng lại sau
@@ -391,24 +391,24 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                     <button
                       type="button"
                       onClick={() => setFoodImage('')}
-                      className="absolute top-2 right-2 bg-rose-500/80 hover:bg-rose-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-md transition-all"
+                      className="absolute top-2 right-2 bg-destructive/80 hover:bg-destructive text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-md transition-all"
                       title="Xóa ảnh"
                     >
                       &times;
                     </button>
-                    <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] text-emerald-400 font-bold flex items-center gap-1 border border-emerald-500/30">
+                    <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs text-success font-bold flex items-center gap-1 border border-success/30">
                       <span>✓</span> Đã tải lên ImgBB
                     </div>
                   </div>
                 ) : uploadingImage ? (
-                  <div className="flex items-center justify-center gap-2 text-xs font-bold text-[#00E5FF] p-6 bg-[#0B101D] border border-slate-800 rounded-2xl">
-                    <div className="w-4 h-4 border-2 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
+                  <div className="flex items-center justify-center gap-2 text-xs font-bold text-primary p-6 bg-inset border border-slate-800 rounded-2xl">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                     Đang tải ảnh lên ImgBB...
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
                     {/* Option 1: Pick existing image from device / gallery */}
-                    <label className="flex flex-col items-center justify-center border border-slate-800 hover:border-[#00E5FF] bg-[#0B101D] hover:bg-[#131B2E] rounded-2xl p-4 cursor-pointer transition-all group text-center">
+                    <label className="flex flex-col items-center justify-center border border-slate-800 hover:border-primary bg-inset hover:bg-card rounded-2xl p-4 cursor-pointer transition-all group text-center">
                       <input
                         type="file"
                         accept="image/*"
@@ -417,12 +417,12 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                         className="hidden"
                       />
                       <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">🖼️</span>
-                      <span className="text-xs font-bold text-slate-300 group-hover:text-[#00E5FF]">Chọn từ thiết bị</span>
-                      <span className="text-[10px] text-slate-500 mt-0.5">Thư viện ảnh / File</span>
+                      <span className="text-xs font-bold text-slate-300 group-hover:text-primary">Chọn từ thiết bị</span>
+                      <span className="text-xs text-slate-500 mt-0.5">Thư viện ảnh / File</span>
                     </label>
 
                     {/* Option 2: Direct camera capture */}
-                    <label className="flex flex-col items-center justify-center border border-slate-800 hover:border-[#00FF87] bg-[#0B101D] hover:bg-[#131B2E] rounded-2xl p-4 cursor-pointer transition-all group text-center">
+                    <label className="flex flex-col items-center justify-center border border-slate-800 hover:border-success bg-inset hover:bg-card rounded-2xl p-4 cursor-pointer transition-all group text-center">
                       <input
                         type="file"
                         accept="image/*"
@@ -432,19 +432,19 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                         className="hidden"
                       />
                       <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📸</span>
-                      <span className="text-xs font-bold text-slate-300 group-hover:text-[#00FF87]">Chụp ảnh mới</span>
-                      <span className="text-[10px] text-slate-500 mt-0.5">Camera điện thoại</span>
+                      <span className="text-xs font-bold text-slate-300 group-hover:text-success">Chụp ảnh mới</span>
+                      <span className="text-xs text-slate-500 mt-0.5">Camera điện thoại</span>
                     </label>
                   </div>
                 )}
                 {imageUploadError && (
-                  <p className="text-rose-400 text-xs mt-1 font-semibold">{imageUploadError}</p>
+                  <p className="text-destructive text-xs mt-1 font-semibold">{imageUploadError}</p>
                 )}
               </div>
 
               {/* Quick suggestions */}
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Gợi ý nhanh:</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Gợi ý nhanh:</label>
                 <div className="flex flex-wrap gap-2">
                   {[
                     { name: 'Phở bò', cal: 450, qty: '1 tô' },
@@ -463,7 +463,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                         setBaseMacros(null);
                         setPortionMultiplier('1');
                       }}
-                      className="px-2.5 py-1 bg-[#18233C] hover:bg-slate-800 border border-slate-800 rounded-lg text-xs text-slate-300 font-medium"
+                      className="px-2.5 py-1 bg-surface-elevated hover:bg-slate-800 border border-slate-800 rounded-lg text-xs text-slate-300 font-medium"
                     >
                       {sug.name} ({sug.qty} • {sug.cal} kcal)
                     </button>
@@ -475,14 +475,14 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                 <button
                   type="button"
                   onClick={() => onClose()}
-                  className="flex-1 py-3 bg-[#18233C] text-slate-300 font-bold rounded-xl hover:bg-slate-800 text-xs"
+                  className="flex-1 py-3 bg-surface-elevated text-slate-300 font-bold rounded-xl hover:bg-slate-800 text-xs"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={uploadingImage}
-                  className="flex-1 py-3 bg-[#00E5FF] text-slate-950 font-black rounded-xl hover:bg-cyan-300 text-xs shadow-lg shadow-[#00E5FF]/20 disabled:opacity-50"
+                  className="flex-1 py-3 bg-primary text-slate-950 font-black rounded-xl hover:bg-primary text-xs shadow-lg shadow-primary/20 disabled:opacity-50"
                 >
                   Lưu món ăn
                 </button>

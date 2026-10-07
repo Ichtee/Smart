@@ -227,8 +227,8 @@ export default function Nutrition() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0B0F19] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -240,11 +240,11 @@ export default function Nutrition() {
         <div className="max-w-[1600px] w-full mx-auto space-y-6 sm:space-y-8">
 
         {profileError && (
-          <div className="bg-rose-500/10 border border-rose-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-rose-300">
+          <div className="bg-destructive/10 border border-destructive/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-destructive">
             <p className="font-extrabold text-white">Không tải được hồ sơ, mục tiêu Calo đang dùng giá trị mặc định.</p>
             <button
               onClick={() => { mutateProfile(); }}
-              className="px-4 py-2 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black rounded-xl text-xs transition shrink-0 cursor-pointer"
+              className="px-4 py-2 bg-primary hover:bg-primary text-slate-950 font-black rounded-xl text-xs transition shrink-0 cursor-pointer"
             >
               🔄 Thử lại
             </button>
@@ -252,11 +252,11 @@ export default function Nutrition() {
         )}
 
         {dayLoadError && (
-          <div className="bg-rose-500/10 border border-rose-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-rose-300">
+          <div className="bg-destructive/10 border border-destructive/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-destructive">
             <p className="font-extrabold text-white">Không tải được nhật ký ngày {selectedDate}. Chỉnh sửa đã bị khóa để tránh ghi đè dữ liệu.</p>
             <button
               onClick={() => { setDayLoadErrorDate(null); setDayRetryTick(t => t + 1); }}
-              className="px-4 py-2 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black rounded-xl text-xs transition shrink-0 cursor-pointer"
+              className="px-4 py-2 bg-primary hover:bg-primary text-slate-950 font-black rounded-xl text-xs transition shrink-0 cursor-pointer"
             >
               🔄 Thử lại
             </button>

@@ -12,7 +12,7 @@ test.describe('water goal follows body weight', () => {
     const heavy = await createActiveUser();
     await completeProfile(heavy, { weight: 70 });
     await uiLogin(page, heavy.username, heavy.password);
-    await nav(page, 'Nutrition');
+    await nav(page, 'Dinh dưỡng');
     await expect(page.getByText('ml / 2450 ml')).toBeVisible();
 
     const light = await createActiveUser();
@@ -20,7 +20,7 @@ test.describe('water goal follows body weight', () => {
     await page.evaluate(() => localStorage.clear());
     await page.context().clearCookies();
     await uiLogin(page, light.username, light.password);
-    await nav(page, 'Nutrition');
+    await nav(page, 'Dinh dưỡng');
     await expect(page.getByText('ml / 1750 ml')).toBeVisible();
   });
 });
@@ -37,7 +37,7 @@ test.describe('copy yesterday\'s meals', () => {
     }, body.token);
 
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Nutrition');
+    await nav(page, 'Dinh dưỡng');
     await expect(page.getByText('Bánh mì trứng')).toHaveCount(0);
 
     const saved = page.waitForResponse(r => r.url().includes('/api/nutrition') && r.request().method() === 'POST');
@@ -61,7 +61,7 @@ test.describe('copy yesterday\'s meals', () => {
     const user = await createActiveUser();
     await completeProfile(user);
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Nutrition');
+    await nav(page, 'Dinh dưỡng');
     let posts = 0;
     page.on('request', r => { if (r.url().includes('/api/nutrition') && r.method() === 'POST') posts++; });
     await page.getByRole('button', { name: /Sao chép từ hôm qua/ }).click();

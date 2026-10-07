@@ -111,11 +111,11 @@ export default function VolumePage() {
                     <h2 className="text-lg font-black">{name}</h2>
                     <span className="text-xs font-bold text-muted-foreground">{r.total} hiệp</span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     Tuần này: <span className="font-bold text-foreground">{r.weekly[r.weekly.length - 1]}</span> hiệp · Trung bình {average.toFixed(1)} hiệp/tuần
                   </p>
                   <WeekBars name={name} weeks={weeks} values={r.weekly} max={max} />
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{shortDate(weeks[0])}</span>
                     <span>{shortDate(weeks[weeks.length - 1])}</span>
                   </div>

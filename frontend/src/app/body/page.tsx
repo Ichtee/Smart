@@ -114,7 +114,7 @@ export default function BodyPage() {
 
   const changeText = summary?.change == null ? '—' : `${summary.change > 0 ? '+' : ''}${summary.change} kg`;
   const inputClass = 'w-full bg-background border border-input rounded-2xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary transition-colors';
-  const labelClass = 'block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2';
+  const labelClass = 'block text-xs sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2';
 
   return (
     <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">

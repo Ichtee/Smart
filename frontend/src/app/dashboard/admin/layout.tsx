@@ -43,12 +43,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ];
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-white flex overflow-hidden font-sans">
+    <div className="min-h-screen bg-background text-white flex overflow-hidden font-sans">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#131B2E] border-r border-slate-800/80 flex flex-col">
+      <aside className="w-64 bg-card border-r border-slate-800/80 flex flex-col">
         <div className="p-6 border-b border-slate-800/80">
           <Link href="/dashboard/admin" className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-            <span className="text-[#00E5FF]">Smart</span>
+            <span className="text-primary">Smart</span>
           </Link>
           <p className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-widest">Admin Control Center</p>
         </div>
@@ -62,8 +62,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-xs uppercase tracking-wider ${
                   isActive 
-                    ? 'bg-[#00E5FF] text-slate-950 shadow-lg shadow-[#00E5FF]/20 font-black' 
-                    : 'text-slate-400 hover:bg-[#18233C] hover:text-white'
+                    ? 'bg-primary text-slate-950 shadow-lg shadow-primary/20 font-black' 
+                    : 'text-slate-400 hover:bg-surface-elevated hover:text-white'
                 }`}
               >
                 <span className="text-lg">{item.icon}</span>
@@ -74,26 +74,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         <div className="p-4 border-t border-slate-800/80">
-          <div className="flex items-center gap-3 px-4 py-3 bg-[#0B101D] rounded-2xl border border-slate-800/80 mb-4">
-            <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-[#00E5FF] flex items-center justify-center font-extrabold text-sm uppercase border border-cyan-500/30">
+          <div className="flex items-center gap-3 px-4 py-3 bg-inset rounded-2xl border border-slate-800/80 mb-4">
+            <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-extrabold text-sm uppercase border border-primary/30">
               {userName.charAt(0)}
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="text-xs font-bold text-white truncate">{userName}</p>
-              <p className="text-[10px] text-slate-500 font-semibold uppercase">Administrator</p>
+              <p className="text-xs text-slate-500 font-semibold uppercase">Administrator</p>
             </div>
           </div>
 
           <div className="flex gap-2">
             <button
               onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
-              className="flex-1 py-2 bg-[#18233C] hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors text-slate-300"
+              className="flex-1 py-2 bg-surface-elevated hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors text-slate-300"
             >
               {lang === 'vi' ? '🇻🇳 VI' : '🇺🇸 EN'}
             </button>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 rounded-xl text-xs font-bold transition-colors"
+              className="px-4 py-2 bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/30 rounded-xl text-xs font-bold transition-colors"
             >
               Thoát
             </button>
@@ -102,10 +102,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 h-screen overflow-y-auto bg-[#0B0F19] relative">
+      <main className="flex-1 h-screen overflow-y-auto bg-background relative">
         {/* FitPulse Glow */}
-        <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none" />
+        <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[140px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-success/10 blur-[140px] pointer-events-none" />
         
         <div className="relative z-10 p-8 h-full">
           {children}

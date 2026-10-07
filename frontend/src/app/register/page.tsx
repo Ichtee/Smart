@@ -69,7 +69,7 @@ export default function Register() {
                 Chúng tôi đã gửi một liên kết đến email <span className="text-primary font-semibold">{email}</span>. Mở liên kết đó để <strong className="text-foreground">đặt mật khẩu</strong> và kích hoạt tài khoản.
               </p>
             </div>
-            <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 p-4 rounded-2xl text-xs font-medium leading-relaxed text-left">
+            <div className="flex items-start gap-2 bg-warning/10 border border-warning/20 text-warning p-4 rounded-2xl text-xs font-medium leading-relaxed text-left">
               <AlertTriangle className="size-4 shrink-0 mt-0.5" />
               <span>Liên kết có hiệu lực trong 10 phút. Sau thời gian này, tài khoản chưa kích hoạt sẽ tự động bị xóa.</span>
             </div>

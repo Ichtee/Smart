@@ -130,12 +130,12 @@ export default function Login() {
         )}
 
         {isUnverified && (
-          <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 p-4 rounded-2xl mb-6 text-xs space-y-3">
+          <div className="bg-warning/10 border border-warning/30 text-warning p-4 rounded-2xl mb-6 text-xs space-y-3">
             <p className="font-semibold leading-relaxed">
               Tài khoản này chưa được kích hoạt qua email. Nếu quá 10 phút chưa xác thực, tài khoản sẽ bị tự động xóa.
             </p>
             {resendStatus === 'success' ? (
-              <p className="text-emerald-400 font-bold flex items-center gap-1.5">
+              <p className="text-success font-bold flex items-center gap-1.5">
                 <CheckCircle2 className="size-4" /> {resendMessage}
               </p>
             ) : (

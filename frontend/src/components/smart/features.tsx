@@ -60,7 +60,7 @@ export function Features() {
                 {feature.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                    className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground"
                   >
                     {tag}
                   </span>

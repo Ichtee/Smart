@@ -17,7 +17,7 @@ test.describe('body measurements', () => {
     await api('/api/body-metrics', { date: localDate(-7), weight: 78.5, bodyFat: 22 }, body.token);
 
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Body');
+    await nav(page, 'Cơ thể');
     await expect(page.getByRole('heading', { name: /Số đo cơ thể/ })).toBeVisible();
     await expect(page.getByTestId('history-row')).toHaveCount(2);
     await expect(page.getByTestId('weight-change')).toHaveText('-1.5 kg');
@@ -34,7 +34,7 @@ test.describe('body measurements', () => {
     expect(profile.weight).toBe(77);
 
     // the new weight is what the other pages use right away (no stale cache): nutrition water goal 77 kg -> 2700 ml
-    await nav(page, 'Nutrition');
+    await nav(page, 'Dinh dưỡng');
     await expect(page.getByText('ml / 2700 ml')).toBeVisible();
   });
 
@@ -42,7 +42,7 @@ test.describe('body measurements', () => {
     const user = await createActiveUser();
     await completeProfile(user);
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Body');
+    await nav(page, 'Cơ thể');
     let posts = 0;
     page.on('request', r => { if (r.url().includes('/api/body-metrics') && r.method() === 'POST') posts++; });
 
@@ -65,7 +65,7 @@ test.describe('body measurements', () => {
     await api('/api/body-metrics', { date: localDate(0), weight: 65 }, body.token);
 
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Body');
+    await nav(page, 'Cơ thể');
     await expect(page.getByTestId('history-row')).toHaveCount(2);
 
     page.once('dialog', d => void d.accept());
@@ -87,7 +87,7 @@ test.describe('body measurements', () => {
     await page.getByRole('button', { name: /Hoàn tất/ }).click();
     await page.waitForURL(/\/dashboard/);
 
-    await nav(page, 'Body');
+    await nav(page, 'Cơ thể');
     await expect(page.getByTestId('history-row')).toHaveCount(1);
     await expect(page.getByTestId('history-row')).toContainText('64 kg');
   });

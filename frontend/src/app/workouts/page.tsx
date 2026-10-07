@@ -783,7 +783,7 @@ export default function Workouts() {
 
   const { highlighterData, modelColors } = useMemo(() => {
     let data: any[] = [];
-    let colors = ['#00E5FF', '#00FF87'];
+    let colors = ['#B8F200', '#2EE59D'];
 
     if (effectiveTargets.length > 0) {
       const rawMuscles: string[] = effectiveTargets.map((t: any) => toModelMuscle(normalizeMuscleId(t.id)));
@@ -795,12 +795,12 @@ export default function Workouts() {
           { name: 'All', muscles: allMuscles },
           { name: 'Selected', muscles: [safeSelected] }
         ];
-        colors = ['#00E5FF', '#00FF87'];
+        colors = ['#B8F200', '#2EE59D'];
       } else {
         data = [
           { name: currentTabWorkout?.name || 'Workout', muscles: allMuscles }
         ];
-        colors = ['#00E5FF'];
+        colors = ['#B8F200'];
       }
     } else if (selectedMuscle) {
       const safeSelected = toModelMuscle(normalizeMuscleId(selectedMuscle));
@@ -808,7 +808,7 @@ export default function Workouts() {
         data = [
           { name: 'Selected', muscles: [safeSelected] }
         ];
-        colors = ['#00FF87'];
+        colors = ['#2EE59D'];
       }
     }
     return { highlighterData: data, modelColors: colors };
@@ -848,18 +848,18 @@ export default function Workouts() {
 
         {/* Fetch Error / Cold Start Retry Banner */}
         {fetchError && (
-          <div className="bg-rose-500/10 border border-rose-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-rose-300 shadow-xl">
+          <div className="bg-destructive/10 border border-destructive/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-destructive shadow-xl">
             <div className="flex items-center gap-3">
               <span className="text-xl">⚠️</span>
               <div>
                 <p className="font-extrabold text-white">Không thể kết nối tới máy chủ!</p>
-                <p className="text-slate-400 text-[11px]">Server Render có thể đang khởi động nguội hoặc mạng di động vừa ngắt kết nối.</p>
+                <p className="text-slate-400 text-xs">Server Render có thể đang khởi động nguội hoặc mạng di động vừa ngắt kết nối.</p>
               </div>
             </div>
             <button
               onClick={fetchInitialData}
               disabled={isFetching}
-              className="w-full sm:w-auto px-4 py-2 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black rounded-xl text-xs transition shadow-md shrink-0 active:scale-95"
+              className="w-full sm:w-auto px-4 py-2 bg-primary hover:bg-primary text-slate-950 font-black rounded-xl text-xs transition shadow-md shrink-0 active:scale-95"
             >
               {isFetching ? 'Đang kết nối lại...' : '🔄 Thử lại ngay'}
             </button>
@@ -867,11 +867,11 @@ export default function Workouts() {
         )}
 
         {dayBlocked && (
-          <div className="bg-rose-500/10 border border-rose-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-rose-300 shadow-xl">
+          <div className="bg-destructive/10 border border-destructive/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-destructive shadow-xl">
             <p className="font-extrabold text-white">Không tải được nhật ký ngày {activeTabDateStr}. Chỉnh sửa đã bị khóa để tránh ghi đè dữ liệu đã lưu.</p>
             <button
               onClick={() => { setDayLoadErrorDate(null); setDayRetryTick(t => t + 1); }}
-              className="w-full sm:w-auto px-4 py-2 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black rounded-xl text-xs transition shadow-md shrink-0 active:scale-95"
+              className="w-full sm:w-auto px-4 py-2 bg-primary hover:bg-primary text-slate-950 font-black rounded-xl text-xs transition shadow-md shrink-0 active:scale-95"
             >
               🔄 Thử lại
             </button>
@@ -915,7 +915,7 @@ export default function Workouts() {
           {/* Right Panel: Exercise Details & Checklist */}
           <div className="lg:col-span-7 space-y-6">
 
-            <div className="bg-[#131B2E]/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-6">
+            <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-6">
 
               {/* Header with Save / Locked Action / Reset */}
               <WorkoutActionBar
@@ -928,7 +928,7 @@ export default function Workouts() {
 
               {/* Inline Notice Message Banner */}
               {noticeMessage && (
-                <div className="bg-amber-500/10 border border-amber-500/40 rounded-2xl p-3.5 flex items-center gap-3 text-xs text-amber-300 shadow-md">
+                <div className="bg-warning/10 border border-warning/40 rounded-2xl p-3.5 flex items-center gap-3 text-xs text-warning shadow-md">
                   <span className="text-lg shrink-0">💡</span>
                   <span className="font-bold">{noticeMessage}</span>
                 </div>
@@ -936,10 +936,10 @@ export default function Workouts() {
 
               {/* Dynamic Over-Target Warning Banner */}
               {exceededTargetMuscles.length > 0 && (
-                <div className="bg-rose-500/10 border border-rose-500/40 rounded-2xl p-3.5 flex items-start gap-3 text-xs text-rose-300 shadow-lg">
+                <div className="bg-destructive/10 border border-destructive/40 rounded-2xl p-3.5 flex items-start gap-3 text-xs text-destructive shadow-lg">
                   <span className="text-xl shrink-0">⚠️</span>
                   <div>
-                    <p className="font-black text-rose-400 uppercase tracking-wider">CẢNH BÁO VƯỢT QUÁ LỊCH TẬP ĐỀ XUẤT!</p>
+                    <p className="font-black text-destructive uppercase tracking-wider">CẢNH BÁO VƯỢT QUÁ LỊCH TẬP ĐỀ XUẤT!</p>
                     <p className="mt-1 leading-relaxed">
                       Bạn đã chọn vượt quá số bài so với mục tiêu đề xuất cho các nhóm cơ:{' '}
                       <strong className="text-white underline">

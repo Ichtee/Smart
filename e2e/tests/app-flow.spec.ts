@@ -16,7 +16,7 @@ test.describe('using the app after sign-up (client-side navigation, shared SWR c
     expect(await greeting(page)).toContain('Dana Pham');
     expect((await page.locator('main').innerText()).replace(/\n/g, ' ')).toMatch(/175 cm \/ 70\s*kg/);
 
-    await nav(page, 'Nutrition');
+    await nav(page, 'Dinh dưỡng');
     await expect(page.getByText('Nhật ký ăn uống & Dinh dưỡng')).toBeVisible();
     expect(page.url()).toContain('/nutrition'); // no bounce to onboarding
     await expect(page.getByText(/Không tải được/)).toHaveCount(0);
@@ -48,7 +48,7 @@ test.describe('using the app after sign-up (client-side navigation, shared SWR c
     const user = await createActiveUser();
     await completeProfile(user);
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Activity');
+    await nav(page, 'Tập luyện');
     await expect(page.getByText('Bench Press').first()).toBeVisible();
     await expect(page.getByText('Triceps Pushdown', { exact: true })).toBeVisible();
     expect(await page.locator('button[title^="Vui lòng bấm LƯU"]').count()).toBeGreaterThanOrEqual(3);
@@ -77,7 +77,7 @@ test.describe('using the app after sign-up (client-side navigation, shared SWR c
     const user = await createActiveUser();
     await completeProfile(user);
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Activity');
+    await nav(page, 'Tập luyện');
     await expect(page.getByText('Bench Press').first()).toBeVisible();
     const planSaved = postTo(page, '/api/workouts');
     await page.getByRole('button', { name: /LƯU & BẮT ĐẦU TẬP/ }).click();
@@ -112,13 +112,13 @@ test.describe('using the app after sign-up (client-side navigation, shared SWR c
     await completeProfile(eli, { gender: 'Nữ', height: 160, weight: 52, goal: 'Giảm mỡ' });
 
     await uiLogin(page, dana.username, dana.password);
-    await nav(page, 'Nutrition');
+    await nav(page, 'Dinh dưỡng');
     await page.getByRole('button', { name: /Thêm món/ }).first().click();
     await page.getByRole('button', { name: /Phở bò \(1 tô/ }).click();
     const done = postTo(page, '/api/nutrition');
     await page.getByRole('button', { name: 'Lưu món ăn' }).click();
     await done;
-    await nav(page, 'Activity');
+    await nav(page, 'Tập luyện');
     await page.getByRole('button', { name: /LƯU & BẮT ĐẦU TẬP/ }).click();
     await page.locator('button[title="Đánh dấu hoàn thành"]').first().click();
     await expect(page.getByText(/1 Ngày/).first()).toBeVisible();
@@ -133,12 +133,12 @@ test.describe('using the app after sign-up (client-side navigation, shared SWR c
     expect(g).not.toContain('Dana');
     expect((await page.locator('main').innerText()).replace(/\n/g, ' ')).toMatch(/160 cm \/ 52\s*kg/);
 
-    await nav(page, 'Nutrition');
+    await nav(page, 'Dinh dưỡng');
     await expect(page.getByText('Nhật ký ăn uống & Dinh dưỡng')).toBeVisible();
     await page.waitForTimeout(1200); // let any (wrongly) cached data render
     expect(await page.locator('main').innerText()).not.toContain('Phở bò (1 tô');
 
-    await nav(page, 'Activity');
+    await nav(page, 'Tập luyện');
     await expect(page.getByText('Bench Press').first()).toBeVisible();
     await page.waitForTimeout(1200);
     await expect(page.getByText(/0 Ngày/).first()).toBeVisible();

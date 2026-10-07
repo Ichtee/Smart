@@ -189,12 +189,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   // No token, failed, or admin-checking → show loading/redirect state
   if (authState === 'no-token' || authState === 'failed' || authState === 'admin-checking') {
     return (
-      <div className="min-h-screen bg-[#0B0F19] text-white flex items-center justify-center p-4 font-sans relative overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#00E5FF]/10 blur-[140px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[#00FF87]/10 blur-[140px] pointer-events-none" />
+      <div className="min-h-screen bg-background text-white flex items-center justify-center p-4 font-sans relative overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[140px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-success/10 blur-[140px] pointer-events-none" />
         
         <div className="flex flex-col items-center space-y-4 relative z-10 text-center">
-          <div className="w-12 h-12 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">
               {authState === 'admin-checking' ? 'Xác thực quyền quản trị' : 'Đang chuyển hướng...'}
@@ -209,8 +209,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   // Unknown (initial render before useEffect runs) — show brief skeleton
   if (authState === 'unknown') {
     return (
-      <div className="min-h-screen bg-[#0B0F19] text-white flex items-center justify-center p-4 font-sans">
-        <div className="w-10 h-10 border-4 border-[#00E5FF] border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-background text-white flex items-center justify-center p-4 font-sans">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }

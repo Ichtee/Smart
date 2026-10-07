@@ -203,7 +203,7 @@ export default function Dashboard() {
       <Sidebar />
       <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-8 overflow-y-auto pb-28 md:pb-10">
         {!!profileError && !isUnauthorizedError(profileError) && (
-          <div className="bg-rose-500/10 border border-rose-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-rose-300">
+          <div className="bg-destructive/10 border border-destructive/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-destructive">
             <p className="font-extrabold text-white">Không tải được hồ sơ. Một số chỉ số đang hiển thị giá trị mặc định.</p>
             <button onClick={() => { mutateProfile(); }} className="px-4 py-2 bg-primary text-primary-foreground font-black rounded-xl text-xs shrink-0 cursor-pointer">🔄 Thử lại</button>
           </div>
@@ -326,15 +326,15 @@ export default function Dashboard() {
                       <div className="flex items-center justify-between w-full text-xs md:text-sm">
                         <span className="font-extrabold">{item.day}</span>
                         <div className="flex items-center gap-0.5">
-                          {hasPhoto && <span className="text-[10px]" title="Có ảnh món ăn">📷</span>}
+                          {hasPhoto && <span className="text-xs" title="Có ảnh món ăn">📷</span>}
                           <span className="text-xs">{item.isActive ? '✓' : item.isToday ? '🎯' : ''}</span>
                         </div>
                       </div>
 
                       {dayCal > 0 ? (
-                        <span className="text-[10px] md:text-xs font-black text-primary mt-1">{dayCal} kcal</span>
+                        <span className="text-xs md:text-xs font-black text-primary mt-1">{dayCal} kcal</span>
                       ) : (
-                        <span className="text-[10px] text-muted-foreground/40 mt-1">-</span>
+                        <span className="text-xs text-muted-foreground/40 mt-1">-</span>
                       )}
                     </button>
                   );
@@ -348,7 +348,7 @@ export default function Dashboard() {
                   <span>Đã tập (Logged workout)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="size-3 rounded-lg bg-primary/20 border border-primary text-primary flex items-center justify-center text-[10px] font-bold">🎯</span>
+                  <span className="size-3 rounded-lg bg-primary/20 border border-primary text-primary flex items-center justify-center text-xs font-bold">🎯</span>
                   <span>Hôm nay (Today)</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -400,7 +400,7 @@ export default function Dashboard() {
                         </div>
                         <div className="bg-secondary/50 p-4 rounded-2xl border border-border">
                           <span className="text-xs text-muted-foreground font-medium block">Buổi tập (Day)</span>
-                          <strong className="text-green-400 font-black text-sm md:text-base mt-0.5 block">🎯 {log.dayName || '-'}</strong>
+                          <strong className="text-success font-black text-sm md:text-base mt-0.5 block">🎯 {log.dayName || '-'}</strong>
                         </div>
                       </div>
 
@@ -425,7 +425,7 @@ export default function Dashboard() {
                                   </div>
                                   <div className="flex items-center gap-2 shrink-0 text-xs">
                                     <span className="bg-background px-3 py-1 rounded-xl border border-border font-bold">Hiệp: <strong className="text-primary">{ex.sets}</strong></span>
-                                    <span className="bg-background px-3 py-1 rounded-xl border border-border font-bold">Lần: <strong className="text-green-400">{String(ex.reps || '10').match(/\d+/)?.[0] || '10'}</strong></span>
+                                    <span className="bg-background px-3 py-1 rounded-xl border border-border font-bold">Lần: <strong className="text-success">{String(ex.reps || '10').match(/\d+/)?.[0] || '10'}</strong></span>
                                   </div>
                                 </div>
                               ))}
@@ -523,9 +523,9 @@ export default function Dashboard() {
                     <div className="bg-secondary/50 p-5 rounded-2xl border border-border space-y-2">
                       <h4 className="text-xs font-bold text-primary uppercase tracking-wider">Gợi ý Calo theo mục tiêu</h4>
                       <div className="space-y-2 text-sm">
-                        <div className="flex justify-between"><span className="text-muted-foreground">🏋️ Tăng cơ</span><strong className="text-green-400">{tdee + 300} kcal</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">🏋️ Tăng cơ</span><strong className="text-success">{tdee + 300} kcal</strong></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">🔥 Giảm mỡ</span><strong className="text-primary">{Math.max(1200, tdee - 500)} kcal</strong></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">⚖️ Giữ dáng</span><strong className="text-yellow-400">{tdee} kcal</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">⚖️ Giữ dáng</span><strong className="text-warning">{tdee} kcal</strong></div>
                       </div>
                     </div>
 

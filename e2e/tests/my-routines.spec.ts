@@ -13,7 +13,7 @@ test.describe('my own routines', () => {
     const user = await createActiveUser();
     await completeProfile(user);
     await uiLogin(page, user.username, user.password);
-    await nav(page, 'Activity');
+    await nav(page, 'Tập luyện');
     await page.getByRole('link', { name: /Lịch tập của tôi/ }).first().click();
     await page.waitForURL(/\/routines/);
     await expect(page.getByText(/chưa có lịch tập riêng/)).toBeVisible();
@@ -37,7 +37,7 @@ test.describe('my own routines', () => {
     // use it: the Activity page now plans the day from it (only the one exercise, not the built-in PPL day)
     await row.getByRole('button', { name: 'Dùng lịch này' }).click();
     await expect(page.getByText(/Đang dùng lịch "Arms Only"/)).toBeVisible();
-    await nav(page, 'Activity');
+    await nav(page, 'Tập luyện');
     await expect(page.getByText('Các bài đã chọn (1)')).toBeVisible(); // the built-in day would have three
     await expect(page.getByText(/^1\.\s*Triceps Pushdown/)).toBeVisible();
 
