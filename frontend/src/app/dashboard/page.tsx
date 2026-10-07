@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import GoogleTranslate from '@/components/GoogleTranslate';
 import { API_URL } from '@/utils/api';
+import { calcTargetCalories, macroTargets, sumMacros } from '@/utils/nutritionCalc';
 import { Bell, ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Trophy, Dumbbell, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 
 const MUSCLE_NAMES_VI: Record<string, string> = {
@@ -228,37 +229,15 @@ export default function Dashboard() {
     setStreakDates(prev => prev.filter(d => d !== targetDate));
   }, []);
 
-  const targetCalories = useMemo(() => {
-    const w = Number(profile.weight) || 65;
-    const h = Number(profile.height) || 170;
-    const a = Number(profile.age) || 25;
-    let bmr = (10 * w) + (6.25 * h) - (5 * a);
-    if (profile.gender === 'Nam') bmr += 5;
-    else bmr -= 161;
-    let mult = 1.2;
-    switch (profile.activityLevel) {
-      case 'Ít vận động': mult = 1.2; break;
-      case 'Vận động nhẹ': mult = 1.375; break;
-      case 'Vận động vừa': mult = 1.55; break;
-      case 'Vận động nhiều': mult = 1.725; break;
-      case 'Vận động cực nhiều': mult = 1.9; break;
-    }
-    const tdee = Math.round(bmr * mult);
-    if (profile.goal === 'Giảm mỡ') return Math.max(1200, tdee - 500);
-    if (profile.goal === 'Tăng cơ' || profile.goal === 'Tăng cân') return tdee + 300;
-    return tdee;
-  }, [profile]);
+  const targetCalories = useMemo(() => calcTargetCalories(profile), [profile]);
 
-  const consumedCalories = useMemo(() => {
-    return todayMeals.reduce((sum, item) => sum + (item.calories || 0), 0);
-  }, [todayMeals]);
+  const consumed = useMemo(() => sumMacros(todayMeals), [todayMeals]);
+  const consumedCalories = consumed.calories;
 
-  const targetProteinGrams = Math.round((targetCalories * 0.30) / 4);
-  const targetCarbsGrams = Math.round((targetCalories * 0.50) / 4);
-  const targetFatGrams = Math.round((targetCalories * 0.20) / 9);
-  const consumedProteinGrams = Math.round((consumedCalories * 0.30) / 4);
-  const consumedCarbsGrams = Math.round((consumedCalories * 0.50) / 4);
-  const consumedFatGrams = Math.round((consumedCalories * 0.20) / 9);
+  const { protein: targetProteinGrams, carbs: targetCarbsGrams, fat: targetFatGrams } = macroTargets(targetCalories);
+  const consumedProteinGrams = consumed.protein;
+  const consumedCarbsGrams = consumed.carbs;
+  const consumedFatGrams = consumed.fat;
   const proteinPct = Math.min(100, Math.round((consumedProteinGrams / (targetProteinGrams || 1)) * 100));
   const carbsPct = Math.min(100, Math.round((consumedCarbsGrams / (targetCarbsGrams || 1)) * 100));
   const fatPct = Math.min(100, Math.round((consumedFatGrams / (targetFatGrams || 1)) * 100));

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Logo } from '@/components/smart/logo';
 import { API_URL } from '@/utils/api';
+import { calcBmr, calcTdee, calcTargetCalories } from '@/utils/nutritionCalc';
 import { ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
 
 export default function Onboarding() {
@@ -39,36 +40,11 @@ export default function Onboarding() {
     if (step === 4) {
       const w = Number(formData.weight);
       const h = Number(formData.height);
-      const a = Number(formData.age);
-
-      // BMI
       const hInM = h / 100;
       const bmi = w / (hInM * hInM);
-
-      // BMR (Mifflin-St Jeor)
-      let bmr = (10 * w) + (6.25 * h) - (5 * a);
-      if (formData.gender === 'Nam') {
-        bmr += 5;
-      } else {
-        bmr -= 161;
-      }
-
-      // TDEE
-      let multiplier = 1.2;
-      switch (formData.activityLevel) {
-        case 'Ít vận động': multiplier = 1.2; break;
-        case 'Vận động nhẹ': multiplier = 1.375; break;
-        case 'Vận động vừa': multiplier = 1.55; break;
-        case 'Vận động nhiều': multiplier = 1.725; break;
-        case 'Vận động cực nhiều': multiplier = 1.9; break;
-      }
-      const tdee = bmr * multiplier;
-
-      // Target Calories
-      let targetCalories = tdee;
-      if (formData.goal === 'Giảm mỡ') targetCalories -= 500;
-      else if (formData.goal === 'Tăng cơ' || formData.goal === 'Tăng cân') targetCalories += 300;
-
+      const bmr = calcBmr(formData);
+      const tdee = calcTdee(formData);
+      const targetCalories = calcTargetCalories(formData);
       setResults({ bmi, bmr, tdee, targetCalories });
     }
   }, [step, formData]);

@@ -520,6 +520,7 @@ export default function RoutineManagement() {
     }
 
     newSchedule[dayIndex].exercises.push({
+      exerciseId: foundEx ? String(foundEx._id || '') : '',
       exerciseName: selectedName || '',
       muscle: foundEx ? foundEx.muscle : 'chest',
       sets: 3,
@@ -541,6 +542,7 @@ export default function RoutineManagement() {
     if (field === 'exerciseName') {
       const foundEx = exercises.find(e => e.name === value);
       newSchedule[dayIndex].exercises[exIndex].exerciseName = value;
+      newSchedule[dayIndex].exercises[exIndex].exerciseId = foundEx ? String(foundEx._id || '') : '';
       if (foundEx) {
         newSchedule[dayIndex].exercises[exIndex].muscle = foundEx.muscle;
       }

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { API_URL } from '@/utils/api';
+import { calcBmr, calcTdee, calcTargetCalories, sumMacros, macroTargets } from '@/utils/nutritionCalc';
 
 const MUSCLE_NAMES_VI: Record<string, string> = {
   chest: 'Ngực (Chest)',
@@ -42,6 +43,7 @@ export default function ProgressPage() {
     height: 170,
     weight: 65,
     goal: 'Tăng cơ',
+    activityLevel: 'Vận động vừa',
     lastActiveRoutineName: 'Lịch tập luyện'
   });
 
@@ -119,6 +121,7 @@ export default function ProgressPage() {
             height: Number(data.height) || 170,
             weight: Number(data.weight) || 65,
             goal: data.goal || 'Tăng cơ',
+            activityLevel: data.activityLevel || 'Vận động vừa',
             lastActiveRoutineName: data.lastActiveRoutineName || 'Lịch tập luyện'
           });
         }
@@ -256,39 +259,30 @@ export default function ProgressPage() {
     };
   }, [selectedCalendarDate]);
 
-  // Update dynamic macros whenever dailyCalories changes
+  // Macros: real values from logged items; manual-calorie days fall back to a 30/50/20 estimate
   useEffect(() => {
-    if (dailyCalories > 0) {
-      setDailyProtein(Math.round((dailyCalories * 0.30) / 4));
-      setDailyCarbs(Math.round((dailyCalories * 0.50) / 4));
-      setDailyFat(Math.round((dailyCalories * 0.20) / 9));
+    const items = Object.values(selectedDateMeals).flat() as Array<{ calories?: number; protein?: number; carbs?: number; fat?: number }>;
+    const logged = sumMacros(items);
+    if (items.length > 0 && logged.calories === dailyCalories) {
+      setDailyProtein(logged.protein);
+      setDailyCarbs(logged.carbs);
+      setDailyFat(logged.fat);
+    } else if (dailyCalories > 0) {
+      const est = macroTargets(dailyCalories);
+      setDailyProtein(est.protein);
+      setDailyCarbs(est.carbs);
+      setDailyFat(est.fat);
     } else {
       setDailyProtein(0);
       setDailyCarbs(0);
       setDailyFat(0);
     }
-  }, [dailyCalories]);
+  }, [dailyCalories, selectedDateMeals]);
 
-  // BMR Calculation (Mifflin-St Jeor Equation)
-  const bmr = useMemo(() => {
-    const { weight, height, age, gender } = userProfile;
-    if (!weight || !height || !age) return 1600;
-    if (gender === 'Nữ') {
-      return Math.round(10 * weight + 6.25 * height - 5 * age - 161);
-    }
-    return Math.round(10 * weight + 6.25 * height - 5 * age + 5);
-  }, [userProfile]);
-
-  // TDEE Calculation (Moderate Activity Factor 1.375)
-  const tdee = useMemo(() => Math.round(bmr * 1.375), [bmr]);
-
-  // Calorie Target based on User Goal
-  const targetCalories = useMemo(() => {
-    const goal = userProfile.goal;
-    if (goal === 'Giảm mỡ') return Math.max(1200, tdee - 500);
-    if (goal === 'Tăng cơ' || goal === 'Tăng cân') return tdee + 300;
-    return tdee;
-  }, [tdee, userProfile.goal]);
+  // BMR / TDEE / target from the shared calculator (same numbers as Dashboard & Nutrition)
+  const bmr = useMemo(() => calcBmr(userProfile), [userProfile]);
+  const tdee = useMemo(() => calcTdee(userProfile), [userProfile]);
+  const targetCalories = useMemo(() => calcTargetCalories(userProfile), [userProfile]);
 
   // Current Month Days Matrix with Synchronized Calorie & Photo Data + Day of Week Padding Offset
   const monthDays = useMemo(() => {
@@ -375,15 +369,6 @@ export default function ProgressPage() {
       return;
     }
     setDailyCalories(val);
-    if (val > 0) {
-      setDailyProtein(Math.round((val * 0.30) / 4));
-      setDailyCarbs(Math.round((val * 0.50) / 4));
-      setDailyFat(Math.round((val * 0.20) / 9));
-    } else {
-      setDailyProtein(0);
-      setDailyCarbs(0);
-      setDailyFat(0);
-    }
     const targetDateStr = selectedCalendarDate || getTodayStr();
     localStorage.setItem(`smart_daily_cal_${targetDateStr}`, val.toString());
     setIsEditingCalories(false);

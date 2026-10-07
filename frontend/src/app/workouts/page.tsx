@@ -43,6 +43,30 @@ const normalizeMuscleId = (id: string): string => {
   return s;
 };
 
+// Match a routine template exercise to the library: by exerciseId first (survives renames), then by name
+const findLibraryExercise = (library: any[], tmplEx: any) => {
+  if (tmplEx.exerciseId) {
+    const byId = library.find(item => item.id === tmplEx.exerciseId || item._id === tmplEx.exerciseId);
+    if (byId) return byId;
+  }
+  const nm = (tmplEx.exerciseName || '').toLowerCase().trim();
+  return library.find(item => item.name && item.name.toLowerCase().trim() === nm);
+};
+
+// Consecutive-day streak ending today/yesterday, from a list of YYYY-MM-DD dates (offline fallback)
+const calcLocalStreak = (dates: string[], todayStr: string): number => {
+  const set = new Set(dates);
+  const parse = (d: string) => { const [y, m, dd] = d.split('-').map(Number); return new Date(y, m - 1, dd); };
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const cursor = parse(todayStr);
+  if (!set.has(fmt(cursor))) cursor.setDate(cursor.getDate() - 1);
+  let n = 0;
+  while (set.has(fmt(cursor))) { n++; cursor.setDate(cursor.getDate() - 1); }
+  return n;
+};
+
+const toModelMuscle = (m: string): string => (m === 'lats' ? 'upper-back' : m);
+
 const toFixedReps = (val: string | number | undefined | null): string => {
   if (!val) return '10';
   const str = String(val).trim();
@@ -195,7 +219,7 @@ export default function Workouts() {
 
   const [selectedDetailExercise, setSelectedDetailExercise] = useState<any | null>(null);
 
-  const [streakDays, setStreakDays] = useState<number>(1);
+  const [streakDays, setStreakDays] = useState<number>(0);
   const [noticeMessage, setNoticeMessage] = useState<string>('');
   const [librarySearchTerm, setLibrarySearchTerm] = useState<string>('');
 
@@ -204,9 +228,11 @@ export default function Workouts() {
   const [restTimerActive, setRestTimerActive] = useState<boolean>(false);
   const [restTimerPaused, setRestTimerPaused] = useState<boolean>(false);
   const [restTimerSeconds, setRestTimerSeconds] = useState<number>(REST_DURATION);
+  const [restTimerTotal, setRestTimerTotal] = useState<number>(REST_DURATION);
   const [restTimerExerciseName, setRestTimerExerciseName] = useState<string>('');
   const [restTimerExerciseId, setRestTimerExerciseId] = useState<string | null>(null);
   const restTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const savedDayIndexRef = useRef<number | null>(null);
 
   // Rest Timer tick logic
   useEffect(() => {
@@ -234,11 +260,12 @@ export default function Workouts() {
     };
   }, [restTimerActive, restTimerPaused, restTimerSeconds]);
 
-  const startRestTimer = useCallback((exerciseId: string, exerciseName: string) => {
+  const startRestTimer = useCallback((exerciseId: string, exerciseName: string, durationSeconds: number = REST_DURATION) => {
     if (restTimerIntervalRef.current) clearInterval(restTimerIntervalRef.current);
     setRestTimerExerciseId(exerciseId);
     setRestTimerExerciseName(exerciseName);
-    setRestTimerSeconds(REST_DURATION);
+    setRestTimerTotal(durationSeconds);
+    setRestTimerSeconds(durationSeconds);
     setRestTimerPaused(false);
     setRestTimerActive(true);
   }, []);
@@ -311,6 +338,7 @@ export default function Workouts() {
           if (userProfile.lastActiveRoutineId) userActiveRoutineId = userProfile.lastActiveRoutineId;
           if (userProfile.lastActiveDayIndex !== undefined && userProfile.lastActiveDayIndex !== null) {
             userActiveDayIdx = userProfile.lastActiveDayIndex;
+            savedDayIndexRef.current = userProfile.lastActiveDayIndex;
           }
         }
       } catch (e) {}
@@ -369,21 +397,19 @@ export default function Workouts() {
     }
   };
 
-  useEffect(() => {
-    fetchInitialData();
-
-    const fetchStreak = async () => {
+  const refreshStreak = async () => {
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          const res = await fetch(`${API_URL}/api/workouts/streak`, {
+          const res = await fetch(`${API_URL}/api/workouts/streak?today=${formatDateStr(new Date())}`, {
             headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             credentials: 'include'
           });
           if (res.ok) {
             const data = await res.json();
-            if (data.count !== undefined) {
-              setStreakDays(Math.max(1, data.count));
+            const cur = data.current ?? data.count;
+            if (cur !== undefined) {
+              setStreakDays(cur);
               return;
             }
           }
@@ -393,12 +419,14 @@ export default function Workouts() {
         const token = localStorage.getItem('token');
         if (!token) {
           const history = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
-          setStreakDays(Math.max(1, history.length));
+          setStreakDays(calcLocalStreak(history, formatDateStr(new Date())));
         }
       } catch (e) { }
-    };
+  };
 
-    fetchStreak();
+  useEffect(() => {
+    fetchInitialData();
+    refreshStreak();
   }, []);
 
   const handleRoutineChange = (newId: string) => {
@@ -445,7 +473,9 @@ export default function Workouts() {
       if (matchIndex !== -1) {
         setCurrentDayIndex(matchIndex);
       } else {
-        setCurrentDayIndex(0);
+        // No tab for today (e.g. routine skips today): restore the last tab the user saved
+        const saved = savedDayIndexRef.current;
+        setCurrentDayIndex(saved !== null && saved >= 0 && saved < sortedSchedule.length ? saved : 0);
       }
     }
   }, [activeRoutineId, sortedSchedule, realTodayString]);
@@ -524,6 +554,7 @@ export default function Workouts() {
     completedIds: string[];
     detailsMap: Record<string, any>;
     isSaved: boolean;
+    setsMap?: Record<string, number[]>;
   }) => {
     try {
       const token = localStorage.getItem('token');
@@ -546,6 +577,13 @@ export default function Workouts() {
         })
         .filter((item): item is NonNullable<typeof item> => item !== null);
 
+      // Persist per-set progress inside detailsMap so it survives reloads / devices
+      const setsSource = payload.setsMap || completedSetsMap;
+      const mergedDetails: Record<string, any> = { ...payload.detailsMap };
+      (payload.selectedIds || []).forEach(id => {
+        mergedDetails[id] = { ...(mergedDetails[id] || {}), completedSets: setsSource[id] || [] };
+      });
+
       await fetch(`${API_URL}/api/workouts`, {
         method: 'POST',
         headers: {
@@ -561,7 +599,7 @@ export default function Workouts() {
           dayIndex: currentDayIndex,
           selectedIds: payload.selectedIds,
           completedIds: payload.completedIds,
-          detailsMap: payload.detailsMap,
+          detailsMap: mergedDetails,
           exercises: completedExercises,
           isSaved: payload.isSaved
         })
@@ -583,6 +621,7 @@ export default function Workouts() {
       let detailsMap: Record<string, any> = {};
       let isSavedSession = false;
       let loadedFromApi = false;
+      const loadedSets: Record<string, number[]> = {};
 
       // 1. Try fetching from Backend API if logged in
       const token = localStorage.getItem('token');
@@ -600,6 +639,9 @@ export default function Workouts() {
                 selectedIds = apiLog.selectedIds || [];
                 completedIds = apiLog.completedIds || [];
                 detailsMap = apiLog.detailsMap || {};
+                Object.keys(detailsMap).forEach(k => {
+                  if (Array.isArray(detailsMap[k]?.completedSets)) loadedSets[k] = detailsMap[k].completedSets;
+                });
                 isSavedSession = true;
               } else {
                 isSavedSession = false;
@@ -660,9 +702,7 @@ export default function Workouts() {
 
         currentTabWorkout.exercises.forEach((tmplEx: any) => {
           if (!tmplEx.exerciseName) return;
-          let matched = allExercises.find(
-            item => item.name && item.name.toLowerCase().trim() === tmplEx.exerciseName.toLowerCase().trim()
-          );
+          const matched = findLibraryExercise(allExercises, tmplEx);
 
           const exId = matched ? (matched.id || matched._id?.toString()) : `template_${tmplEx.exerciseName.replace(/\s+/g, '_')}`;
 
@@ -687,6 +727,7 @@ export default function Workouts() {
 
       if (isCancelled) return;
 
+      if (loadedFromApi) setCompletedSetsMap(loadedSets);
       setDaySelections(prev => ({ ...prev, [currentDayKey]: selectedIds }));
       setDayCompleted(prev => ({ ...prev, [currentDayKey]: completedIds }));
       setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: isSavedSession }));
@@ -779,9 +820,7 @@ export default function Workouts() {
 
     currentTabWorkout.exercises.forEach((tmplEx: any) => {
       if (!tmplEx.exerciseName) return;
-      let matched = allExercises.find(
-        item => item.name && item.name.toLowerCase().trim() === tmplEx.exerciseName.toLowerCase().trim()
-      );
+      const matched = findLibraryExercise(allExercises, tmplEx);
       const exId = matched ? (matched.id || matched._id?.toString()) : `template_${tmplEx.exerciseName.replace(/\s+/g, '_')}`;
 
       if (exId) {
@@ -876,7 +915,12 @@ export default function Workouts() {
     });
   };
 
-  const toggleCompleteExercise = (id: string, forcedState?: boolean, customSets?: number[]) => {
+  const toggleCompleteExercise = (id: string, forcedState?: boolean, customSets?: number[], setsMapOverride?: Record<string, number[]>) => {
+    if (activeTabDateStr > todayDateStr) {
+      setNoticeMessage('Không thể đánh dấu hoàn thành cho ngày trong tương lai!');
+      setTimeout(() => setNoticeMessage(''), 4000);
+      return;
+    }
     if (!isWorkoutSaved) {
       setNoticeMessage('Vui lòng nhấn "💾 LƯU & BẮT ĐẦU TẬP" ở trên để chốt danh sách bài tập trước!');
       setTimeout(() => setNoticeMessage(''), 4000);
@@ -893,6 +937,7 @@ export default function Workouts() {
     setDayCompleted(prev => ({ ...prev, [currentDayKey]: newComp }));
 
     // Update completedSetsMap if clicking main exercise checkmark directly
+    let effectiveSetsMap: Record<string, number[]> = setsMapOverride || completedSetsMap;
     if (customSets === undefined) {
       const targetEx = activeSelectedExercises.find(ex => ex.id === id);
       const totalSets = targetEx ? targetEx.sets : 3;
@@ -902,6 +947,7 @@ export default function Workouts() {
         ...completedSetsMap,
         [id]: newSets
       };
+      effectiveSetsMap = updatedSetsMap;
       setCompletedSetsMap(updatedSetsMap);
       try {
         localStorage.setItem(`smart_sets_${activeTabDateStr}_${currentDayKey}`, JSON.stringify(updatedSetsMap));
@@ -945,7 +991,7 @@ export default function Workouts() {
         updatedHistory = history.filter(d => d !== activeTabDateStr);
       }
       localStorage.setItem('smart_streak_history', JSON.stringify(updatedHistory));
-      setStreakDays(updatedHistory.length);
+      setStreakDays(calcLocalStreak(updatedHistory, todayDateStr));
 
       notifyStorageChange(activeTabDateStr);
     } catch (e) { }
@@ -959,19 +1005,25 @@ export default function Workouts() {
       selectedIds: currentSelectedIds,
       completedIds: newComp,
       detailsMap: toggleDayDetailsMap,
-      isSaved: true
-    });
+      isSaved: true,
+      setsMap: effectiveSetsMap
+    }).then(() => { if (localStorage.getItem('token')) refreshStreak(); });
 
     // 4. Start 3-minute rest timer when marking exercise as COMPLETED, stop/hide timer when UNTICKING
     if (shouldBeComp && forcedState === undefined) {
       const completedEx = allExercises.find(ex => ex.id === id || ex._id === id || ex._id?.toString() === id);
-      startRestTimer(id, completedEx?.name || 'Bài tập');
+      startRestTimer(id, completedEx?.name || 'Bài tập', exerciseDetails[id]?.restTimeSeconds || REST_DURATION);
     } else if (!shouldBeComp && restTimerExerciseId === id) {
       skipRestTimer();
     }
   };
 
   const toggleCompleteSet = (exId: string, setIndex: number, totalSets: number, exName: string) => {
+    if (activeTabDateStr > todayDateStr) {
+      setNoticeMessage('Không thể đánh dấu hoàn thành cho ngày trong tương lai!');
+      setTimeout(() => setNoticeMessage(''), 4000);
+      return;
+    }
     if (!isWorkoutSaved) {
       setNoticeMessage('Vui lòng nhấn "💾 LƯU & BẮT ĐẦU TẬP" ở trên để chốt danh sách bài tập trước!');
       setTimeout(() => setNoticeMessage(''), 4000);
@@ -999,7 +1051,7 @@ export default function Workouts() {
 
     // Trigger clock timer when checking a set, STOP/HIDE timer when UNTICKING set
     if (!isSetDone) {
-      startRestTimer(exId, `${exName} #${setIndex + 1}`);
+      startRestTimer(exId, `${exName} #${setIndex + 1}`, exerciseDetails[exId]?.restTimeSeconds || REST_DURATION);
     } else if (restTimerExerciseId === exId) {
       skipRestTimer();
     }
@@ -1009,9 +1061,22 @@ export default function Workouts() {
     const isMainDone = currentCompletedIds.includes(exId);
 
     if (allDone && !isMainDone) {
-      toggleCompleteExercise(exId, true, newSets);
+      toggleCompleteExercise(exId, true, newSets, updatedSetsMap);
     } else if (!allDone && isMainDone) {
-      toggleCompleteExercise(exId, false, newSets);
+      toggleCompleteExercise(exId, false, newSets, updatedSetsMap);
+    } else {
+      // Main completion unchanged: still persist the per-set progress
+      const dayDetails: Record<string, any> = {};
+      currentSelectedIds.forEach(id => {
+        if (exerciseDetails[id]) dayDetails[id] = exerciseDetails[id];
+      });
+      pushWorkoutToBackend({
+        selectedIds: currentSelectedIds,
+        completedIds: currentCompletedIds,
+        detailsMap: dayDetails,
+        isSaved: true,
+        setsMap: updatedSetsMap
+      });
     }
   };
 
@@ -1032,7 +1097,7 @@ export default function Workouts() {
     if (currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
       currentTabWorkout.exercises.forEach((tmplEx: any) => {
         if (!tmplEx.exerciseName) return;
-        const matched = allExercises.find(e => e.name && e.name.toLowerCase().trim() === tmplEx.exerciseName.toLowerCase().trim());
+        const matched = findLibraryExercise(allExercises, tmplEx);
         const muscleRaw = matched ? matched.muscle : (tmplEx.muscle || 'chest');
         const muscleKey = normalizeMuscleId(muscleRaw);
         if (!countsMap[muscleKey]) {
@@ -1081,9 +1146,9 @@ export default function Workouts() {
     let colors = ['#00E5FF', '#00FF87'];
 
     if (effectiveTargets.length > 0) {
-      const rawMuscles: string[] = effectiveTargets.map((t: any) => normalizeMuscleId(t.id));
+      const rawMuscles: string[] = effectiveTargets.map((t: any) => toModelMuscle(normalizeMuscleId(t.id)));
       const allMuscles = Array.from(new Set(rawMuscles)).filter((m: string) => VALID_MODEL_MUSCLES.has(m));
-      const safeSelected = selectedMuscle ? normalizeMuscleId(selectedMuscle) : null;
+      const safeSelected = selectedMuscle ? toModelMuscle(normalizeMuscleId(selectedMuscle)) : null;
 
       if (safeSelected && VALID_MODEL_MUSCLES.has(safeSelected)) {
         data = [
@@ -1098,7 +1163,7 @@ export default function Workouts() {
         colors = ['#00E5FF'];
       }
     } else if (selectedMuscle) {
-      const safeSelected = normalizeMuscleId(selectedMuscle);
+      const safeSelected = toModelMuscle(normalizeMuscleId(selectedMuscle));
       if (VALID_MODEL_MUSCLES.has(safeSelected)) {
         data = [
           { name: 'Selected', muscles: [safeSelected] }
@@ -1718,7 +1783,7 @@ export default function Workouts() {
                                     ? 'bg-gradient-to-r from-amber-500 to-amber-300'
                                     : 'bg-gradient-to-r from-[#00E5FF] to-[#00FF87]'
                               }`}
-                              style={{ width: `${(restTimerSeconds / REST_DURATION) * 100}%` }}
+                              style={{ width: `${(restTimerSeconds / (restTimerTotal || REST_DURATION)) * 100}%` }}
                             />
                           </div>
 

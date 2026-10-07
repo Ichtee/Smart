@@ -7,6 +7,8 @@ const targetSchema = new mongoose.Schema({
 }, { _id: false });
 
 const workoutExerciseSchema = new mongoose.Schema({
+  // Link to Exercise._id so renaming an exercise doesn't break routines (name kept as fallback/display)
+  exerciseId: { type: String, default: '' },
   exerciseName: { type: String, required: true },
   muscle: { type: String, required: true, default: 'chest' },
   secondaryMuscles: [{ type: String }],

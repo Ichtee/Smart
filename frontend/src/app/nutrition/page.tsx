@@ -4,6 +4,7 @@ import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { API_URL, apiFetch, isUnauthorized } from '@/utils/api';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
+import { calcTargetCalories, calcTdee, calcGoalAdjustment } from '@/utils/nutritionCalc';
 
 interface MealItem {
   id: string;
@@ -11,6 +12,9 @@ interface MealItem {
   calories: number;
   quantity?: string;
   image?: string;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
 }
 
 export default function Nutrition() {
@@ -54,6 +58,8 @@ export default function Nutrition() {
   const [servingSize, setServingSize] = useState('1 phần');
   const [baseCalories, setBaseCalories] = useState('');
   const [portionMultiplier, setPortionMultiplier] = useState<string>('1');
+  // Macros (grams) for ONE base serving of the selected food; null = unknown (manual entry)
+  const [baseMacros, setBaseMacros] = useState<{ protein: number; carbs: number; fat: number } | null>(null);
   const [foodImage, setFoodImage] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUploadError, setImageUploadError] = useState('');
@@ -71,6 +77,9 @@ export default function Nutrition() {
     category?: string;
     image?: string;
     isCustom?: boolean;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
   }>>([]);
   const [showDbDropdown, setShowDbDropdown] = useState(false);
   const [saveAsCustomFood, setSaveAsCustomFood] = useState(false);
@@ -181,6 +190,7 @@ export default function Nutrition() {
     setFoodName(product.name);
     setServingSize(product.servingSize || '1 phần');
     setBaseCalories((product.calories || 0).toString());
+    setBaseMacros({ protein: product.protein || 0, carbs: product.carbs || 0, fat: product.fat || 0 });
     setPortionMultiplier('1');
   };
 
@@ -314,42 +324,9 @@ export default function Nutrition() {
             return;
           }
 
-          const w = Number(user.weight);
-          const h = Number(user.height);
-          const a = Number(user.age);
-
-          let bmr = (10 * w) + (6.25 * h) - (5 * a);
-          if (user.gender === 'Nam') {
-            bmr += 5;
-          } else {
-            bmr -= 161;
-          }
-
-          let multiplier = 1.2;
-          switch (user.activityLevel) {
-            case 'Ít vận động': multiplier = 1.2; break;
-            case 'Vận động nhẹ': multiplier = 1.375; break;
-            case 'Vận động vừa': multiplier = 1.55; break;
-            case 'Vận động nhiều': multiplier = 1.725; break;
-            case 'Vận động cực nhiều': multiplier = 1.9; break;
-            default: multiplier = 1.2; break;
-          }
-
-          const tdeeValue = bmr * multiplier;
-          let calories = tdeeValue;
-          let deficit = 0;
-
-          if (user.goal === 'Giảm mỡ') {
-            calories -= 500;
-            deficit = -500;
-          } else if (user.goal === 'Tăng cơ' || user.goal === 'Tăng cân') {
-            calories += 300;
-            deficit = 300;
-          }
-
-          setTdee(Math.round(tdeeValue));
-          setCalorieDeficit(deficit);
-          setTargetCalories(Math.round(calories));
+          setTdee(calcTdee(user));
+          setCalorieDeficit(calcGoalAdjustment(user));
+          setTargetCalories(calcTargetCalories(user));
         } else if (isUnauthorized(res)) {
           localStorage.removeItem('token');
           router.push('/login');
@@ -456,7 +433,12 @@ export default function Nutrition() {
       name: trimmedFoodName,
       calories: computedTotalCalories,
       quantity: formattedQuantity,
-      image: foodImage || undefined
+      image: foodImage || undefined,
+      ...(baseMacros ? {
+        protein: Math.round(baseMacros.protein * multVal * 10) / 10,
+        carbs: Math.round(baseMacros.carbs * multVal * 10) / 10,
+        fat: Math.round(baseMacros.fat * multVal * 10) / 10
+      } : {})
     };
 
     const updatedMeals = {
@@ -484,6 +466,7 @@ export default function Nutrition() {
             name: trimmedFoodName,
             servingSize: cleanServing,
             calories: parseFloat(baseCalories) || computedTotalCalories,
+            ...(baseMacros || {}),
             image: foodImage || ''
           })
         }).then(() => fetchFoodsFromDb()).catch(() => {});
@@ -494,6 +477,7 @@ export default function Nutrition() {
     setFoodName('');
     setServingSize('1 phần');
     setBaseCalories('');
+    setBaseMacros(null);
     setPortionMultiplier('1');
     setFoodImage('');
     setSaveAsCustomFood(false);
@@ -996,6 +980,7 @@ export default function Nutrition() {
                           setFoodName(item.name);
                           setServingSize(item.servingSize || '1 phần');
                           setBaseCalories(item.calories.toString());
+                          setBaseMacros({ protein: item.protein || 0, carbs: item.carbs || 0, fat: item.fat || 0 });
                           setPortionMultiplier('1');
                           if (item.image) setFoodImage(item.image);
                           setActiveModalTab('search');
@@ -1102,6 +1087,7 @@ export default function Nutrition() {
                             setFoodName(item.name);
                             setServingSize(item.servingSize || '1 phần');
                             setBaseCalories(item.calories.toString());
+                            setBaseMacros({ protein: item.protein || 0, carbs: item.carbs || 0, fat: item.fat || 0 });
                             setPortionMultiplier('1');
                             if (item.image) setFoodImage(item.image);
                             setShowDbDropdown(false);
@@ -1143,7 +1129,7 @@ export default function Nutrition() {
                     min="1"
                     max="10000"
                     value={baseCalories}
-                    onChange={(e) => setBaseCalories(e.target.value)}
+                    onChange={(e) => { setBaseCalories(e.target.value); setBaseMacros(null); }}
                     placeholder="VD: 400"
                     className="w-full bg-[#0B101D] border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#00E5FF]"
                   />
@@ -1301,6 +1287,7 @@ export default function Nutrition() {
                         setFoodName(sug.name);
                         setServingSize(sug.qty);
                         setBaseCalories(sug.cal.toString());
+                        setBaseMacros(null);
                         setPortionMultiplier('1');
                       }}
                       className="px-2.5 py-1 bg-[#18233C] hover:bg-slate-800 border border-slate-800 rounded-lg text-xs text-slate-300 font-medium"

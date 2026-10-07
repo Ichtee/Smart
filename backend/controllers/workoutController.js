@@ -1,5 +1,32 @@
 const WorkoutLog = require('../models/WorkoutLog');
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const toUtcDay = (dateStr) => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return Date.UTC(y, m - 1, d) / 86400000;
+};
+
+// Compute consecutive-day streaks from a sorted, de-duplicated list of YYYY-MM-DD dates.
+// "current" is still alive if the last trained day is today or yesterday (relative to `today`).
+const computeStreaks = (sortedDates, today) => {
+  let longest = 0;
+  let run = 0;
+  let prev = null;
+  for (const d of sortedDates) {
+    const day = toUtcDay(d);
+    run = prev !== null && day - prev === 1 ? run + 1 : 1;
+    if (run > longest) longest = run;
+    prev = day;
+  }
+  let current = 0;
+  if (sortedDates.length > 0) {
+    const last = toUtcDay(sortedDates[sortedDates.length - 1]);
+    if (toUtcDay(today) - last <= 1) current = run;
+  }
+  return { current, longest };
+};
+
 // @desc    Get workout log for a specific date
 // @route   GET /api/workouts
 // @access  Private
@@ -57,8 +84,15 @@ const saveWorkoutLog = async (req, res) => {
     }
 
     // Validate date format YYYY-MM-DD
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (!DATE_RE.test(date)) {
       return res.status(400).json({ message: 'Định dạng ngày phải là YYYY-MM-DD' });
+    }
+
+    // Cannot log completed exercises for a future day (allow +1 day for client timezones ahead of UTC)
+    const hasCompletion = Array.isArray(completedIds) && completedIds.length > 0;
+    const todayUtc = Math.floor(Date.now() / 86400000);
+    if (hasCompletion && toUtcDay(date) > todayUtc + 1) {
+      return res.status(400).json({ message: 'Không thể đánh dấu hoàn thành bài tập cho ngày trong tương lai.' });
     }
 
     const updatedLog = await WorkoutLog.findOneAndUpdate(
@@ -97,9 +131,18 @@ const getStreakHistory = async (req, res) => {
     }).select('date');
 
     const streakDates = Array.from(new Set(logs.map(l => l.date))).sort();
+    // Client sends its local date so "today" respects the user's timezone
+    const today = DATE_RE.test(req.query.today || '')
+      ? req.query.today
+      : new Date().toISOString().slice(0, 10);
+    const { current, longest } = computeStreaks(streakDates, today);
+
     return res.status(200).json({
       streakDates,
-      count: streakDates.length
+      current,
+      longest,
+      total: streakDates.length,
+      count: current // consecutive-day streak (was total days before)
     });
   } catch (error) {
     console.error('Error fetching streak history:', error);
