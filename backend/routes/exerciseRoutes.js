@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Exercise = require('../models/Exercise');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -78,6 +79,8 @@ router.put('/:id', protect, admin, async (req, res) => {
 // DELETE exercise
 router.delete('/:id', protect, admin, async (req, res) => {
   try {
+    // a malformed id cannot match anything: 404 instead of a CastError turning into a 500
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Không tìm thấy bài tập' });
     const exercise = await Exercise.findByIdAndDelete(req.params.id);
     if (!exercise) return res.status(404).json({ message: 'Không tìm thấy bài tập' });
     res.json({ message: 'Xóa bài tập thành công' });

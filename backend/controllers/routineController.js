@@ -1,5 +1,15 @@
 const Routine = require('../models/Routine');
 
+// Bad client data (a schedule day without a name, 99 sets, ...) is a 400, not a server error
+const isClientDataError = (error) => error && (error.name === 'ValidationError' || error.name === 'CastError');
+const clientDataMessage = (error) => {
+  if (error.name === 'ValidationError') {
+    const first = Object.values(error.errors || {})[0];
+    return (first && first.message) || 'Dữ liệu lịch tập không hợp lệ.';
+  }
+  return 'Dữ liệu lịch tập không hợp lệ.';
+};
+
 // @desc    Get all routines
 // @route   GET /api/routines
 // @access  Public
@@ -20,10 +30,10 @@ const createRoutine = async (req, res) => {
     const { id, name, type, description, frequencyDaysPerWeek, generalNotes, schedule } = req.body;
     
     // Validation
-    if (!id || !id.trim()) {
+    if (typeof id !== 'string' || !id.trim()) {
       return res.status(400).json({ message: 'ID lịch tập là bắt buộc.' });
     }
-    if (!name || !name.trim() || name.trim().length < 2 || name.trim().length > 100) {
+    if (typeof name !== 'string' || !name.trim() || name.trim().length < 2 || name.trim().length > 100) {
       return res.status(400).json({ message: 'Tên lịch tập phải từ 2 đến 100 ký tự.' });
     }
     if (frequencyDaysPerWeek !== undefined && (isNaN(Number(frequencyDaysPerWeek)) || Number(frequencyDaysPerWeek) < 1 || Number(frequencyDaysPerWeek) > 7)) {
@@ -47,6 +57,7 @@ const createRoutine = async (req, res) => {
 
     res.status(201).json(routine);
   } catch (error) {
+    if (isClientDataError(error)) return res.status(400).json({ message: clientDataMessage(error) });
     res.status(500).json({ message: error.message });
   }
 };
@@ -64,8 +75,16 @@ const updateRoutine = async (req, res) => {
 
     // Explicitly pick only allowed fields to prevent mass assignment
     const { name, type, description, frequencyDaysPerWeek, generalNotes, schedule } = req.body;
+
+    if (name !== undefined && (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100)) {
+      return res.status(400).json({ message: 'Tên lịch tập phải từ 2 đến 100 ký tự.' });
+    }
+    if (frequencyDaysPerWeek !== undefined && (isNaN(Number(frequencyDaysPerWeek)) || Number(frequencyDaysPerWeek) < 1 || Number(frequencyDaysPerWeek) > 7)) {
+      return res.status(400).json({ message: 'Tần suất tập phải từ 1 đến 7 ngày/tuần.' });
+    }
+
     const updateData = {};
-    if (name !== undefined) updateData.name = name;
+    if (name !== undefined) updateData.name = name.trim();
     if (type !== undefined) updateData.type = type;
     if (description !== undefined) updateData.description = description;
     if (frequencyDaysPerWeek !== undefined) updateData.frequencyDaysPerWeek = frequencyDaysPerWeek;
@@ -80,6 +99,7 @@ const updateRoutine = async (req, res) => {
 
     res.status(200).json(updatedRoutine);
   } catch (error) {
+    if (isClientDataError(error)) return res.status(400).json({ message: clientDataMessage(error) });
     console.error('updateRoutine error:', error);
     res.status(500).json({ message: 'Server error' });
   }
