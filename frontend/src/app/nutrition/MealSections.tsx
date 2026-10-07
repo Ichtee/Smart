@@ -6,6 +6,10 @@ interface MealSectionsProps {
   caloriesConsumed: number;
   handleRemoveFood: (category: string, itemId: string) => void;
   meals: Record<string, MealItem[]>;
+  onCopyPreviousDay: () => void;
+  copyBusy: boolean;
+  copyNotice: string;
+  canCopy: boolean;
   setActiveMealCategory: Dispatch<SetStateAction<string | null>>;
   setSelectedPreviewImage: Dispatch<SetStateAction<string | null>>;
 }
@@ -14,6 +18,10 @@ export default function MealSections({
   caloriesConsumed,
   handleRemoveFood,
   meals,
+  onCopyPreviousDay,
+  copyBusy,
+  copyNotice,
+  canCopy,
   setActiveMealCategory,
   setSelectedPreviewImage,
 }: MealSectionsProps) {
@@ -25,9 +33,21 @@ export default function MealSections({
             <span>🍱</span> Ghi chép bữa ăn trong ngày
           </h3>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onCopyPreviousDay}
+              disabled={!canCopy || copyBusy}
+              className="px-3 py-1.5 rounded-xl bg-[#18233C] text-slate-200 text-[10px] sm:text-xs font-bold hover:bg-[#1f2d4d] disabled:opacity-50 transition-all cursor-pointer"
+            >
+              {copyBusy ? 'Đang sao chép...' : '📋 Sao chép từ hôm qua'}
+            </button>
             <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tổng: <strong className="text-[#00E5FF] font-black">{caloriesConsumed} kcal</strong></span>
           </div>
         </div>
+
+        {copyNotice && (
+          <p role="status" className="text-xs font-semibold text-cyan-300">{copyNotice}</p>
+        )}
 
         <div className="grid grid-cols-2 gap-3 sm:gap-6">
           {[

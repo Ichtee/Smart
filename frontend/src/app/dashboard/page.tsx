@@ -7,6 +7,7 @@ import GoogleTranslate from '@/components/GoogleTranslate';
 import { apiFetch } from '@/utils/api';
 import { fetcher, useProfile, useStreak, isUnauthorizedError } from '@/hooks/useApi';
 import { monthAndWeekRange, monthRange, monthKey } from '@/utils/dateUtils';
+import { waterGoalMl } from '@/utils/waterGoal';
 import { calcBmr, calcTdee, calcTargetCalories, macroTargets, sumMacros } from '@/utils/nutritionCalc';
 import { Bell, ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Trophy, Dumbbell, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 
@@ -106,6 +107,7 @@ export default function Dashboard() {
   const { data: todayNutrition } = useSWR(`/api/nutrition?date=${todayStr}`, fetcher, logsOpts);
   const todayMeals: any[] = useMemo(() => Object.values(todayNutrition?.meals || {}).flat() as any[], [todayNutrition]);
   const todayWaterGlasses: number = todayNutrition?.waterGlasses || 0;
+  const waterGoal = waterGoalMl(profile.weight);
 
   const weeklyCalories: number[] = useMemo(
     () => weekDates.map(d => nutritionLogs[d]?.dayCalories || 0),
@@ -258,7 +260,7 @@ export default function Dashboard() {
               <div className="relative size-14 flex items-center justify-center">
                 <svg className="size-full -rotate-90" viewBox="0 0 36 36">
                   <path className="text-secondary" strokeWidth="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  <path className="text-primary" strokeDasharray={`${Math.min(100, Math.round(((todayWaterGlasses * 250) / 2000) * 100))}, 100`} strokeWidth="4" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path className="text-primary" strokeDasharray={`${Math.min(100, Math.round(((todayWaterGlasses * 250) / waterGoal) * 100))}, 100`} strokeWidth="4" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                 </svg>
               </div>
             </div>

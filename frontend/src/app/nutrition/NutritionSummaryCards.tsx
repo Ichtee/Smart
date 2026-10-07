@@ -10,6 +10,7 @@ interface NutritionSummaryCardsProps {
   setShowDetailModal: Dispatch<SetStateAction<boolean>>;
   targetCalories: number;
   targetWaterGlasses: number;
+  waterGoalMl: number;
   tdee: number;
   updateWater: (delta: number) => void;
   waterGlasses: number;
@@ -24,6 +25,7 @@ export default function NutritionSummaryCards({
   setShowDetailModal,
   targetCalories,
   targetWaterGlasses,
+  waterGoalMl,
   tdee,
   updateWater,
   waterGlasses,
@@ -105,7 +107,7 @@ export default function NutritionSummaryCards({
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-xl sm:text-4xl font-black text-white drop-shadow-md">{waterGlasses * mlPerGlass}</span>
-              <span className="text-slate-400 text-[9px] sm:text-xs font-bold uppercase tracking-wider mt-0.5">ml / 2000 ml</span>
+              <span className="text-slate-400 text-[9px] sm:text-xs font-bold uppercase tracking-wider mt-0.5">ml / {waterGoalMl} ml</span>
             </div>
           </div>
 

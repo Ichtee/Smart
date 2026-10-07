@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { apiFetch, isUnauthorized } from '@/utils/api';
 import { calcTargetCalories, calcTdee, calcGoalAdjustment } from '@/utils/nutritionCalc';
+import { waterGoalMl as calcWaterGoalMl, waterGoalGlasses } from '@/utils/waterGoal';
 import { useFoods, useProfile, isUnauthorizedError } from '@/hooks/useApi';
 import { useServerSave } from '@/hooks/useServerSave';
 import SaveStatusBanner from '@/components/SaveStatusBanner';
@@ -14,6 +15,7 @@ import AddFoodModal from './AddFoodModal';
 import MealSections from './MealSections';
 import NutritionSummaryCards from './NutritionSummaryCards';
 import NutritionDateBar from './NutritionDateBar';
+import { mergeCopiedMeals, previousDay } from './copyMeals';
 
 
 export default function Nutrition() {
@@ -22,7 +24,6 @@ export default function Nutrition() {
   // Water Tracker State
   const [waterGlasses, setWaterGlasses] = useState(4);
   const [mlPerGlass, setMlPerGlass] = useState(250);
-  const targetWaterGlasses = Math.ceil(2000 / (mlPerGlass || 250));
 
   // Meals State with persistence
   const [meals, setMeals] = useState<Record<string, MealItem[]>>({
@@ -136,6 +137,8 @@ export default function Nutrition() {
   const targetCalories = profile ? calcTargetCalories(profile) : 2000;
   const tdee = profile ? calcTdee(profile) : 2000;
   const calorieDeficit = profile ? calcGoalAdjustment(profile) : 0;
+  const waterGoalMl = calcWaterGoalMl(profile?.weight);
+  const targetWaterGlasses = waterGoalGlasses(waterGoalMl, mlPerGlass);
 
 
   // Date navigation helpers using local date arithmetic
@@ -155,6 +158,43 @@ export default function Nutrition() {
     const newVal = Math.max(0, waterGlasses + delta);
     setWaterGlasses(newVal);
     pushNutritionToBackend(selectedDate, newVal, mlPerGlass, meals);
+  };
+
+  // "Same as yesterday": append the previous day's foods to this day.
+  // The request is async, so it reads the latest day/meals from a ref and gives up if the user moved to
+  // another day meanwhile (it must never write yesterday's foods into a different day).
+  const [copyBusy, setCopyBusy] = useState(false);
+  const [copyNotice, setCopyNotice] = useState('');
+  const latest = useRef({ selectedDate, meals, waterGlasses, mlPerGlass });
+  useEffect(() => {
+    latest.current = { selectedDate, meals, waterGlasses, mlPerGlass };
+  }, [selectedDate, meals, waterGlasses, mlPerGlass]);
+  useEffect(() => { setCopyNotice(''); }, [selectedDate]);
+
+  const handleCopyPreviousDay = async () => {
+    if (!dayLoaded || copyBusy) return;
+    const targetDate = selectedDate;
+    const from = previousDay(targetDate);
+    setCopyBusy(true);
+    setCopyNotice('');
+    try {
+      const res = await apiFetch(`/api/nutrition?date=${from}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const source = await res.json();
+      if (latest.current.selectedDate !== targetDate) return;
+      const { meals: merged, added } = mergeCopiedMeals(latest.current.meals, source?.meals);
+      if (added === 0) {
+        setCopyNotice(`Ngày ${from} chưa có món ăn nào để sao chép.`);
+        return;
+      }
+      setMeals(merged);
+      pushNutritionToBackend(targetDate, latest.current.waterGlasses, latest.current.mlPerGlass, merged);
+      setCopyNotice(`Đã sao chép ${added} món từ ngày ${from}.`);
+    } catch {
+      if (latest.current.selectedDate === targetDate) setCopyNotice('Không sao chép được. Vui lòng thử lại.');
+    } finally {
+      setCopyBusy(false);
+    }
   };
 
   // Called by the add-food modal with a fully validated item
@@ -242,6 +282,7 @@ export default function Nutrition() {
           setShowDetailModal={setShowDetailModal}
           targetCalories={targetCalories}
           targetWaterGlasses={targetWaterGlasses}
+          waterGoalMl={waterGoalMl}
           tdee={tdee}
           updateWater={updateWater}
           waterGlasses={waterGlasses}
@@ -252,6 +293,10 @@ export default function Nutrition() {
           caloriesConsumed={caloriesConsumed}
           handleRemoveFood={handleRemoveFood}
           meals={meals}
+          onCopyPreviousDay={handleCopyPreviousDay}
+          copyBusy={copyBusy}
+          copyNotice={copyNotice}
+          canCopy={dayLoaded}
           setActiveMealCategory={setActiveMealCategory}
           setSelectedPreviewImage={setSelectedPreviewImage}
         />
