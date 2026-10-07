@@ -1,5 +1,5 @@
 'use client';
-import useSWR, { SWRConfiguration, mutate as globalMutate } from 'swr';
+import useSWR, { SWRConfiguration, mutate as globalMutate, unload } from 'swr';
 import { apiFetch, resetAuthVerified } from '@/utils/api';
 import { toDateStr } from '@/utils/dateUtils';
 
@@ -28,10 +28,13 @@ export const fetcher = async (path: string) => {
 };
 
 // Reference data that rarely changes: fetch once, share between pages, refresh only on demand (mutate()).
+// Do NOT raise dedupingInterval here: SWR reuses an in-flight/recent request for that long, and
+// clearApiCache() (login/logout) does not clear that bookkeeping, so a long window would hand the
+// NEXT account the previous account's request and leave its page empty. "Fetch once" is already
+// guaranteed by revalidateIfStale: false.
 const STATIC: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateIfStale: false,
-  dedupingInterval: 60_000,
   shouldRetryOnError: false,
 };
 
@@ -48,7 +51,9 @@ export function useProfile() {
  */
 export const clearApiCache = () => {
   resetAuthVerified();
-  return globalMutate(() => true, undefined, { revalidate: false });
+  // unload() (not mutate): besides emptying the cache it cancels in-flight requests and forgets SWR's
+  // request-dedupe bookkeeping, so the next account's first fetch is never merged into the old one.
+  unload({ revalidate: false });
 };
 
 /** Put an already-fetched profile into the cache (AuthGuard fetches it anyway). */
