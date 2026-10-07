@@ -1,14 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { API_URL } from '@/utils/api';
+import { apiFetch, isUnauthorized } from '@/utils/api';
 
 export default function UserManagement() {
   const router = useRouter();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState('');
-  const [token, setToken] = useState<string | null>(null);
   
   // Search state
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,21 +27,16 @@ export default function UserManagement() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      if (!storedToken) {
-        router.push('/login');
-        return;
-      }
-      setToken(storedToken);
-
       try {
-        const res = await fetch(`${API_URL}/api/users/profile`, {
-          headers: { 'Authorization': `Bearer ${storedToken}` }
-        });
+        const res = await apiFetch('/api/users/profile');
+        if (isUnauthorized(res)) {
+          router.push('/login');
+          return;
+        }
         const user = await res.json();
-        
+
         if (res.ok && user.role === 'admin') {
-          fetchUsers(storedToken);
+          fetchUsers();
         } else {
           setAuthError('Từ chối truy cập: Bạn không có quyền Quản trị viên (Admin).');
           setLoading(false);
@@ -56,11 +50,9 @@ export default function UserManagement() {
     checkAuth();
   }, []);
 
-  const fetchUsers = async (authToken: string) => {
+  const fetchUsers = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/users`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      });
+      const res = await apiFetch('/api/users');
       if (!res.ok) throw new Error(`Lỗi Server: ${res.status}`);
       const data = await res.json();
       setUsers(Array.isArray(data) ? data : (data.users || []));
@@ -84,15 +76,11 @@ export default function UserManagement() {
 
   const performDeleteUser = async (id: string, userName: string) => {
     setPopup(null);
-    if (!token) return;
     try {
-      const res = await fetch(`${API_URL}/api/users/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await apiFetch(`/api/users/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setSelectedUser(null);
-        fetchUsers(token);
+        fetchUsers();
         setPopup({
           show: true,
           type: 'success',
@@ -119,20 +107,16 @@ export default function UserManagement() {
   };
 
   const handleUpdateField = async (id: string, field: string, value: any) => {
-    if (!token) return;
     try {
-      const res = await fetch(`${API_URL}/api/users/${id}`, {
+      const res = await apiFetch(`/api/users/${id}`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           [field]: value
         })
       });
       if (res.ok) {
-        fetchUsers(token);
+        fetchUsers();
         setPopup({
           show: true,
           type: 'success',
@@ -141,7 +125,7 @@ export default function UserManagement() {
         });
       } else {
         const error = await res.json();
-        fetchUsers(token);
+        fetchUsers();
         setPopup({
           show: true,
           type: 'error',

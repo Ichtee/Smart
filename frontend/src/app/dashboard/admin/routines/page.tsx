@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { API_URL } from '@/utils/api';
+import { apiFetch, isUnauthorized } from '@/utils/api';
 
 function SearchableExerciseSelect({
   value,
@@ -239,7 +239,6 @@ export default function RoutineManagement() {
   const [exercises, setExercises] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState('');
-  const [token, setToken] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -286,19 +285,14 @@ export default function RoutineManagement() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      if (!storedToken) {
-        router.push('/login');
-        return;
-      }
-      setToken(storedToken);
-
       try {
-        const res = await fetch(`${API_URL}/api/users/profile`, {
-          headers: { 'Authorization': `Bearer ${storedToken}` }
-        });
+        const res = await apiFetch('/api/users/profile');
+        if (isUnauthorized(res)) {
+          router.push('/login');
+          return;
+        }
         const user = await res.json();
-        
+
         if (res.ok && user.role === 'admin') {
           fetchRoutines();
           fetchExercises(); // Pre-fetch exercises to extract dynamic categories
@@ -317,7 +311,7 @@ export default function RoutineManagement() {
 
   const fetchRoutines = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/routines`);
+      const res = await apiFetch('/api/routines');
       if (!res.ok) throw new Error(`Lỗi Server: ${res.status}`);
       const data = await res.json();
       setRoutines(data);
@@ -332,7 +326,7 @@ export default function RoutineManagement() {
 
   const fetchExercises = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/exercises`);
+      const res = await apiFetch('/api/exercises');
       if (!res.ok) throw new Error(`Lỗi Server: ${res.status}`);
       const data = await res.json();
       setExercises(data);
@@ -366,12 +360,8 @@ export default function RoutineManagement() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Bạn có chắc chắn muốn xóa lịch tập này?')) return;
-    if (!token) return;
     try {
-      const res = await fetch(`${API_URL}/api/routines/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await apiFetch(`/api/routines/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setRoutines(routines.filter(r => r.id !== id));
       } else {
@@ -407,12 +397,11 @@ export default function RoutineManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
     setSaving(true);
     try {
       const url = isEditing 
-        ? `${API_URL}/api/routines/${formData.id}`
-        : `${API_URL}/api/routines`;
+        ? `/api/routines/${formData.id}`
+        : '/api/routines';
       
       const method = isEditing ? 'PUT' : 'POST';
 
@@ -432,12 +421,9 @@ export default function RoutineManagement() {
 
       const payload = { ...formData, schedule: sortedSchedule };
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 

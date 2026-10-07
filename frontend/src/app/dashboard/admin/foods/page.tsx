@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { API_URL } from '@/utils/api';
+import { apiFetch } from '@/utils/api';
 
 interface FoodItem {
   _id: string;
@@ -37,9 +37,7 @@ export default function AdminFoodsPage() {
   const fetchFoods = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_URL}/api/foods`, {
-        credentials: 'include'
-      });
+      const res = await apiFetch('/api/foods');
       if (res.ok) {
         const data = await res.json();
         setFoods(data);
@@ -94,7 +92,6 @@ export default function AdminFoodsPage() {
     setErrorMsg('');
 
     try {
-      const token = localStorage.getItem('token');
       const payload = {
         name: formName.trim(),
         servingSize: formServingSize.trim() || '1 phần',
@@ -107,17 +104,13 @@ export default function AdminFoodsPage() {
       };
 
       const url = editingFood
-        ? `${API_URL}/api/foods/${editingFood._id}`
-        : `${API_URL}/api/foods`;
+        ? `/api/foods/${editingFood._id}`
+        : '/api/foods';
       const method = editingFood ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
@@ -139,12 +132,7 @@ export default function AdminFoodsPage() {
     if (!confirm(`Bạn có chắc chắn muốn xóa món ăn "${name}" khỏi cơ sở dữ liệu?`)) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/foods/${id}`, {
-        method: 'DELETE',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-        credentials: 'include'
-      });
+      const res = await apiFetch(`/api/foods/${id}`, { method: 'DELETE' });
 
       if (res.ok) {
         fetchFoods();

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { API_URL } from '@/utils/api';
+import { apiFetch, isUnauthorized } from '@/utils/api';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -11,28 +11,18 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const checkAuthAndFetchStats = async () => {
-      const storedToken = localStorage.getItem('token');
-      if (!storedToken) {
-        router.push('/login');
-        return;
-      }
-
       try {
-        const profileRes = await fetch(`${API_URL}/api/users/profile`, {
-          headers: storedToken ? { 'Authorization': `Bearer ${storedToken}` } : {},
-          credentials: 'include'
-        });
+        const profileRes = await apiFetch('/api/users/profile');
+        if (isUnauthorized(profileRes)) {
+          router.push('/login');
+          return;
+        }
         const user = await profileRes.json();
 
         if (profileRes.ok && user.role === 'admin') {
           const [usersRes, exercisesRes] = await Promise.all([
-            fetch(`${API_URL}/api/users`, {
-              headers: storedToken ? { 'Authorization': `Bearer ${storedToken}` } : {},
-              credentials: 'include'
-            }),
-            fetch(`${API_URL}/api/exercises`, {
-              credentials: 'include'
-            })
+            apiFetch('/api/users'),
+            apiFetch('/api/exercises')
           ]);
 
           let usersCount = 0;

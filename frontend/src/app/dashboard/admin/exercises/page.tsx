@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { API_URL } from '@/utils/api';
+import { apiFetch, isUnauthorized } from '@/utils/api';
 
 const MUSCLE_NAMES_VI: Record<string, string> = {
   chest: 'Ngực (Chest)',
@@ -37,7 +37,6 @@ export default function AdminExercises() {
   const [exercises, setExercises] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState('');
-  const [token, setToken] = useState<string | null>(null);
   
   // Search and Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,19 +80,14 @@ export default function AdminExercises() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      if (!storedToken) {
-        router.push('/login');
-        return;
-      }
-      setToken(storedToken);
-
       try {
-        const res = await fetch(`${API_URL}/api/users/profile`, {
-          headers: { 'Authorization': `Bearer ${storedToken}` }
-        });
+        const res = await apiFetch('/api/users/profile');
+        if (isUnauthorized(res)) {
+          router.push('/login');
+          return;
+        }
         const user = await res.json();
-        
+
         if (res.ok && user.role === 'admin') {
           fetchExercises();
         } else {
@@ -111,7 +105,7 @@ export default function AdminExercises() {
 
   const fetchExercises = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/exercises`);
+      const res = await apiFetch('/api/exercises');
       const data = await res.json();
       setExercises(data);
     } catch (err) {
@@ -137,18 +131,6 @@ export default function AdminExercises() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const activeToken = token || localStorage.getItem('token');
-
-    if (!activeToken) {
-      setPopup({
-        show: true,
-        type: 'error',
-        title: 'Chưa Đăng Nhập ⛔',
-        message: 'Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!'
-      });
-      return;
-    }
-
     // Process secondary muscles comma separated list
     const secMusclesArray = formData.secondaryMuscles
       ? formData.secondaryMuscles.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
@@ -168,21 +150,15 @@ export default function AdminExercises() {
     try {
       let res;
       if (editingId) {
-        res = await fetch(`${API_URL}/api/exercises/${editingId}`, {
+        res = await apiFetch(`/api/exercises/${editingId}`, {
           method: 'PUT',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${activeToken}`
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
       } else {
-        res = await fetch(`${API_URL}/api/exercises`, {
+        res = await apiFetch('/api/exercises', {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${activeToken}`
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
       }
@@ -247,22 +223,8 @@ export default function AdminExercises() {
 
   const performDelete = async (id: string, name: string) => {
     setPopup(null);
-    const activeToken = token || localStorage.getItem('token');
-    if (!activeToken) {
-      setPopup({
-        show: true,
-        type: 'error',
-        title: 'Chưa Đăng Nhập ⛔',
-        message: 'Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!'
-      });
-      return;
-    }
-
     try {
-      const res = await fetch(`${API_URL}/api/exercises/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${activeToken}` }
-      });
+      const res = await apiFetch(`/api/exercises/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (res.ok) {
         fetchExercises();
