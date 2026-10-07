@@ -15,8 +15,9 @@ function VerifyContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
-  const [status, setStatus] = useState<Status>('checking');
-  const [message, setMessage] = useState('');
+  // A link without ?token= can never work: start in the error state instead of setting it from an effect
+  const [status, setStatus] = useState<Status>(token ? 'checking' : 'error');
+  const [message, setMessage] = useState(token ? '' : 'Không tìm thấy mã xác thực (token) trong liên kết URL.');
   const [account, setAccount] = useState<{ name: string; email: string } | null>(null);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -25,13 +26,7 @@ function VerifyContent() {
   const hasChecked = useRef(false);
 
   useEffect(() => {
-    if (!token) {
-      setStatus('error');
-      setMessage('Không tìm thấy mã xác thực (token) trong liên kết URL.');
-      return;
-    }
-
-    if (hasChecked.current) return;
+    if (!token || hasChecked.current) return;
     hasChecked.current = true;
 
     const check = async () => {

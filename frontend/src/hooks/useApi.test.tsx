@@ -122,8 +122,14 @@ describe('data hooks', () => {
 });
 
 describe('useStreak', () => {
-  test("asks for the streak relative to the user's LOCAL today", async () => {
-    vi.setSystemTime(new Date(2026, 9, 7, 23, 30)); // 7 Oct 2026, 23:30 local (already 8 Oct in UTC+ zones)
+  // Just after local midnight the UTC date is still "yesterday" east of Greenwich, and just before
+  // local midnight it is already "tomorrow" west of it: one of these two differs from the local date
+  // in every time zone except UTC itself, so asking for the UTC date can never pass both.
+  test.each([
+    ['00:30 local', new Date(2026, 9, 7, 0, 30)],
+    ['23:30 local', new Date(2026, 9, 7, 23, 30)],
+  ])("asks for the streak relative to the user's LOCAL today (%s)", async (_label, now) => {
+    vi.setSystemTime(now);
     fetchMock.mockResolvedValue(json({ current: 3, longest: 5, total: 9, streakDates: [] }));
 
     const { result } = renderHook(() => useStreak());

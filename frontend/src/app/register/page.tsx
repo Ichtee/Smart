@@ -44,9 +44,10 @@ export default function Register() {
       if (!res.ok) throw new Error(data.message || 'Registration failed');
 
       setIsSuccess(true);
-    } catch (err: any) {
+    } catch (err) {
       // fetch() rejects with a TypeError when the server is unreachable: do not show "Failed to fetch"
-      setError(err instanceof TypeError ? 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng và thử lại.' : err.message);
+      if (err instanceof TypeError) setError('Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng và thử lại.');
+      else setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setIsLoading(false);
     }

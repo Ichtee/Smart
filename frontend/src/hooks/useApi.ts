@@ -28,10 +28,9 @@ export const fetcher = async (path: string) => {
 };
 
 // Reference data that rarely changes: fetch once, share between pages, refresh only on demand (mutate()).
-// Do NOT raise dedupingInterval here: SWR reuses an in-flight/recent request for that long, and
-// clearApiCache() (login/logout) does not clear that bookkeeping, so a long window would hand the
-// NEXT account the previous account's request and leave its page empty. "Fetch once" is already
-// guaranteed by revalidateIfStale: false.
+// "Fetch once" comes from revalidateIfStale: false. The request-dedupe window is left at SWR's default:
+// clearApiCache() uses unload(), which also forgets in-flight requests, so a login right after a logout
+// never gets the previous account's request.
 const STATIC: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateIfStale: false,
