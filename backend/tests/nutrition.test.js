@@ -88,6 +88,63 @@ describe('nutrition day log', () => {
     expect((await getDay(b.auth, day(0))).body.waterGlasses).toBe(9);
   });
 
+  describe('validation', () => {
+    const save = async (body) => { const { auth } = await createUser(); return saveDay(auth, { date: day(0), ...body }); };
+    const breakfast = (...items) => ({ meals: { 'Bữa Sáng': items } });
+
+    test.each(['yesterday', '2026-02-30', '2026-1-5'])('date %j is refused on save and on read', async (date) => {
+      const { auth } = await createUser();
+      expect((await saveDay(auth, { date })).status).toBe(400);
+      expect((await getDay(auth, date)).status).toBe(400);
+    });
+
+    test.each([
+      ['negative calories', { calories: -5 }],
+      ['text calories', { calories: 'lots' }],
+      ['absurd calories', { calories: 1e9 }],
+      ['negative protein', { protein: -1 }],
+      ['text carbs', { carbs: 'x' }],
+      ['no name', { name: '' }],
+    ])('an item with %s is refused', async (_label, over) => {
+      expect((await save(breakfast(item(over)))).status).toBe(400);
+    });
+
+    test('items that are not objects, or lists that are not arrays, are refused', async () => {
+      expect((await save(breakfast('Cơm'))).status).toBe(400);
+      expect((await save({ meals: { 'Bữa Sáng': 'Cơm' } })).status).toBe(400);
+      expect((await save({ meals: [] })).status).toBe(400);
+      expect((await save({ meals: 'x' })).status).toBe(400);
+    });
+
+    test('at most 100 items per meal', async () => {
+      expect((await save(breakfast(...Array.from({ length: 101 }, () => item())))).status).toBe(400);
+      expect((await save(breakfast(...Array.from({ length: 100 }, () => item())))).status).toBe(200);
+    });
+
+    test.each([{ waterGlasses: -1 }, { waterGlasses: 101 }, { waterGlasses: 'many' }, { mlPerGlass: -250 }, { mlPerGlass: 99999 }, { mlPerGlass: 'big' }])('water %j is refused', async (body) => {
+      expect((await save(body)).status).toBe(400);
+    });
+
+    test('numeric strings are stored as numbers; unknown fields and meals are dropped; long text is cut', async () => {
+      const { auth } = await createUser();
+      const res = await saveDay(auth, {
+        date: day(0),
+        waterGlasses: '3',
+        meals: {
+          'Bữa Sáng': [item({ calories: '450', protein: '22', name: 'x'.repeat(500), hacker: '<script>' })],
+          'Bữa Khuya': [item()],
+        },
+      });
+      expect(res.status).toBe(200);
+      const saved = (await getDay(auth, day(0))).body;
+      expect(saved.waterGlasses).toBe(3);
+      expect(saved.meals['Bữa Sáng'][0]).toMatchObject({ calories: 450, protein: 22 });
+      expect(saved.meals['Bữa Sáng'][0].name).toHaveLength(200);
+      expect(saved.meals['Bữa Sáng'][0].hacker).toBeUndefined();
+      expect(Object.keys(saved.meals)).toEqual(MEAL_KEYS);
+    });
+  });
+
   test('concurrent saves of the same new day do not fail or duplicate it', async () => {
     const { auth, user } = await createUser();
     const results = await Promise.all(

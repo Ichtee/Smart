@@ -1,5 +1,6 @@
 const NutritionLog = require('../models/NutritionLog');
-const { parseDateRange } = require('../utils/dateRange');
+const { parseDateRange, isValidDate } = require('../utils/dateRange');
+const { sanitizeMeals, sanitizeWater } = require('../utils/nutrition');
 
 // @desc    Get nutrition log for a specific date
 // @route   GET /api/nutrition
@@ -9,6 +10,9 @@ const getNutritionLog = async (req, res) => {
     const date = req.query.date;
     if (!date) {
       return res.status(400).json({ message: 'Vui lòng cung cấp tham số date (YYYY-MM-DD)' });
+    }
+    if (!isValidDate(date)) {
+      return res.status(400).json({ message: 'Tham số date phải có dạng YYYY-MM-DD hợp lệ' });
     }
 
     const log = await NutritionLog.findOne({ user: req.user._id, date });
@@ -44,20 +48,22 @@ const saveNutritionLog = async (req, res) => {
     if (!date) {
       return res.status(400).json({ message: 'Ngày (date) là bắt buộc' });
     }
+    if (!isValidDate(date)) {
+      return res.status(400).json({ message: 'Ngày (date) phải có dạng YYYY-MM-DD hợp lệ' });
+    }
+    const water = sanitizeWater(waterGlasses, mlPerGlass);
+    if (water.error) return res.status(400).json({ message: water.error });
+    const clean = sanitizeMeals(meals);
+    if (clean.error) return res.status(400).json({ message: clean.error });
 
     const updatedLog = await NutritionLog.findOneAndUpdate(
       { user: req.user._id, date },
       {
         user: req.user._id,
         date,
-        waterGlasses: waterGlasses !== undefined ? waterGlasses : 0,
-        mlPerGlass: mlPerGlass || 250,
-        meals: meals || {
-          'Bữa Sáng': [],
-          'Bữa Trưa': [],
-          'Bữa Tối': [],
-          'Ăn Vặt': []
-        }
+        waterGlasses: water.waterGlasses,
+        mlPerGlass: water.mlPerGlass,
+        meals: clean.meals
       },
       { upsert: true, returnDocument: 'after', runValidators: true }
     );
