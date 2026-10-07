@@ -14,6 +14,8 @@ import NutritionDetailModal from './NutritionDetailModal';
 import AddFoodModal from './AddFoodModal';
 import MealSections from './MealSections';
 import NutritionSummaryCards from './NutritionSummaryCards';
+import MacroSummary from './MacroSummary';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 import NutritionDateBar from './NutritionDateBar';
 import { mergeCopiedMeals, previousDay } from './copyMeals';
 
@@ -227,8 +229,8 @@ export default function Nutrition() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-background text-foreground">
+        <main className="mx-auto max-w-5xl p-4 md:p-8"><PageSkeleton rows={3} /></main>
       </div>
     );
   }
@@ -287,6 +289,8 @@ export default function Nutrition() {
           updateWater={updateWater}
           waterGlasses={waterGlasses}
         />
+
+        <MacroSummary meals={meals} targetCalories={targetCalories} />
 
         {/* Meal Logging Section */}
         <MealSections

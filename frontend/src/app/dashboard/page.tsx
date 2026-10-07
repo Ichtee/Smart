@@ -173,7 +173,7 @@ export default function Dashboard() {
     return days;
   }, [calendarDate, streakDates, todayStr]);
 
-  const monthYearLabel = calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const monthYearLabel = calendarDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
   const prevMonth = () => { setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)); };
   const nextMonth = () => { setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)); };
 
@@ -310,7 +310,7 @@ export default function Dashboard() {
             <div className="bg-card border border-border p-6 md:p-8 rounded-3xl shadow-2xl space-y-6">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <h2 className="text-lg md:text-2xl font-black text-foreground flex items-center gap-3">
-                  <Calendar className="size-6 text-primary" /> Workout & Nutrition Calendar
+                  <Calendar className="size-6 text-primary" /> Lịch tập & ăn uống
                 </h2>
                 <div className="flex items-center gap-3 text-sm md:text-base font-bold text-muted-foreground">
                   <button onClick={prevMonth} className="p-1.5 hover:text-foreground cursor-pointer rounded-lg hover:bg-secondary transition"><ChevronLeft className="size-5" /></button>
@@ -321,7 +321,7 @@ export default function Dashboard() {
 
               {/* Days Header */}
               <div className="grid grid-cols-7 gap-1.5 text-center text-xs md:text-sm font-bold text-muted-foreground uppercase">
-                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                <span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span>
               </div>
 
               {/* Interactive Date Grid */}
@@ -372,11 +372,11 @@ export default function Dashboard() {
               <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-border text-xs md:text-sm text-muted-foreground font-semibold">
                 <div className="flex items-center gap-2">
                   <span className="size-3 rounded-full bg-primary" />
-                  <span>Đã tập (Logged workout)</span>
+                  <span>Đã tập</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="size-3 rounded-lg bg-primary/20 border border-primary text-primary flex items-center justify-center text-xs font-bold">🎯</span>
-                  <span>Hôm nay (Today)</span>
+                  <span>Hôm nay</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs">📷</span>

@@ -225,6 +225,7 @@ html.light {
   h3 {
     font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
     letter-spacing: 0.01em;
+    font-synthesis: none; /* never fake a bolder weight than the font has */
   }
 
   html {

@@ -1,4 +1,6 @@
 'use client';
+import EmptyState from '@/components/ui/EmptyState';
+import { Scale } from 'lucide-react';
 import { chartPoints, pointsToPath, type BodyMetric } from '@/utils/bodyMetrics';
 
 const W = 600;
@@ -7,7 +9,7 @@ const H = 220;
 /** Line chart of the weight over time (plain SVG, no chart library). */
 export default function BodyChart({ metrics }: { metrics: BodyMetric[] }) {
   if (metrics.length === 0) {
-    return <p className="text-sm text-muted-foreground italic py-10 text-center">Chưa có số đo nào. Hãy ghi cân nặng đầu tiên của bạn.</p>;
+    return <EmptyState icon={<Scale className="size-7" />} title="Chưa có số đo nào" hint="Hãy ghi cân nặng đầu tiên của bạn ở ô bên dưới." />;
   }
   const points = chartPoints(metrics, W, H);
   const first = points[0];

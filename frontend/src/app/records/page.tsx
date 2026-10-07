@@ -7,6 +7,7 @@ import Sidebar from '@/components/Sidebar';
 import { fetcher, isUnauthorizedError } from '@/hooks/useApi';
 import { chartPoints, pointsToPath } from '@/utils/bodyMetrics';
 import { Trophy, Loader2 } from 'lucide-react';
+import EmptyState from '@/components/ui/EmptyState';
 
 export interface ExerciseRecord {
   name: string;
@@ -66,7 +67,7 @@ export default function RecordsPage() {
               <Trophy className="size-8 text-primary" /> Kỷ lục cá nhân
             </h1>
             <p className="text-muted-foreground text-xs sm:text-sm font-semibold mt-1">
-              Mức tạ nặng nhất bạn đã hoàn thành ở mỗi bài tập. Nhập mức tạ cho từng hiệp trong trang Activity để theo dõi tiến bộ sức mạnh.
+              Mức tạ nặng nhất bạn đã hoàn thành ở mỗi bài tập. Nhập mức tạ cho từng hiệp trong trang Tập luyện để theo dõi tiến bộ sức mạnh.
             </p>
           </div>
 
@@ -78,10 +79,7 @@ export default function RecordsPage() {
           )}
 
           {!error && records.length === 0 && (
-            <div className="bg-card border border-border rounded-3xl p-8 text-center space-y-3">
-              <p className="text-sm text-muted-foreground">Chưa có kỷ lục nào. Nhập mức tạ (kg) cho một hiệp và đánh dấu hoàn thành để bắt đầu.</p>
-              <Link href="/workouts" className="inline-block text-sm font-bold text-primary hover:underline">Đến trang tập luyện</Link>
-            </div>
+            <EmptyState icon={<Trophy className="size-7" />} title="Chưa có kỷ lục nào" hint="Nhập mức tạ (kg) cho một hiệp và đánh dấu hoàn thành để bắt đầu." action={{ label: "Đến trang tập luyện", href: "/workouts" }} />
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">

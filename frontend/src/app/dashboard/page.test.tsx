@@ -207,7 +207,7 @@ describe('Dashboard: metabolism card (uses the shared calculator)', () => {
 describe('Dashboard: calendar', () => {
   test('shows the current month with today marked and workout days ticked', async () => {
     const { day } = await setup();
-    expect(screen.getByText('October 2026')).toBeInTheDocument();
+    expect(screen.getByText('tháng 10 năm 2026')).toBeInTheDocument();
     expect(day(5)).toHaveTextContent('✓'); // trained
     expect(day(7)).toHaveTextContent('✓'); // today, and trained
     expect(day(6)).not.toHaveTextContent('✓');
@@ -238,8 +238,8 @@ describe('Dashboard: calendar', () => {
 
     handlers['GET /api/nutrition/logs'] = (u) => json(u.searchParams.get('from') === '2026-11-01'
       ? { '2026-11-03': { date: '2026-11-03', dayCalories: 777, photoCount: 0 } } : NUTRITION_LOGS);
-    await user.click(screen.getByText('October 2026').nextElementSibling as HTMLElement);
-    expect(await screen.findByText('November 2026')).toBeInTheDocument();
+    await user.click(screen.getByText('tháng 10 năm 2026').nextElementSibling as HTMLElement);
+    expect(await screen.findByText('tháng 11 năm 2026')).toBeInTheDocument();
 
     await waitFor(() => expect(calls('GET', '/api/nutrition/logs').some(u => u.search === '?from=2026-11-01&to=2026-11-30')).toBe(true));
     expect(calls('GET', '/api/workouts/logs').some(u => u.search === '?from=2026-11-01&to=2026-11-30')).toBe(true);
@@ -248,12 +248,12 @@ describe('Dashboard: calendar', () => {
 
   test('going back to the current month reuses what is already loaded', async () => {
     const { user } = await setup();
-    const label = screen.getByText('October 2026');
+    const label = screen.getByText('tháng 10 năm 2026');
     await user.click(label.nextElementSibling as HTMLElement);
-    await screen.findByText('November 2026');
+    await screen.findByText('tháng 11 năm 2026');
     const before = calls('GET', '/api/workouts/logs').length;
-    await user.click(screen.getByText('November 2026').previousElementSibling as HTMLElement);
-    await screen.findByText('October 2026');
+    await user.click(screen.getByText('tháng 11 năm 2026').previousElementSibling as HTMLElement);
+    await screen.findByText('tháng 10 năm 2026');
     expect(calls('GET', '/api/workouts/logs').length).toBe(before);
   });
 
@@ -261,7 +261,7 @@ describe('Dashboard: calendar', () => {
     const { user } = await setup();
     for (let i = 0; i < 4; i++) await user.click(screen.getByText(/20\d\d$/).nextElementSibling as HTMLElement);
     // Oct -> Nov -> Dec -> Jan -> Feb 2027 (not a leap year): 28 days
-    await screen.findByText('February 2027');
+    await screen.findByText('tháng 2 năm 2027');
     expect(screen.queryByRole('button', { name: /^29(\s|$)/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^28(\s|$)/ })).toBeInTheDocument();
   });
@@ -415,7 +415,7 @@ describe('Dashboard: errors and sessions', () => {
     handlers['GET /api/nutrition/logs'] = () => json({}, 500);
     handlers['GET /api/nutrition'] = () => json({}, 500);
     await setup();
-    expect(screen.getByText('October 2026')).toBeInTheDocument();
+    expect(screen.getByText('tháng 10 năm 2026')).toBeInTheDocument();
     expect(text()).toContain('Chuỗi ngày tập1 ngày');
     expect(within(document.body).queryByText(/NaN/)).not.toBeInTheDocument();
   });

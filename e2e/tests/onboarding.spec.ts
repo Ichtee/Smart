@@ -45,16 +45,14 @@ test.describe('onboarding', () => {
     expect(profile).toMatchObject({ age: 28, gender: 'Nữ', height: 165, weight: 58, goal: 'Giảm mỡ', activityLevel: 'Vận động nhẹ' });
   });
 
-  test('out-of-range answers are refused with an alert and do not advance', async ({ page }) => {
+  test('out-of-range answers are refused with a message and do not advance', async ({ page }) => {
     const user = await createActiveUser();
     await uiLogin(page, user.username, user.password, /\/onboarding/);
-    const dialogs: string[] = [];
-    page.on('dialog', d => { dialogs.push(d.message()); void d.dismiss(); });
+    const toast = (text: string) => page.getByRole('alert').filter({ hasText: text });
 
     await page.getByLabel('Độ tuổi').fill('150');
     await page.getByRole('button', { name: /Tiếp tục/ }).click();
-    await expect.poll(() => dialogs.length).toBe(1);
-    expect(dialogs[0]).toContain('Tuổi');
+    await expect(toast('Tuổi')).toBeVisible();
     await expect(page.getByText('Bắt đầu thiết lập!')).toBeVisible();
 
     await page.getByLabel('Độ tuổi').fill('30');
@@ -62,8 +60,7 @@ test.describe('onboarding', () => {
     await page.getByLabel(/Chiều cao/).fill('20');
     await page.getByLabel(/Cân nặng/).fill('70');
     await page.getByRole('button', { name: /Tiếp tục/ }).click();
-    await expect.poll(() => dialogs.length).toBe(2);
-    expect(dialogs[1]).toContain('Chiều cao');
+    await expect(toast('Chiều cao')).toBeVisible();
     await expect(page.getByText('Chỉ số hình thể')).toBeVisible();
   });
 

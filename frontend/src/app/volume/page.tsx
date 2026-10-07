@@ -7,6 +7,7 @@ import Sidebar from '@/components/Sidebar';
 import { fetcher, isUnauthorizedError } from '@/hooks/useApi';
 import { MUSCLE_NAMES_VI } from '../workouts/utils';
 import { BarChart3, Loader2 } from 'lucide-react';
+import EmptyState from '@/components/ui/EmptyState';
 
 export interface WeeklyVolume {
   from: string;
@@ -95,10 +96,7 @@ export default function VolumePage() {
           )}
 
           {!error && rows.length === 0 && (
-            <div className="bg-card border border-border rounded-3xl p-8 text-center space-y-3">
-              <p className="text-sm text-muted-foreground">Chưa có hiệp nào được hoàn thành trong thời gian này.</p>
-              <Link href="/workouts" className="inline-block text-sm font-bold text-primary hover:underline">Đến trang tập luyện</Link>
-            </div>
+            <EmptyState icon={<BarChart3 className="size-7" />} title="Chưa có hiệp nào được hoàn thành trong thời gian này." hint="Hoàn thành một hiệp ở trang Tập luyện để xem khối lượng theo nhóm cơ." action={{ label: "Đến trang tập luyện", href: "/workouts" }} />
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">

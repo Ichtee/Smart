@@ -52,8 +52,8 @@ test.describe('my own routines', () => {
     await expect(page.getByTestId('my-routine')).toContainText('Arms Day');
 
     // delete
-    page.once('dialog', d => void d.accept());
     await page.getByRole('button', { name: 'Xóa lịch tập Arms Day' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa', exact: true }).click();
     await expect(page.getByText(/chưa có lịch tập riêng/)).toBeVisible();
     const { body } = await loginApi(user.username, user.password);
     const all = await (await api('/api/routines', undefined, body.token)).json();

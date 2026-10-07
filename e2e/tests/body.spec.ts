@@ -68,8 +68,8 @@ test.describe('body measurements', () => {
     await nav(page, 'Cơ thể');
     await expect(page.getByTestId('history-row')).toHaveCount(2);
 
-    page.once('dialog', d => void d.accept());
     await page.getByRole('button', { name: `Xóa số đo ngày ${localDate(0)}` }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa', exact: true }).click();
     await expect(page.getByTestId('history-row')).toHaveCount(1);
     const profile = await (await api('/api/users/profile', undefined, body.token)).json();
     expect(profile.weight).toBe(70);
