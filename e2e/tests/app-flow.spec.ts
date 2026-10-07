@@ -1,25 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
-import { BASE, api, createActiveUser, completeProfile, createAdmin, uiLogin, nav, greeting } from '../support';
-
-/** An admin creates three exercises and a routine that has a workout on every weekday (so "today" always has one). */
-async function seedRoutine() {
-  const { token } = await createAdmin();
-  const ex: Record<string, string> = {};
-  for (const [name, muscle] of [['Bench Press', 'chest'], ['Incline Dumbbell Press', 'chest'], ['Triceps Pushdown', 'triceps']]) {
-    const r = await api('/api/exercises', { name, muscle, defaultSets: 3, defaultReps: '10', equipment: 'Barbell' }, token);
-    ex[name] = (await r.json())._id;
-  }
-  const days = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
-  const res = await api('/api/routines', {
-    id: 'ppl', name: 'Push Pull Legs', type: 'PPL', frequencyDaysPerWeek: 7,
-    schedule: days.map(day => ({
-      day, name: 'Push', isRestDay: false,
-      targets: [{ id: 'chest', label: 'Ngực', count: 2 }, { id: 'triceps', label: 'Tay sau', count: 1 }],
-      exercises: Object.entries(ex).map(([name, id]) => ({ exerciseId: id, exerciseName: name, muscle: name.includes('Triceps') ? 'triceps' : 'chest', sets: 3, repsRange: '10', rir: '1', restTimeSeconds: 60 })),
-    })),
-  }, token);
-  expect(res.status).toBe(201);
-}
+import { BASE, api, createActiveUser, completeProfile, uiLogin, nav, greeting } from '../support';
+import { seedRoutine } from './seed';
 
 const postTo = (page: Page, part: string) => page.waitForResponse(r => r.url().includes(part) && r.request().method() === 'POST');
 

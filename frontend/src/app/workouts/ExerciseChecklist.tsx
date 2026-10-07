@@ -59,7 +59,10 @@ export default function ExerciseChecklist({
           <p className="text-[11px] sm:text-xs font-bold text-[#00E5FF] uppercase tracking-wider">
             Các bài đã chọn ({activeSelectedExercises.length})
           </p>
-          <Link href="/records" className="text-[11px] sm:text-xs font-bold text-amber-300 hover:text-amber-200">🏆 Kỷ lục cá nhân</Link>
+          <span className="flex items-center gap-3">
+            <Link href="/routines" className="text-[11px] sm:text-xs font-bold text-cyan-300 hover:text-cyan-200">📋 Lịch tập của tôi</Link>
+            <Link href="/records" className="text-[11px] sm:text-xs font-bold text-amber-300 hover:text-amber-200">🏆 Kỷ lục cá nhân</Link>
+          </span>
           <span className="text-[10px] sm:text-xs text-slate-400 font-semibold hidden sm:inline">
             {isWorkoutSaved ? 'Tích chọn để đánh dấu hoàn thành' : 'Chỉnh sửa theo ý bạn rồi bấm LƯU để bắt đầu'}
           </span>
