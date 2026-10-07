@@ -140,6 +140,7 @@ export default function CustomFoodsTab({ dbFoods, mutateFoods, onPickFood, onBac
                 <input
                   type="number"
                   min="0"
+                  step="0.1"
                   value={customFormProtein}
                   onChange={(e) => setCustomFormProtein(e.target.value)}
                   className="w-full bg-[#131B2E] border border-slate-700 rounded-xl p-2 text-xs text-cyan-400 font-bold focus:outline-none"
@@ -150,6 +151,7 @@ export default function CustomFoodsTab({ dbFoods, mutateFoods, onPickFood, onBac
                 <input
                   type="number"
                   min="0"
+                  step="0.1"
                   value={customFormCarbs}
                   onChange={(e) => setCustomFormCarbs(e.target.value)}
                   className="w-full bg-[#131B2E] border border-slate-700 rounded-xl p-2 text-xs text-amber-400 font-bold focus:outline-none"
@@ -160,6 +162,7 @@ export default function CustomFoodsTab({ dbFoods, mutateFoods, onPickFood, onBac
                 <input
                   type="number"
                   min="0"
+                  step="0.1"
                   value={customFormFat}
                   onChange={(e) => setCustomFormFat(e.target.value)}
                   className="w-full bg-[#131B2E] border border-slate-700 rounded-xl p-2 text-xs text-rose-400 font-bold focus:outline-none"

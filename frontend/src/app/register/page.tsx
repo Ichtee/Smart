@@ -45,7 +45,8 @@ export default function Register() {
 
       setIsSuccess(true);
     } catch (err: any) {
-      setError(err.message);
+      // fetch() rejects with a TypeError when the server is unreachable: do not show "Failed to fetch"
+      setError(err instanceof TypeError ? 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng và thử lại.' : err.message);
     } finally {
       setIsLoading(false);
     }
