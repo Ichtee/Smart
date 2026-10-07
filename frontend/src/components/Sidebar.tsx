@@ -14,7 +14,7 @@ const GROUPS = [
     title: 'Tập luyện',
     items: [
       { label: 'Tập luyện', href: '/workouts', icon: Dumbbell },
-      { label: 'Lịch tập', href: '/routines', icon: CalendarDays },
+      { label: 'Lịch tập cá nhân', href: '/routines', icon: CalendarDays },
       { label: 'Kỷ lục', href: '/records', icon: Trophy },
       { label: 'Khối lượng', href: '/volume', icon: BarChart3 },
     ],
