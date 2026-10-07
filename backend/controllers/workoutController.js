@@ -1,6 +1,7 @@
 const WorkoutLog = require('../models/WorkoutLog');
 const { parseDateRange, isValidDate } = require('../utils/dateRange');
 const { sanitizeDetailsMap, computeRecords } = require('../utils/records');
+const { computeWeeklyVolume } = require('../utils/volume');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -211,6 +212,23 @@ const getRecords = async (req, res) => {
   }
 };
 
+// @desc    Sets done per muscle group per week (from/to optional, same rules as /logs)
+// @route   GET /api/workouts/volume
+// @access  Private
+const getWeeklyVolume = async (req, res) => {
+  try {
+    const range = parseDateRange(req.query);
+    if (range.error) return res.status(400).json({ message: range.error });
+    const logs = await WorkoutLog.find({ user: req.user._id, date: { $gte: range.from, $lte: range.to } })
+      .select('date exercises completedIds detailsMap')
+      .lean();
+    return res.status(200).json({ from: range.from, to: range.to, ...computeWeeklyVolume(logs, range.from, range.to) });
+  } catch (error) {
+    console.error('Error computing weekly volume:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi tính khối lượng tập' });
+  }
+};
+
 // @desc    Delete workout log for a specific date
 // @route   DELETE /api/workouts
 // @access  Private
@@ -240,5 +258,6 @@ module.exports = {
   getStreakHistory,
   getAllWorkoutLogs,
   getRecords,
+  getWeeklyVolume,
   computeStreaks
 };

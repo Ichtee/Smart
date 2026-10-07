@@ -59,4 +59,4 @@ const parseDateRange = (query, now = new Date()) => {
   return { from: fromDay(fromDayNum), to: fromDay(toDayNum) };
 };
 
-module.exports = { parseDateRange, isValidDate, MAX_RANGE_DAYS, DEFAULT_RANGE_DAYS };
+module.exports = { parseDateRange, isValidDate, toDay, fromDay, MAX_RANGE_DAYS, DEFAULT_RANGE_DAYS };

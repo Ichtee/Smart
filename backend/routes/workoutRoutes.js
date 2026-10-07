@@ -7,7 +7,8 @@ const {
   deleteWorkoutLog,
   getStreakHistory,
   getAllWorkoutLogs,
-  getRecords
+  getRecords,
+  getWeeklyVolume
 } = require('../controllers/workoutController');
 
 router.use(protect);
@@ -20,5 +21,6 @@ router.route('/')
 router.get('/streak', getStreakHistory);
 router.get('/logs', getAllWorkoutLogs);
 router.get('/records', getRecords);
+router.get('/volume', getWeeklyVolume);
 
 module.exports = router;
