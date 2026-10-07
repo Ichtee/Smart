@@ -80,3 +80,9 @@ export const nav = (page: Page, label: string) => page.locator('aside').getByRol
 export const formAlert = (page: Page) => page.locator('[role="alert"]:not(#__next-route-announcer__)').first();
 
 export { expect };
+
+/** Remove every body measurement of a user (saving a profile with a weight logs one as a side effect). */
+export async function clearMetrics(token: string) {
+  const list = await (await api('/api/body-metrics', undefined, token)).json();
+  for (const m of list) await api(`/api/body-metrics?date=${m.date}`, undefined, token, 'DELETE');
+}

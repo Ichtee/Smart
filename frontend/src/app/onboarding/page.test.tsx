@@ -1,3 +1,4 @@
+import { todayStr } from '@/utils/dateUtils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -232,7 +233,7 @@ describe('Onboarding: finishing', () => {
     expect(url).toBe('/api/users/profile');
     expect(options?.method).toBe('PUT');
     expect(JSON.parse(options!.body as string)).toEqual({
-      age: 30, gender: 'Nam', height: 175, weight: 70, goal: 'Giữ dáng', activityLevel: 'Vận động vừa',
+      age: 30, gender: 'Nam', height: 175, weight: 70, goal: 'Giữ dáng', activityLevel: 'Vận động vừa', metricDate: todayStr(),
     });
     expect(order).toEqual(['refresh', 'push']);
     nav.push.mockReset();

@@ -1,3 +1,4 @@
+import { todayStr } from '@/utils/dateUtils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -171,7 +172,7 @@ describe('Profile: saving', () => {
     expect(url).toBe('/api/users/profile');
     expect(options?.method).toBe('PUT');
     expect(JSON.parse(options!.body as string)).toEqual({
-      name: 'Dana Pham Nguyen', age: 31, gender: 'Nữ', height: 165, weight: 58, goal: 'Sức bền',
+      name: 'Dana Pham Nguyen', age: 31, gender: 'Nữ', height: 165, weight: 58, goal: 'Sức bền', metricDate: todayStr(),
     });
   });
 

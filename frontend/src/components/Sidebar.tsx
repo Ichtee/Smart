@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from './smart/logo';
-import { LayoutGrid, Activity, Utensils, User, LogOut } from 'lucide-react';
+import { LayoutGrid, Activity, Utensils, Scale, User, LogOut } from 'lucide-react';
 import { API_URL } from '@/utils/api';
 import { clearApiCache } from '@/hooks/useApi';
 import { useRouter } from 'next/navigation';
@@ -15,6 +15,7 @@ export default function Sidebar() {
     { label: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
     { label: 'Activity', href: '/workouts', icon: Activity },
     { label: 'Nutrition', href: '/nutrition', icon: Utensils },
+    { label: 'Body', href: '/body', icon: Scale },
     { label: 'Profile', href: '/profile', icon: User },
   ];
 

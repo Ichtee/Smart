@@ -4,6 +4,7 @@ import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/utils/api';
 import { normalizeName, validateName } from '@/utils/validation';
+import { todayStr } from '@/utils/dateUtils';
 import { useProfile, refreshProfile, isUnauthorizedError } from '@/hooks/useApi';
 import { calcBmi, bmiCategory as getBmiCategory } from '@/utils/bmi';
 import { User, Activity, Target, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
@@ -107,7 +108,8 @@ export default function Profile() {
           gender: formData.gender,
           height: formData.height ? Number(formData.height) : undefined,
           weight: formData.weight ? Number(formData.weight) : undefined,
-          goal: formData.goal
+          goal: formData.goal,
+          metricDate: todayStr() // a changed weight is also logged as today's body measurement
         })
       });
 

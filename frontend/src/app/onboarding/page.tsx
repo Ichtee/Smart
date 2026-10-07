@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Logo } from '@/components/smart/logo';
 import { apiFetch, describeError } from '@/utils/api';
 import { refreshProfile } from '@/hooks/useApi';
+import { todayStr } from '@/utils/dateUtils';
 import { calcBmr, calcTdee, calcTargetCalories } from '@/utils/nutritionCalc';
 import { calcBmi } from '@/utils/bmi';
 import { ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
@@ -93,7 +94,8 @@ export default function Onboarding() {
           height: Number(formData.height),
           weight: Number(formData.weight),
           goal: formData.goal,
-          activityLevel: formData.activityLevel
+          activityLevel: formData.activityLevel,
+          metricDate: todayStr() // the starting weight is the first body measurement
         })
       });
 
