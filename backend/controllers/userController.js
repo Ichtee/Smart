@@ -5,6 +5,8 @@ const User = require('../models/User');
 const WorkoutLog = require('../models/WorkoutLog');
 const NutritionLog = require('../models/NutritionLog');
 const Food = require('../models/Food');
+const BodyMetric = require('../models/BodyMetric');
+const { recordWeight } = require('../utils/bodyMetrics');
 
 // Never expose these fields in API responses (reset/verification tokens would allow account takeover)
 const SECRET_FIELDS = '-password -verificationToken -verificationTokenExpires -resetPasswordToken -resetPasswordExpires';
@@ -388,6 +390,7 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
+    let newWeight; // set when this request changes the weight: it is also logged as a body measurement
 
     if (user) {
       if (req.body.name !== undefined) {
@@ -426,6 +429,7 @@ const updateProfile = async (req, res) => {
         if (isNaN(weightNum) || weightNum < 10 || weightNum > 500) {
           return res.status(400).json({ message: 'Cân nặng phải là số dương hợp lệ (từ 10kg đến 500kg).' });
         }
+        if (weightNum !== user.weight) newWeight = weightNum;
         user.weight = weightNum;
       }
 
@@ -468,6 +472,9 @@ const updateProfile = async (req, res) => {
       }
 
       const updatedUser = await user.save();
+      const currentWeight = newWeight !== undefined
+        ? (await recordWeight(updatedUser._id, newWeight, req.body.metricDate)) ?? updatedUser.weight
+        : updatedUser.weight;
 
       res.json({
         _id: updatedUser.id,
@@ -477,7 +484,7 @@ const updateProfile = async (req, res) => {
         age: updatedUser.age,
         gender: updatedUser.gender,
         height: updatedUser.height,
-        weight: updatedUser.weight,
+        weight: currentWeight,
         goal: updatedUser.goal,
         activityLevel: updatedUser.activityLevel,
         role: updatedUser.role,
@@ -525,6 +532,7 @@ const deleteUser = async (req, res) => {
       await Promise.all([
         WorkoutLog.deleteMany({ user: user._id }),
         NutritionLog.deleteMany({ user: user._id }),
+        BodyMetric.deleteMany({ user: user._id }),
         Food.deleteMany({ user: user._id, isCustom: true }),
       ]);
       res.json({ message: 'User removed' });
