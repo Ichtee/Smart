@@ -2,6 +2,9 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const User = require('../models/User');
+const WorkoutLog = require('../models/WorkoutLog');
+const NutritionLog = require('../models/NutritionLog');
+const Food = require('../models/Food');
 
 const sendEmail = async ({ to, to_name, verify_url, subject, template_id }) => {
   const serviceId = process.env.EMAILJS_SERVICE_ID;
@@ -441,7 +444,14 @@ const deleteUser = async (req, res) => {
       if (user._id.toString() === req.user._id.toString()) {
         return res.status(400).json({ message: 'Cannot delete your own account' });
       }
+      // Remove the account first, then its data: a failure in between leaves harmless orphans
+      // instead of an account whose history was wiped.
       await User.deleteOne({ _id: user._id });
+      await Promise.all([
+        WorkoutLog.deleteMany({ user: user._id }),
+        NutritionLog.deleteMany({ user: user._id }),
+        Food.deleteMany({ user: user._id, isCustom: true }),
+      ]);
       res.json({ message: 'User removed' });
     } else {
       res.status(404).json({ message: 'User not found' });
