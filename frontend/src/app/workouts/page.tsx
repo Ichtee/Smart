@@ -3,7 +3,10 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Model from 'react-body-highlighter';
 import Sidebar from '@/components/Sidebar';
-import { API_URL } from '@/utils/api';
+import { apiFetch, isUnauthorized } from '@/utils/api';
+import { useRoutines, useExercises, useProfile, useStreak, isUnauthorizedError } from '@/hooks/useApi';
+import { useServerSave } from '@/hooks/useServerSave';
+import SaveStatusBanner from '@/components/SaveStatusBanner';
 
 const DEFAULT_ROUTINES = {
   none: {
@@ -51,18 +54,6 @@ const findLibraryExercise = (library: any[], tmplEx: any) => {
   }
   const nm = (tmplEx.exerciseName || '').toLowerCase().trim();
   return library.find(item => item.name && item.name.toLowerCase().trim() === nm);
-};
-
-// Consecutive-day streak ending today/yesterday, from a list of YYYY-MM-DD dates (offline fallback)
-const calcLocalStreak = (dates: string[], todayStr: string): number => {
-  const set = new Set(dates);
-  const parse = (d: string) => { const [y, m, dd] = d.split('-').map(Number); return new Date(y, m - 1, dd); };
-  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const cursor = parse(todayStr);
-  if (!set.has(fmt(cursor))) cursor.setDate(cursor.getDate() - 1);
-  let n = 0;
-  while (set.has(fmt(cursor))) { n++; cursor.setDate(cursor.getDate() - 1); }
-  return n;
 };
 
 const toModelMuscle = (m: string): string => (m === 'lats' ? 'upper-back' : m);
@@ -193,15 +184,15 @@ export default function Workouts() {
   const router = useRouter();
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [modelType, setModelType] = useState<'anterior' | 'posterior'>('anterior');
-  const [activeRoutineId, setActiveRoutineId] = useState<string>('ppl');
+  // The user's explicit routine choice; until they pick one we derive it (see data layer below)
+  const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(null);
+  // Date whose log failed to load: editing that day is blocked so we never overwrite unread data
+  const [dayLoadErrorDate, setDayLoadErrorDate] = useState<string | null>(null);
+  const [dayRetryTick, setDayRetryTick] = useState(0);
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0);
-  const [routinesMap, setRoutinesMap] = useState<Record<string, any>>(DEFAULT_ROUTINES);
 
   const [showMobileBodyModel, setShowMobileBodyModel] = useState<boolean>(false);
-  const [isFetching, setIsFetching] = useState<boolean>(true);
-  const [fetchError, setFetchError] = useState<boolean>(false);
 
-  const [allExercises, setAllExercises] = useState<any[]>([]);
   const [daySelections, setDaySelections] = useState<Record<string, string[]>>({});
   const [dayCompleted, setDayCompleted] = useState<Record<string, string[]>>({});
   const [completedSetsMap, setCompletedSetsMap] = useState<Record<string, number[]>>({});
@@ -219,7 +210,6 @@ export default function Workouts() {
 
   const [selectedDetailExercise, setSelectedDetailExercise] = useState<any | null>(null);
 
-  const [streakDays, setStreakDays] = useState<number>(0);
   const [noticeMessage, setNoticeMessage] = useState<string>('');
   const [librarySearchTerm, setLibrarySearchTerm] = useState<string>('');
 
@@ -282,155 +272,82 @@ export default function Workouts() {
     setRestTimerPaused(prev => !prev);
   }, []);
 
-  const fetchInitialData = async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (!token) {
+  // ── Data layer: shared SWR cache; the server is the only source of truth ─────────────
+  const { routines: routinesData, error: routinesError, isLoading: routinesLoading, mutate: mutateRoutines } = useRoutines();
+  const { exercises: exercisesData, error: exercisesError, isLoading: exercisesLoading, mutate: mutateExercises } = useExercises();
+  const { profile, error: profileError, isLoading: profileLoading, mutate: mutateProfile } = useProfile();
+  const { streak, mutate: mutateStreak } = useStreak();
+  const streakDays: number = streak?.current ?? 0;
+
+  useEffect(() => {
+    if (isUnauthorizedError(routinesError) || isUnauthorizedError(exercisesError) || isUnauthorizedError(profileError)) {
+      localStorage.removeItem('token');
       router.push('/login');
-      return;
     }
+  }, [routinesError, exercisesError, profileError, router]);
 
-    setIsFetching(true);
-    setFetchError(false);
+  useEffect(() => {
+    savedDayIndexRef.current = typeof profile?.lastActiveDayIndex === 'number' ? profile.lastActiveDayIndex : null;
+  }, [profile]);
 
-    const headers: HeadersInit = {
-      'Authorization': `Bearer ${token}`
-    };
+  const isFetching = routinesLoading || exercisesLoading || profileLoading;
+  const fetchError = !isFetching && (!!routinesError || !!exercisesError);
+  const fetchInitialData = () => {
+    mutateRoutines();
+    mutateExercises();
+    mutateProfile();
+  };
 
-    let routinesData: any[] = [];
-    let exercisesData: any[] = [];
-
-    try {
-      const [routinesRes, exercisesRes] = await Promise.allSettled([
-        fetch(`${API_URL}/api/routines`, { headers, credentials: 'include', cache: 'no-store' }),
-        fetch(`${API_URL}/api/exercises`, { headers, credentials: 'include', cache: 'no-store' })
-      ]);
-
-      if (routinesRes.status === 'fulfilled' && routinesRes.value.ok) {
-        routinesData = await routinesRes.value.json();
-      }
-
-      if (exercisesRes.status === 'fulfilled' && exercisesRes.value.ok) {
-        exercisesData = await exercisesRes.value.json();
-      }
-    } catch (err) {
-      console.warn('Network fetch issue, using fallbacks:', err);
-    }
-
-    const newMap: Record<string, any> = { ...DEFAULT_ROUTINES };
+  const routinesMap: Record<string, any> = useMemo(() => {
+    const map: Record<string, any> = { ...DEFAULT_ROUTINES };
     if (Array.isArray(routinesData)) {
       routinesData.forEach((r: any) => {
-        if (r && r.id) newMap[r.id] = r;
+        if (r && r.id) map[r.id] = r;
       });
     }
-    setRoutinesMap(newMap);
+    return map;
+  }, [routinesData]);
 
-    let userActiveRoutineId = '';
-    let userActiveDayIdx: number | null = null;
+  const allExercises: any[] = useMemo(() => {
+    if (!Array.isArray(exercisesData)) return [];
+    return exercisesData.map((ex: any) => ({
+      id: ex._id,
+      muscle: ex.muscle,
+      secondaryMuscles: ex.secondaryMuscles || [],
+      equipment: ex.equipment || 'Tạ đơn / Cáp / Máy',
+      description: ex.description || 'Bài tập giúp cô lập và phát triển nhóm cơ hiệu quả.',
+      videoUrl: ex.videoUrl || '',
+      normMuscle: normalizeMuscleId(ex.muscle),
+      name: ex.name,
+      defaultSets: ex.defaultSets || 1,
+      defaultReps: ex.defaultReps || '10',
+    }));
+  }, [exercisesData]);
 
-    if (token) {
-      try {
-        const profileRes = await fetch(`${API_URL}/api/users/profile`, {
-          headers,
-          credentials: 'include'
-        });
-        if (profileRes.ok) {
-          const userProfile = await profileRes.json();
-          if (userProfile.lastActiveRoutineId) userActiveRoutineId = userProfile.lastActiveRoutineId;
-          if (userProfile.lastActiveDayIndex !== undefined && userProfile.lastActiveDayIndex !== null) {
-            userActiveDayIdx = userProfile.lastActiveDayIndex;
-            savedDayIndexRef.current = userProfile.lastActiveDayIndex;
-          }
-        }
-      } catch (e) {}
-    }
-
-    if (userActiveRoutineId && newMap[userActiveRoutineId]) {
-      setActiveRoutineId(userActiveRoutineId);
-    } else {
-      const lastTrainedRoutineId = localStorage.getItem('smart_last_trained_routine_id');
-      const savedRoutineId = localStorage.getItem('smart_last_active_routine_id');
-
-      if (lastTrainedRoutineId && newMap[lastTrainedRoutineId]) {
-        setActiveRoutineId(lastTrainedRoutineId);
-      } else if (savedRoutineId && newMap[savedRoutineId]) {
-        setActiveRoutineId(savedRoutineId);
-      } else if (routinesData.length > 0) {
-        setActiveRoutineId(routinesData[0].id);
-      } else {
-        setActiveRoutineId('ppl');
-      }
-    }
-
-    if (Array.isArray(exercisesData) && exercisesData.length > 0) {
-      const mapped = exercisesData.map((ex: any) => ({
-        id: ex._id,
-        muscle: ex.muscle,
-        secondaryMuscles: ex.secondaryMuscles || [],
-        equipment: ex.equipment || 'Tạ đơn / Cáp / Máy',
-        description: ex.description || 'Bài tập giúp cô lập và phát triển nhóm cơ hiệu quả.',
-        videoUrl: ex.videoUrl || '',
-        normMuscle: normalizeMuscleId(ex.muscle),
-        name: ex.name,
-        defaultSets: ex.defaultSets || 1,
-        defaultReps: ex.defaultReps || '10',
-      }));
-      setAllExercises(mapped);
-    }
-    setIsFetching(false);
-  };
+  // Active routine: the user's explicit choice, else the one saved on their profile, else the first routine
+  const defaultRoutineId = useMemo(() => {
+    const saved = profile?.lastActiveRoutineId;
+    if (saved && routinesMap[saved]) return saved;
+    if (Array.isArray(routinesData) && routinesData.length > 0) return routinesData[0].id as string;
+    return 'ppl';
+  }, [profile, routinesMap, routinesData]);
+  const activeRoutineId: string = selectedRoutineId && routinesMap[selectedRoutineId] ? selectedRoutineId : defaultRoutineId;
 
   const pushUserProfileUpdate = async (data: Record<string, any>) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      await fetch(`${API_URL}/api/users/profile`, {
+      const res = await apiFetch('/api/users/profile', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
+      if (res.ok) mutateProfile();
     } catch (e) {
       console.error('Failed to update active routine profile:', e);
     }
   };
 
-  const refreshStreak = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          const res = await fetch(`${API_URL}/api/workouts/streak?today=${formatDateStr(new Date())}`, {
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-            credentials: 'include'
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const cur = data.current ?? data.count;
-            if (cur !== undefined) {
-              setStreakDays(cur);
-              return;
-            }
-          }
-        }
-      } catch (e) { }
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          const history = JSON.parse(localStorage.getItem('smart_streak_history') || '[]');
-          setStreakDays(calcLocalStreak(history, formatDateStr(new Date())));
-        }
-      } catch (e) { }
-  };
-
-  useEffect(() => {
-    fetchInitialData();
-    refreshStreak();
-  }, []);
-
   const handleRoutineChange = (newId: string) => {
-    setActiveRoutineId(newId);
+    setSelectedRoutineId(newId);
     const selectedRoutine = routinesMap[newId];
     if (selectedRoutine && selectedRoutine.name) {
       pushUserProfileUpdate({
@@ -527,65 +444,63 @@ export default function Workouts() {
     return formatDateStr(targetDate);
   }, [currentTabWorkout, todayDateStr]);
 
-  // Function to push workout log state to Backend API
-  const pushWorkoutToBackend = async (payload: {
+  const dayBlocked = dayLoadErrorDate === activeTabDateStr;
+  const { save: saveToServer, retry: retrySave, status: saveStatus } = useServerSave();
+
+  // The day's snapshot is built now (not when the queued request runs); requests are serialized and a
+  // failure is shown in the SaveStatusBanner. Resolves to whether the server accepted the save.
+  const pushWorkoutToBackend = (payload: {
     selectedIds: string[];
     completedIds: string[];
     detailsMap: Record<string, any>;
     isSaved: boolean;
     setsMap?: Record<string, number[]>;
   }) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
+    const completedExercises = (payload.selectedIds || [])
+      .map(id => {
+        const ex = allExercises.find(item => item.id === id || item._id === id || item._id?.toString() === id);
+        if (!ex || !ex.name) return null;
+        const detail = payload.detailsMap[id] || {};
+        return {
+          id: ex.id,
+          name: ex.name,
+          sets: detail.sets || ex.defaultSets || 1,
+          reps: detail.reps || ex.defaultReps || '10',
+          muscle: ex.muscle,
+          normMuscle: ex.normMuscle,
+          completed: payload.completedIds.includes(id)
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
 
-      const completedExercises = (payload.selectedIds || [])
-        .map(id => {
-          const ex = allExercises.find(item => item.id === id || item._id === id || item._id?.toString() === id);
-          if (!ex || !ex.name) return null;
-          const detail = payload.detailsMap[id] || {};
-          return {
-            id: ex.id,
-            name: ex.name,
-            sets: detail.sets || ex.defaultSets || 1,
-            reps: detail.reps || ex.defaultReps || '10',
-            muscle: ex.muscle,
-            normMuscle: ex.normMuscle,
-            completed: payload.completedIds.includes(id)
-          };
-        })
-        .filter((item): item is NonNullable<typeof item> => item !== null);
+    // Persist per-set progress inside detailsMap so it survives reloads / devices
+    const setsSource = payload.setsMap || completedSetsMap;
+    const mergedDetails: Record<string, any> = { ...payload.detailsMap };
+    (payload.selectedIds || []).forEach(id => {
+      mergedDetails[id] = { ...(mergedDetails[id] || {}), completedSets: setsSource[id] || [] };
+    });
 
-      // Persist per-set progress inside detailsMap so it survives reloads / devices
-      const setsSource = payload.setsMap || completedSetsMap;
-      const mergedDetails: Record<string, any> = { ...payload.detailsMap };
-      (payload.selectedIds || []).forEach(id => {
-        mergedDetails[id] = { ...(mergedDetails[id] || {}), completedSets: setsSource[id] || [] };
-      });
+    const body = JSON.stringify({
+      date: activeTabDateStr,
+      routineId: activeRoutineId,
+      routineName: activeRoutine?.name || '',
+      dayName: currentTabWorkout ? `${currentTabWorkout.day}: ${currentTabWorkout.name}` : '',
+      dayIndex: currentDayIndex,
+      selectedIds: payload.selectedIds,
+      completedIds: payload.completedIds,
+      detailsMap: mergedDetails,
+      exercises: completedExercises,
+      isSaved: payload.isSaved
+    });
 
-      await fetch(`${API_URL}/api/workouts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          date: activeTabDateStr,
-          routineId: activeRoutineId,
-          routineName: activeRoutine?.name || '',
-          dayName: currentTabWorkout ? `${currentTabWorkout.day}: ${currentTabWorkout.name}` : '',
-          dayIndex: currentDayIndex,
-          selectedIds: payload.selectedIds,
-          completedIds: payload.completedIds,
-          detailsMap: mergedDetails,
-          exercises: completedExercises,
-          isSaved: payload.isSaved
-        })
-      });
-    } catch (err) {
-      console.error('Failed to push workout log to API:', err);
-    }
+    return saveToServer(() => apiFetch('/api/workouts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    })).then(ok => {
+      if (ok) mutateStreak();
+      return ok;
+    });
   };
 
   // Load / Initialize Day Selections per Day Tab with real-time event synchronization
@@ -602,33 +517,41 @@ export default function Workouts() {
       let loadedFromApi = false;
       const loadedSets: Record<string, number[]> = {};
 
-      // 1. Try fetching from Backend API if logged in
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const res = await fetch(`${API_URL}/api/workouts?date=${activeTabDateStr}`, {
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-            credentials: 'include'
+      // 1. Load the saved log for this date from the server.
+      // A failed load must NOT fall through to the template: the user could then "save" over a
+      // log we simply failed to read. Show an error (editing is blocked) and let them retry.
+      let apiLog: any = null;
+      try {
+        const res = await apiFetch(`/api/workouts?date=${activeTabDateStr}`);
+        if (isCancelled) return;
+        if (isUnauthorized(res)) {
+          localStorage.removeItem('token');
+          router.push('/login');
+          return;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        apiLog = await res.json();
+      } catch (e) {
+        if (!isCancelled) setDayLoadErrorDate(activeTabDateStr);
+        return;
+      }
+      if (isCancelled) return;
+      setDayLoadErrorDate(null);
+
+      if (apiLog) {
+        const logRoutineMatches = !apiLog.routineId || apiLog.routineId === activeRoutineId || activeRoutineId === 'none';
+        if (logRoutineMatches && apiLog.isSaved && (apiLog.selectedIds || []).length > 0) {
+          selectedIds = apiLog.selectedIds || [];
+          completedIds = apiLog.completedIds || [];
+          detailsMap = apiLog.detailsMap || {};
+          Object.keys(detailsMap).forEach(k => {
+            if (Array.isArray(detailsMap[k]?.completedSets)) loadedSets[k] = detailsMap[k].completedSets;
           });
-          if (res.ok) {
-            const apiLog = await res.json();
-            if (apiLog) {
-              const logRoutineMatches = !apiLog.routineId || apiLog.routineId === activeRoutineId || activeRoutineId === 'none';
-              if (logRoutineMatches && apiLog.isSaved && (apiLog.selectedIds || []).length > 0) {
-                selectedIds = apiLog.selectedIds || [];
-                completedIds = apiLog.completedIds || [];
-                detailsMap = apiLog.detailsMap || {};
-                Object.keys(detailsMap).forEach(k => {
-                  if (Array.isArray(detailsMap[k]?.completedSets)) loadedSets[k] = detailsMap[k].completedSets;
-                });
-                isSavedSession = true;
-              } else {
-                isSavedSession = false;
-              }
-              loadedFromApi = true;
-            }
-          }
-        } catch (e) { }
+          isSavedSession = true;
+        } else {
+          isSavedSession = false;
+        }
+        loadedFromApi = true;
       }
 
       if ((!isSavedSession || selectedIds.length === 0) && currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
@@ -674,7 +597,7 @@ export default function Workouts() {
     return () => {
       isCancelled = true;
     };
-  }, [currentDayKey, allExercises, todayDateStr, activeTabDateStr, currentTabWorkout, isFetching]);
+  }, [currentDayKey, allExercises, todayDateStr, activeTabDateStr, currentTabWorkout, isFetching, dayRetryTick, router]);
 
   const currentSelectedIds = daySelections[currentDayKey] || [];
   const currentCompletedIds = dayCompleted[currentDayKey] || [];
@@ -774,6 +697,11 @@ export default function Workouts() {
   };
 
   const handleSaveWorkout = () => {
+    if (dayBlocked) {
+      setNoticeMessage('Chưa tải được nhật ký ngày này. Bấm "Thử lại" trước khi chỉnh sửa để tránh ghi đè dữ liệu.');
+      setTimeout(() => setNoticeMessage(''), 4000);
+      return;
+    }
     if (currentSelectedIds.length === 0) {
       setNoticeMessage('Vui lòng chọn ít nhất 1 bài tập từ thư viện bên dưới trước khi chốt lịch!');
       setTimeout(() => setNoticeMessage(''), 4000);
@@ -806,6 +734,11 @@ export default function Workouts() {
   };
 
   const handleUnlockWorkout = () => {
+    if (dayBlocked) {
+      setNoticeMessage('Chưa tải được nhật ký ngày này. Bấm "Thử lại" trước khi chỉnh sửa để tránh ghi đè dữ liệu.');
+      setTimeout(() => setNoticeMessage(''), 4000);
+      return;
+    }
     setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: false }));
     pushWorkoutToBackend({
       selectedIds: currentSelectedIds,
@@ -816,6 +749,11 @@ export default function Workouts() {
   };
 
   const toggleCompleteExercise = (id: string, forcedState?: boolean, customSets?: number[], setsMapOverride?: Record<string, number[]>) => {
+    if (dayBlocked) {
+      setNoticeMessage('Chưa tải được nhật ký ngày này. Bấm "Thử lại" trước khi chỉnh sửa để tránh ghi đè dữ liệu.');
+      setTimeout(() => setNoticeMessage(''), 4000);
+      return;
+    }
     if (activeTabDateStr > todayDateStr) {
       setNoticeMessage('Không thể đánh dấu hoàn thành cho ngày trong tương lai!');
       setTimeout(() => setNoticeMessage(''), 4000);
@@ -862,7 +800,7 @@ export default function Workouts() {
       detailsMap: toggleDayDetailsMap,
       isSaved: true,
       setsMap: effectiveSetsMap
-    }).then(() => { if (localStorage.getItem('token')) refreshStreak(); });
+    });
 
     // 4. Start 3-minute rest timer when marking exercise as COMPLETED, stop/hide timer when UNTICKING
     if (shouldBeComp && forcedState === undefined) {
@@ -874,6 +812,11 @@ export default function Workouts() {
   };
 
   const toggleCompleteSet = (exId: string, setIndex: number, totalSets: number, exName: string) => {
+    if (dayBlocked) {
+      setNoticeMessage('Chưa tải được nhật ký ngày này. Bấm "Thử lại" trước khi chỉnh sửa để tránh ghi đè dữ liệu.');
+      setTimeout(() => setNoticeMessage(''), 4000);
+      return;
+    }
     if (activeTabDateStr > todayDateStr) {
       setNoticeMessage('Không thể đánh dấu hoàn thành cho ngày trong tương lai!');
       setTimeout(() => setNoticeMessage(''), 4000);
@@ -1107,6 +1050,20 @@ export default function Workouts() {
             </button>
           </div>
         )}
+
+        {dayBlocked && (
+          <div className="bg-rose-500/10 border border-rose-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-rose-300 shadow-xl">
+            <p className="font-extrabold text-white">Không tải được nhật ký ngày {activeTabDateStr}. Chỉnh sửa đã bị khóa để tránh ghi đè dữ liệu đã lưu.</p>
+            <button
+              onClick={() => { setDayLoadErrorDate(null); setDayRetryTick(t => t + 1); }}
+              className="w-full sm:w-auto px-4 py-2 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black rounded-xl text-xs transition shadow-md shrink-0 active:scale-95"
+            >
+              🔄 Thử lại
+            </button>
+          </div>
+        )}
+
+        <SaveStatusBanner status={saveStatus} onRetry={retrySave} />
 
         {/* Stats Dashboard Row */}
         <div className="grid grid-cols-3 gap-2 sm:gap-6">
