@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Logo } from '@/components/smart/logo';
-import { apiFetch } from '@/utils/api';
+import { apiFetch, describeError } from '@/utils/api';
 import { refreshProfile } from '@/hooks/useApi';
 import { calcBmr, calcTdee, calcTargetCalories } from '@/utils/nutritionCalc';
 import { calcBmi } from '@/utils/bmi';
@@ -101,10 +101,11 @@ export default function Onboarding() {
         await refreshProfile(); // other pages must not keep the pre-onboarding (empty) profile
         router.push('/dashboard');
       } else {
-        alert('Có lỗi xảy ra, vui lòng thử lại.');
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || 'Có lỗi xảy ra, vui lòng thử lại.');
       }
     } catch (err) {
-      console.error(err);
+      alert(describeError(err)); // used to be silent: the button just stopped spinning
     } finally {
       setSaving(false);
     }
@@ -137,11 +138,13 @@ export default function Onboarding() {
 
             <div className="space-y-6">
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Giới tính của bạn</label>
-                <div className="grid grid-cols-2 gap-4">
+                <span id="onb-gender-label" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Giới tính của bạn</span>
+                <div role="group" aria-labelledby="onb-gender-label" className="grid grid-cols-2 gap-4">
                   {['Nam', 'Nữ'].map(g => (
                     <button
                       key={g}
+                      type="button"
+                      aria-pressed={formData.gender === g}
                       onClick={() => setFormData({ ...formData, gender: g })}
                       className={`py-4 rounded-2xl font-semibold border transition-all cursor-pointer ${formData.gender === g
                         ? 'bg-primary/10 border-primary text-primary'
@@ -155,8 +158,9 @@ export default function Onboarding() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Độ tuổi</label>
+                <label htmlFor="onb-age" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Độ tuổi</label>
                 <input
+                  id="onb-age"
                   type="number"
                   name="age"
                   value={formData.age}
@@ -179,8 +183,9 @@ export default function Onboarding() {
 
             <div className="space-y-6">
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Chiều cao (cm)</label>
+                <label htmlFor="onb-height" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Chiều cao (cm)</label>
                 <input
+                  id="onb-height"
                   type="number"
                   name="height"
                   value={formData.height}
@@ -194,8 +199,9 @@ export default function Onboarding() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Cân nặng (kg)</label>
+                <label htmlFor="onb-weight" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Cân nặng (kg)</label>
                 <input
+                  id="onb-weight"
                   type="number"
                   name="weight"
                   value={formData.weight}
@@ -218,8 +224,9 @@ export default function Onboarding() {
 
             <div className="space-y-6">
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mục tiêu chính</label>
+                <label htmlFor="onb-goal" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mục tiêu chính</label>
                 <select
+                  id="onb-goal"
                   name="goal"
                   value={formData.goal}
                   onChange={handleChange}
@@ -232,8 +239,9 @@ export default function Onboarding() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mức độ hoạt động (Tần suất vận động)</label>
+                <label htmlFor="onb-activity" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mức độ hoạt động (Tần suất vận động)</label>
                 <select
+                  id="onb-activity"
                   name="activityLevel"
                   value={formData.activityLevel}
                   onChange={handleChange}

@@ -162,7 +162,7 @@ export default function Profile() {
         </div>
 
         {message.text && (
-          <div className={`p-4 rounded-2xl border flex items-center gap-2 ${message.type === 'success' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-destructive/10 border-destructive/30 text-destructive'} text-xs font-semibold`}>
+          <div role={message.type === 'error' ? 'alert' : 'status'} className={`p-4 rounded-2xl border flex items-center gap-2 ${message.type === 'success' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-destructive/10 border-destructive/30 text-destructive'} text-xs font-semibold`}>
             {message.type === 'success' ? <CheckCircle2 className="size-4 shrink-0" /> : <AlertCircle className="size-4 shrink-0" />}
             <span>{message.text}</span>
           </div>
@@ -171,7 +171,7 @@ export default function Profile() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Form */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
+            <form onSubmit={handleSubmit} noValidate className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
 
               <div>
                 <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
@@ -180,8 +180,9 @@ export default function Profile() {
                 </h2>
                 <div className="grid grid-cols-2 gap-3 sm:gap-6">
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Họ và tên</label>
+                    <label htmlFor="profile-name" className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Họ và tên</label>
                     <input
+                      id="profile-name"
                       type="text"
                       name="name"
                       maxLength={50}
@@ -221,8 +222,9 @@ export default function Profile() {
                 </h2>
                 <div className="grid grid-cols-2 gap-3 sm:gap-6">
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Giới tính</label>
+                    <label htmlFor="profile-gender" className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Giới tính</label>
                     <select
+                      id="profile-gender"
                       name="gender"
                       value={formData.gender}
                       onChange={handleChange}
@@ -235,8 +237,9 @@ export default function Profile() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tuổi</label>
+                    <label htmlFor="profile-age" className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tuổi</label>
                     <input
+                      id="profile-age"
                       type="number"
                       name="age"
                       min="1"
@@ -249,8 +252,9 @@ export default function Profile() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Chiều cao (cm)</label>
+                    <label htmlFor="profile-height" className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Chiều cao (cm)</label>
                     <input
+                      id="profile-height"
                       type="number"
                       name="height"
                       min="30"
@@ -263,8 +267,9 @@ export default function Profile() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Cân nặng (kg)</label>
+                    <label htmlFor="profile-weight" className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Cân nặng (kg)</label>
                     <input
+                      id="profile-weight"
                       type="number"
                       name="weight"
                       min="10"
@@ -277,8 +282,9 @@ export default function Profile() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mục tiêu tập luyện</label>
+                    <label htmlFor="profile-goal" className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mục tiêu tập luyện</label>
                     <select
+                      id="profile-goal"
                       name="goal"
                       value={formData.goal}
                       onChange={handleChange}

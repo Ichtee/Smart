@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/smart/logo';
-import { API_URL } from '@/utils/api';
+import { API_URL, describeError } from '@/utils/api';
+import { validateEmail } from '@/utils/validation';
 import { ArrowLeft, CheckCircle2, AlertCircle, Send } from 'lucide-react';
 
 export default function ForgotPassword() {
@@ -16,9 +17,10 @@ export default function ForgotPassword() {
     setMessage('');
 
     const trimmedEmail = email.trim();
-    if (/\s/.test(trimmedEmail) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    const problem = validateEmail(email);
+    if (problem) {
       setStatus('error');
-      setMessage('Email không được chứa dấu cách và phải đúng định dạng (VD: user@example.com).');
+      setMessage(problem);
       return;
     }
 
@@ -33,9 +35,9 @@ export default function ForgotPassword() {
       if (!res.ok) throw new Error(data.message || 'Something went wrong');
       setStatus('success');
       setMessage(data.message);
-    } catch (err: any) {
+    } catch (err) {
       setStatus('error');
-      setMessage(err.message);
+      setMessage(describeError(err, 'Something went wrong'));
     }
   };
 
@@ -70,7 +72,7 @@ export default function ForgotPassword() {
         ) : (
           <>
             {status === 'error' && (
-              <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/30 text-destructive p-3.5 rounded-2xl mb-6 text-xs font-semibold">
+              <div role="alert" className="flex items-center gap-2 bg-destructive/10 border border-destructive/30 text-destructive p-3.5 rounded-2xl mb-6 text-xs font-semibold">
                 <AlertCircle className="size-4 shrink-0" />
                 <span>{message}</span>
               </div>
@@ -78,11 +80,13 @@ export default function ForgotPassword() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                <label htmlFor="forgot-email" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                   Địa chỉ Email
                 </label>
                 <input
+                  id="forgot-email"
                   type="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3.5 bg-background border border-input rounded-2xl focus:outline-none focus:border-primary transition text-sm text-foreground placeholder:text-muted-foreground"

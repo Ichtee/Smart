@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/smart/logo';
-import { API_URL } from '@/utils/api';
+import { API_URL, describeError } from '@/utils/api';
 import { clearApiCache } from '@/hooks/useApi';
 import { ArrowRight, AlertCircle, Mail, CheckCircle2 } from 'lucide-react';
 
@@ -12,6 +12,7 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isUnverified, setIsUnverified] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [resendStatus, setResendStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -40,7 +41,9 @@ export default function Login() {
       setError('Vui lòng nhập Mật khẩu.');
       return;
     }
+    if (isLoading) return;
 
+    setIsLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/users/login`, {
         method: 'POST',
@@ -76,8 +79,10 @@ export default function Login() {
       } else {
         router.push('/dashboard');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(describeError(err, 'Login failed'));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -97,9 +102,9 @@ export default function Login() {
       if (!res.ok) throw new Error(data.message || 'Failed to resend email');
       setResendStatus('success');
       setResendMessage(data.message || 'Đã gửi lại link xác thực thành công!');
-    } catch (err: any) {
+    } catch (err) {
       setResendStatus('error');
-      setResendMessage(err.message);
+      setResendMessage(describeError(err, 'Failed to resend email'));
     }
   };
 
@@ -118,7 +123,7 @@ export default function Login() {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/30 text-destructive p-3.5 rounded-2xl mb-6 text-xs font-semibold">
+          <div role="alert" className="flex items-center gap-2 bg-destructive/10 border border-destructive/30 text-destructive p-3.5 rounded-2xl mb-6 text-xs font-semibold">
             <AlertCircle className="size-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -152,9 +157,11 @@ export default function Login() {
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tên đăng nhập / Email</label>
+            <label htmlFor="login-identifier" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tên đăng nhập / Email</label>
             <input
+              id="login-identifier"
               type="text"
+              autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-3.5 bg-background border border-input rounded-2xl focus:outline-none focus:border-primary transition text-sm text-foreground placeholder:text-muted-foreground"
@@ -164,13 +171,15 @@ export default function Login() {
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mật khẩu</label>
+              <label htmlFor="login-password" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mật khẩu</label>
               <Link href="/forgot-password" className="text-xs text-primary font-medium hover:underline">
                 Quên mật khẩu?
               </Link>
             </div>
             <input
+              id="login-password"
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3.5 bg-background border border-input rounded-2xl focus:outline-none focus:border-primary transition text-sm text-foreground placeholder:text-muted-foreground"
@@ -180,10 +189,11 @@ export default function Login() {
           </div>
           <button
             type="submit"
-            className="group w-full py-3.5 rounded-full bg-primary hover:brightness-110 text-primary-foreground font-semibold text-sm transition-all shadow-lg glow-primary flex items-center justify-center gap-2 cursor-pointer mt-2"
+            disabled={isLoading}
+            className="group w-full py-3.5 rounded-full bg-primary hover:brightness-110 disabled:opacity-50 text-primary-foreground font-semibold text-sm transition-all shadow-lg glow-primary flex items-center justify-center gap-2 cursor-pointer mt-2"
           >
-            Đăng nhập
-            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+            {!isLoading && <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />}
           </button>
         </form>
 

@@ -6,6 +6,8 @@ import {
   markAuthVerified,
   resetAuthVerified,
   isAuthRecentlyVerified,
+  describeError,
+  NETWORK_ERROR_MESSAGE,
 } from './api';
 
 const res = (status: number, body: unknown = {}) =>
@@ -197,5 +199,23 @@ describe('auth verification timestamp', () => {
     markAuthVerified();
     resetAuthVerified();
     expect(isAuthRecentlyVerified(60_000)).toBe(false);
+  });
+});
+
+describe('describeError', () => {
+  test('a TypeError (what fetch throws when unreachable) becomes the friendly network message', () => {
+    expect(describeError(new TypeError('Failed to fetch'))).toBe(NETWORK_ERROR_MESSAGE);
+    expect(describeError(new TypeError('Failed to fetch'))).not.toMatch(/Failed to fetch/);
+  });
+
+  test('an ordinary Error keeps its message (the server text we threw ourselves)', () => {
+    expect(describeError(new Error('Invalid credentials'))).toBe('Invalid credentials');
+  });
+
+  test('an Error without a message and non-errors use the fallback', () => {
+    expect(describeError(new Error(''), 'custom')).toBe('custom');
+    expect(describeError('boom', 'custom')).toBe('custom');
+    expect(describeError(undefined, 'custom')).toBe('custom');
+    expect(describeError(null)).toBe('Đã có lỗi xảy ra. Vui lòng thử lại.');
   });
 });

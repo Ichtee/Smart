@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/smart/logo';
-import { API_URL } from '@/utils/api';
+import { API_URL, describeError } from '@/utils/api';
 import { normalizeName, validateName, validateUsername, validateEmail } from '@/utils/validation';
 import { ArrowRight, AlertCircle, MailCheck, AlertTriangle } from 'lucide-react';
 
@@ -45,9 +45,7 @@ export default function Register() {
 
       setIsSuccess(true);
     } catch (err) {
-      // fetch() rejects with a TypeError when the server is unreachable: do not show "Failed to fetch"
-      if (err instanceof TypeError) setError('Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng và thử lại.');
-      else setError(err instanceof Error ? err.message : 'Registration failed');
+      setError(describeError(err, 'Registration failed'));
     } finally {
       setIsLoading(false);
     }

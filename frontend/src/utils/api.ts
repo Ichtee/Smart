@@ -10,6 +10,17 @@ export const markAuthVerified = () => { authVerifiedAt = Date.now(); };
 export const resetAuthVerified = () => { authVerifiedAt = 0; };
 export const isAuthRecentlyVerified = (maxAgeMs: number) => Date.now() - authVerifiedAt < maxAgeMs;
 
+/** Shown instead of the browser's raw "Failed to fetch" when the server cannot be reached. */
+export const NETWORK_ERROR_MESSAGE = 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng và thử lại.';
+
+/** Turn anything thrown by a fetch flow into text safe to show to a user. */
+export function describeError(err: unknown, fallback = 'Đã có lỗi xảy ra. Vui lòng thử lại.'): string {
+  // fetch() rejects with a TypeError when the network or server is unreachable
+  if (err instanceof TypeError) return NETWORK_ERROR_MESSAGE;
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
+
 const RETRYABLE_STATUS = new Set([429, 502, 503, 504]);
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
