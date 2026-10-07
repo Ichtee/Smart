@@ -1,5 +1,6 @@
 const WorkoutLog = require('../models/WorkoutLog');
 const { parseDateRange } = require('../utils/dateRange');
+const { sanitizeDetailsMap, computeRecords } = require('../utils/records');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -107,7 +108,7 @@ const saveWorkoutLog = async (req, res) => {
         dayIndex: dayIndex !== undefined ? dayIndex : 0,
         selectedIds: selectedIds || [],
         completedIds: completedIds || [],
-        detailsMap: detailsMap || {},
+        detailsMap: sanitizeDetailsMap(detailsMap) || {},
         exercises: exercises || [],
         isSaved: isSaved !== undefined ? isSaved : false
       },
@@ -187,6 +188,21 @@ const getAllWorkoutLogs = async (req, res) => {
   }
 };
 
+// @desc    Personal records per exercise (heaviest completed set), with the weight history
+// @route   GET /api/workouts/records
+// @access  Private
+const getRecords = async (req, res) => {
+  try {
+    const logs = await WorkoutLog.find({ user: req.user._id, 'completedIds.0': { $exists: true } })
+      .select('date exercises detailsMap')
+      .lean();
+    return res.status(200).json(computeRecords(logs));
+  } catch (error) {
+    console.error('Error fetching records:', error);
+    return res.status(500).json({ message: 'Lỗi máy chủ khi lấy kỷ lục tập luyện' });
+  }
+};
+
 // @desc    Delete workout log for a specific date
 // @route   DELETE /api/workouts
 // @access  Private
@@ -212,5 +228,6 @@ module.exports = {
   deleteWorkoutLog,
   getStreakHistory,
   getAllWorkoutLogs,
+  getRecords,
   computeStreaks
 };

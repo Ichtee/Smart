@@ -8,6 +8,8 @@ export interface ExerciseDetail {
   requiresWarmup?: boolean;
   warmupNotes?: string;
   notes?: string;
+  /** kg lifted per set, keyed by set index (see setWeights.ts) */
+  setWeights?: Record<string, number | string>;
 }
 
 export type ExerciseDetailsMap = Record<string, ExerciseDetail>;

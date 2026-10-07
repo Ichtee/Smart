@@ -1,11 +1,16 @@
 'use client';
+import { useRef } from 'react';
 import { toFixedReps, MUSCLE_NAMES_VI } from './utils';
+import Link from 'next/link';
 import type { ExerciseDetailsMap } from './types';
+import { setWeightText, withSetWeight } from './setWeights';
 
 interface ExerciseChecklistProps {
   activeSelectedExercises: any[];
   adjustExerciseReps: (id: string, delta: number) => void;
   completedSetsMap: Record<string, number[]>;
+  exerciseDetails: ExerciseDetailsMap;
+  persistSetWeights: () => void;
   handleRemoveExercise: (exId: string) => void;
   isWorkoutSaved: boolean;
   REST_DURATION: number;
@@ -27,6 +32,8 @@ export default function ExerciseChecklist({
   activeSelectedExercises,
   adjustExerciseReps,
   completedSetsMap,
+  exerciseDetails,
+  persistSetWeights,
   handleRemoveExercise,
   isWorkoutSaved,
   REST_DURATION,
@@ -43,6 +50,8 @@ export default function ExerciseChecklist({
   toggleRestTimerPause,
   updateExerciseSets,
 }: ExerciseChecklistProps) {
+  // a weight box only saves when its text changed since it got focus (tabbing through does not save)
+  const weightOnFocus = useRef('');
   return (
     <>
       <div className="space-y-3 sm:space-y-4">
@@ -50,6 +59,7 @@ export default function ExerciseChecklist({
           <p className="text-[11px] sm:text-xs font-bold text-[#00E5FF] uppercase tracking-wider">
             Các bài đã chọn ({activeSelectedExercises.length})
           </p>
+          <Link href="/records" className="text-[11px] sm:text-xs font-bold text-amber-300 hover:text-amber-200">🏆 Kỷ lục cá nhân</Link>
           <span className="text-[10px] sm:text-xs text-slate-400 font-semibold hidden sm:inline">
             {isWorkoutSaved ? 'Tích chọn để đánh dấu hoàn thành' : 'Chỉnh sửa theo ý bạn rồi bấm LƯU để bắt đầu'}
           </span>
@@ -231,6 +241,23 @@ export default function ExerciseChecklist({
                               <span className="text-[11px] font-bold text-slate-400">
                                 Lần: <strong className="text-[#00E5FF]">{toFixedReps(ex.reps)}</strong>
                               </span>
+
+                              {/* Weight lifted in this set (kg) */}
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                aria-label={`Mức tạ Hiệp ${setIdx + 1} của ${ex.name} (kg)`}
+                                placeholder="kg"
+                                value={setWeightText(exerciseDetails[ex.id], setIdx)}
+                                disabled={!isWorkoutSaved}
+                                onChange={(e) => setExerciseDetails(prev => ({
+                                  ...prev,
+                                  [ex.id]: withSetWeight(prev[ex.id] || { sets: ex.sets, reps: ex.reps }, setIdx, e.target.value),
+                                }))}
+                                onFocus={(e) => { weightOnFocus.current = e.currentTarget.value; }}
+                                onBlur={(e) => { if (e.currentTarget.value !== weightOnFocus.current) persistSetWeights(); }}
+                                className="w-16 sm:w-20 bg-[#0B101D] border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center font-bold text-white focus:outline-none focus:border-[#00E5FF] disabled:opacity-40"
+                              />
 
                               {/* Set Checkbox Button */}
                               <button

@@ -705,6 +705,21 @@ export default function Workouts() {
     }
   };
 
+  // Weights typed into the set boxes live in exerciseDetails; save them once the box loses focus
+  const persistSetWeights = () => {
+    if (dayBlocked || !isWorkoutSaved) return;
+    const dayDetails: Record<string, any> = {};
+    currentSelectedIds.forEach(id => {
+      if (exerciseDetails[id]) dayDetails[id] = exerciseDetails[id];
+    });
+    pushWorkoutToBackend({
+      selectedIds: currentSelectedIds,
+      completedIds: currentCompletedIds,
+      detailsMap: dayDetails,
+      isSaved: true
+    });
+  };
+
   const handleClickBodyMuscle = (muscle: any) => {
     const muscleId = muscle && muscle.muscle ? muscle.muscle : (typeof muscle === 'string' ? muscle : null);
     if (muscleId) {
@@ -951,6 +966,8 @@ export default function Workouts() {
                 activeSelectedExercises={activeSelectedExercises}
                 adjustExerciseReps={adjustExerciseReps}
                 completedSetsMap={completedSetsMap}
+                exerciseDetails={exerciseDetails}
+                persistSetWeights={persistSetWeights}
                 handleRemoveExercise={handleRemoveExercise}
                 isWorkoutSaved={isWorkoutSaved}
                 REST_DURATION={REST_DURATION}

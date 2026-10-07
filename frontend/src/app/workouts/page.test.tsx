@@ -796,3 +796,93 @@ describe('Workouts: exercise details', () => {
     expect(document.querySelector('iframe')?.getAttribute('src')).toContain('youtube.com/embed/dQw4w9WgXcQ');
   });
 });
+
+// =========================================================================================================
+describe('Workouts: weight lifted per set', () => {
+  const weightBox = (set: number) => screen.getByLabelText(new RegExp(`^Mức tạ Hiệp ${set} của Squat`)) as HTMLInputElement;
+
+  test('the boxes are locked until the plan is saved', async () => {
+    await setup();
+    expect(weightBox(1)).toBeDisabled();
+  });
+
+  test('typing a weight and leaving the box saves it with the log', async () => {
+    const { user, saveAndWait } = await setup();
+    await saveAndWait();
+    const before = server.posts.length;
+    await user.type(weightBox(1), '60');
+    expect(server.posts.length).toBe(before); // saved when the box loses focus, not per keystroke
+    await user.tab();
+
+    await waitFor(() => expect(server.posts.length).toBe(before + 1));
+    expect(lastPost().detailsMap['e-squat'].setWeights).toEqual({ 0: '60' });
+    expect(lastPost().completedIds).toEqual([]);
+  });
+
+  test('weights of several sets are kept together; a decimal comma becomes a point', async () => {
+    const { user, saveAndWait } = await setup();
+    await saveAndWait();
+    await user.type(weightBox(1), '60');
+    await user.tab();
+    await user.type(weightBox(2), '62,5');
+    await user.tab();
+    await waitFor(() => expect(lastPost().detailsMap['e-squat'].setWeights).toEqual({ 0: '60', 1: '62.5' }));
+  });
+
+  test('the box refuses letters, negatives and absurd values', async () => {
+    const { user, saveAndWait } = await setup();
+    await saveAndWait();
+    await user.type(weightBox(1), 'a-5');
+    expect(weightBox(1).value).toBe('5');
+    await user.clear(weightBox(1));
+    await user.type(weightBox(1), '1001');
+    expect(weightBox(1).value).toBe('100');
+  });
+
+  test('tabbing through a box without changing it does not save', async () => {
+    const { user, saveAndWait } = await setup();
+    await saveAndWait();
+    const before = server.posts.length;
+    await user.click(weightBox(1));
+    await user.tab();
+    expect(server.posts.length).toBe(before);
+  });
+
+  test('ticking a set saves the weights typed so far in the same snapshot', async () => {
+    const { user, saveAndWait, setTick } = await setup();
+    await saveAndWait();
+    await user.type(weightBox(1), '70');
+    await user.click(setTick(0)); // the click blurs the box first
+    await waitFor(() => expect(lastPost().detailsMap['e-squat'].completedSets).toEqual([0]));
+    expect(lastPost().detailsMap['e-squat'].setWeights).toEqual({ 0: '70' });
+  });
+
+  test('clearing a weight removes it from the saved log', async () => {
+    const { user, saveAndWait } = await setup();
+    await saveAndWait();
+    await user.type(weightBox(1), '70');
+    await user.tab();
+    await waitFor(() => expect(lastPost().detailsMap['e-squat'].setWeights).toEqual({ 0: '70' }));
+    await user.clear(weightBox(1));
+    await user.tab();
+    await waitFor(() => expect(lastPost().detailsMap['e-squat'].setWeights).toEqual({}));
+  });
+
+  test('saved weights come back in the boxes after a reload', async () => {
+    server.logs['2026-10-07'] = {
+      date: '2026-10-07', routineId: 'ppl', routineName: 'Push Pull Legs', dayName: 'Thứ 4: Legs', dayIndex: 2,
+      selectedIds: ['e-squat'], completedIds: [],
+      detailsMap: { 'e-squat': { sets: 4, reps: '8', completedSets: [0], setWeights: { 0: 80, 1: '82.5' } } },
+      exercises: [], isSaved: true,
+    };
+    await setup();
+    expect(weightBox(1).value).toBe('80');
+    expect(weightBox(2).value).toBe('82.5');
+    expect(weightBox(3).value).toBe('');
+  });
+
+  test('a link leads to the personal records', async () => {
+    await setup();
+    expect(screen.getByRole('link', { name: /Kỷ lục cá nhân/ })).toHaveAttribute('href', '/records');
+  });
+});

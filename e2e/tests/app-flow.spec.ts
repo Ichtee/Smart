@@ -92,6 +92,38 @@ test.describe('using the app after sign-up (client-side navigation, shared SWR c
     await expect(page.getByText(/1 Ngày/).first()).toBeVisible();
   });
 
+  test('weights per set are saved with the workout and show up as personal records', async ({ page }) => {
+    const user = await createActiveUser();
+    await completeProfile(user);
+    await uiLogin(page, user.username, user.password);
+    await nav(page, 'Activity');
+    await expect(page.getByText('Bench Press').first()).toBeVisible();
+    const planSaved = postTo(page, '/api/workouts');
+    await page.getByRole('button', { name: /LƯU & BẮT ĐẦU TẬP/ }).click();
+    await planSaved;
+
+    const box = page.getByLabel(/^Mức tạ Hiệp 1 của Bench Press/);
+    await expect(box).toBeEnabled();
+    const saved = postTo(page, '/api/workouts');
+    await box.fill('60');
+    await box.blur();
+    const sent = JSON.parse((await saved).request().postData()!);
+    expect(Object.values(sent.detailsMap).some((d: any) => d.setWeights && d.setWeights['0'] === '60')).toBe(true);
+
+    await page.locator('button[title="Đánh dấu hoàn thành"]').first().click(); // finishes every set of the first exercise
+    await expect(page.getByText(/1 Ngày/).first()).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByLabel(/^Mức tạ Hiệp 1 của Bench Press/)).toHaveValue('60');
+
+    await page.getByRole('link', { name: /Kỷ lục cá nhân/ }).first().click();
+    await page.waitForURL(/\/records/);
+    const card = page.getByRole('region', { name: 'Bench Press' });
+    await expect(card).toBeVisible();
+    await expect(card).toContainText('60 kg');
+    await expect(card).toContainText('1 buổi');
+  });
+
   test('log out and in as someone else: no data leaks between accounts', async ({ page }) => {
     const dana = await createActiveUser({ name: 'Dana Pham' });
     const eli = await createActiveUser({ name: 'Eli Vu' });
