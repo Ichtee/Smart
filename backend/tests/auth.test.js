@@ -466,6 +466,54 @@ describe('POST /api/users/login', () => {
     }
   });
 
+  describe('how the login identifier is matched', () => {
+    test.each([
+      ['an email in a different case (phones capitalise the first letter)', 'Vana@Example.COM'],
+      ['an email with surrounding spaces', '  vana@example.com  '],
+      ['a username with surrounding spaces', '  vana  '],
+      ['a username in a different case', 'VANA'],
+    ])('logs in with %s', async (_label, identifier) => {
+      await createUser({ username: 'vana', email: 'vana@example.com' });
+      const res = await loginAs(identifier, 'password123');
+      expect(res.status).toBe(200);
+      expect(res.body.username).toBe('vana');
+    });
+
+    test('the password stays case-sensitive and is never trimmed or normalized', async () => {
+      await createUser({ username: 'vana', email: 'vana@example.com', password: 'Password123' });
+      expect((await loginAs('vana', 'password123')).status).toBe(401);
+      expect((await loginAs('vana', ' Password123')).status).toBe(401);
+      expect((await loginAs('vana', 'Password123')).status).toBe(200);
+    });
+
+    test('when two accounts differ only by case, an exact username always wins', async () => {
+      const lower = await createUser({ username: 'alice', email: 'a1@example.com', password: 'lower-pass-1' });
+      const upper = await createUser({ username: 'Alice', email: 'a2@example.com', password: 'upper-pass-1' });
+      expect((await loginAs('alice', 'lower-pass-1')).body._id).toBe(String(lower.user._id));
+      expect((await loginAs('Alice', 'upper-pass-1')).body._id).toBe(String(upper.user._id));
+      expect((await loginAs('alice', 'upper-pass-1')).status).toBe(401); // no cross-over
+    });
+
+    test('an ambiguous case-insensitive username never guesses (ALICE could be either account)', async () => {
+      await createUser({ username: 'alice', email: 'a1@example.com', password: 'lower-pass-1' });
+      await createUser({ username: 'Alice', email: 'a2@example.com', password: 'upper-pass-1' });
+      expect((await loginAs('ALICE', 'lower-pass-1')).status).toBe(401);
+      expect((await loginAs('ALICE', 'upper-pass-1')).status).toBe(401);
+    });
+
+    test('an unknown identifier is still the same 401', async () => {
+      expect((await loginAs('ghost', 'password123')).status).toBe(401);
+      expect((await loginAs('GHOST@Example.com', 'password123')).status).toBe(401);
+    });
+
+    test('an unverified account is found the same way (so the "not activated" notice appears)', async () => {
+      await createUser({ username: 'vana', email: 'vana@example.com', isEmailVerified: false });
+      const res = await loginAs('Vana@Example.com', 'whatever');
+      expect(res.status).toBe(403);
+      expect(res.body.notVerified).toBe(true);
+    });
+  });
+
   test('the login cookie authenticates later requests (no Authorization header needed)', async () => {
     await createUser({ username: 'vana', email: 'vana@example.com' });
     const agent = request.agent(app);

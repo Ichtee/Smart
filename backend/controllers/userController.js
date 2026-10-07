@@ -21,6 +21,20 @@ const passwordRuleError = (password) => {
   return null;
 };
 
+// Find the account a login identifier refers to.
+// - emails are stored trimmed + lower-case, so the identifier's email form is normalized the same way
+//   (phones capitalise the first letter, people paste trailing spaces)
+// - an exact username match always wins; if there is none, a case-insensitive username match is accepted
+//   ONLY when it is unambiguous (accounts "Alice" and "alice" can both exist, so "ALICE" must not guess)
+const findUserForLogin = async (identifier) => {
+  const id = identifier.trim();
+  const exact = await User.findOne({ $or: [{ username: id }, { email: id.toLowerCase() }] });
+  if (exact) return exact;
+
+  const sameIgnoringCase = await User.find({ username: id }).collation({ locale: 'en', strength: 2 }).limit(2);
+  return sameIgnoringCase.length === 1 ? sameIgnoringCase[0] : null;
+};
+
 const sendEmail = async ({ to, to_name, verify_url, subject, template_id }) => {
   const serviceId = process.env.EMAILJS_SERVICE_ID;
   const defaultTemplateId = process.env.EMAILJS_TEMPLATE_ID;
@@ -194,9 +208,7 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: 'Please provide username and password' });
     }
 
-    const user = await User.findOne({
-      $or: [{ username: username }, { email: username }]
-    });
+    const user = await findUserForLogin(username);
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
