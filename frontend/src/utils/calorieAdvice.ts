@@ -1,8 +1,13 @@
-// Weight-trend advice: compares how fast the weight really moves with what the goal asks for and
-// suggests a small change of the daily calorie target. Pure functions, no I/O.
+// Weight-trend advice: compares how fast the weight really moves with what the goal and pace ask
+// for and suggests a small change of the daily calorie target. The static 7700 kcal/kg start value
+// overestimates long-term change (Hall 2008/2011), so this feedback loop corrects it. Pure functions, no I/O.
 import type { BodyMetric } from './bodyMetrics';
+import {
+  KCAL_PER_KG, FAT_LOSS_RATE, MAX_LOSS_KG_PER_WEEK, MUSCLE_GAIN_RATE, MUSCLE_GAIN_AIM,
+  WEIGHT_GAIN_RATE_KG, WEIGHT_GAIN_SURPLUS, MAINTENANCE_RATE_KG, normalizePace,
+} from './nutritionCalc';
 
-export const KCAL_PER_KG = 7700;
+export { KCAL_PER_KG };
 export const WINDOW_DAYS = 28;
 export const MIN_ENTRIES = 4;
 export const MIN_SPAN_DAYS = 14;
@@ -42,14 +47,28 @@ export function weightTrend(metrics: BodyMetric[]): WeightTrend | null {
   return { perWeek: Math.round((num / den) * 7 * 100) / 100, entries: n, spanDays };
 }
 
-/** Healthy weekly change (kg/week) the goal is aiming for: the acceptable band and the middle to aim at. */
-export function goalRate(goal?: string | null): { min: number; max: number; aim: number } {
-  if (goal === 'Giảm mỡ') return { min: -0.75, max: -0.25, aim: -0.5 };
-  if (goal === 'Tăng cơ' || goal === 'Tăng cân') return { min: 0.1, max: 0.5, aim: 0.25 };
-  return { min: -0.25, max: 0.25, aim: 0 };
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Healthy weekly change (kg/week) for the goal and pace: the acceptable band and the rate to aim at.
+ * Same sources and constants as the calorie target (see nutritionCalc): fat loss 0.5-1 % of body
+ * weight/week but at most 1 kg; muscle gain 0.25-0.5 %/week; weight gain 0.25-1 kg/week; otherwise stable.
+ * `weight` is the current weight in kg (the band of a %-based goal scales with it).
+ */
+export function goalRate(goal?: string | null, pace?: string | null, weight = 70): { min: number; max: number; aim: number } {
+  const p = normalizePace(pace);
+  const w = Number(weight) > 0 ? Number(weight) : 70;
+  if (goal === 'Giảm mỡ') {
+    const min = Math.max(-FAT_LOSS_RATE['Nhanh'] * w, -MAX_LOSS_KG_PER_WEEK);
+    const max = -FAT_LOSS_RATE['Chậm'] * w;
+    return { min: r2(min), max: r2(max), aim: r2(Math.min(max, Math.max(min, -FAT_LOSS_RATE[p] * w))) };
+  }
+  if (goal === 'Tăng cơ') return { min: r2(MUSCLE_GAIN_RATE.min * w), max: r2(MUSCLE_GAIN_RATE.max * w), aim: r2(MUSCLE_GAIN_AIM[p] * w) };
+  if (goal === 'Tăng cân') return { ...WEIGHT_GAIN_RATE_KG, aim: r2((WEIGHT_GAIN_SURPLUS[p] * 7) / KCAL_PER_KG) };
+  return { ...MAINTENANCE_RATE_KG, aim: 0 };
 }
 
-export type AdviceStatus = 'insufficient' | 'on-track' | 'adjust' | 'limit';
+export type AdviceStatus = 'insufficient' | 'on-track' | 'adjust' | 'limit' | 'reached';
 
 export interface CalorieAdvice {
   status: AdviceStatus;
@@ -60,19 +79,37 @@ export interface CalorieAdvice {
   newAdjustment: number;
 }
 
+export interface AdviceOptions {
+  pace?: string | null;
+  targetWeight?: number | string | null;
+}
+
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
+/** Whether the latest weight has reached the target weight in the direction of the goal. */
+export function targetReached(latestWeight: number, goal: string | null | undefined, targetWeight: unknown): boolean {
+  if (targetWeight === null || targetWeight === undefined || targetWeight === '') return false;
+  const t = Number(targetWeight);
+  if (!Number.isFinite(t) || t <= 0) return false;
+  if (goal === 'Giảm mỡ') return latestWeight <= t;
+  if (goal === 'Tăng cơ' || goal === 'Tăng cân') return latestWeight >= t;
+  return false;
+}
+
 /**
- * Whether the real trend fits the goal and, if not, the next calorie adjustment (in steps of 50 kcal,
- * at most MAX_STEP at a time, never beyond +-MAX_ADJUSTMENT in total).
- * "limit" means the trend is off but the adjustment is already at its limit.
+ * Whether the real trend fits the goal and pace and, if not, the next calorie adjustment (in steps
+ * of 50 kcal, at most MAX_STEP at a time, never beyond +-MAX_ADJUSTMENT in total).
+ * "limit": the trend is off but the adjustment is already at its limit.
+ * "reached": the latest weight has reached the target weight (time to switch to maintenance).
  */
-export function calorieAdvice(metrics: BodyMetric[], goal: string | null | undefined, currentAdjustment = 0): CalorieAdvice {
+export function calorieAdvice(metrics: BodyMetric[], goal: string | null | undefined, currentAdjustment = 0, options: AdviceOptions = {}): CalorieAdvice {
   const current = clamp(Math.round(Number(currentAdjustment) || 0), -MAX_ADJUSTMENT, MAX_ADJUSTMENT);
+  const latest = metrics.length ? metrics[metrics.length - 1].weight : null;
   const trend = weightTrend(metrics);
+  if (latest !== null && targetReached(latest, goal, options.targetWeight)) return { status: 'reached', trend, delta: 0, newAdjustment: current };
   if (!trend) return { status: 'insufficient', trend: null, delta: 0, newAdjustment: current };
 
-  const { min, max, aim } = goalRate(goal);
+  const { min, max, aim } = goalRate(goal, options.pace, latest ?? undefined);
   if (trend.perWeek >= min && trend.perWeek <= max) return { status: 'on-track', trend, delta: 0, newAdjustment: current };
 
   const wanted = Math.round(((aim - trend.perWeek) * KCAL_PER_KG) / 7 / 50) * 50;

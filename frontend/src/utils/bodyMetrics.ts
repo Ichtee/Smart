@@ -5,12 +5,16 @@ export interface BodyMetric {
   weight: number;
   bodyFat: number | null;
   waist: number | null;
+  neck?: number | null;
+  hip?: number | null;
 }
 
 export interface MetricForm {
   weight: string;
   bodyFat: string;
   waist: string;
+  neck?: string;
+  hip?: string;
 }
 
 const num = (s: string) => (s.trim() === '' ? undefined : Number(s));
@@ -23,6 +27,10 @@ export function validateMetricForm(f: MetricForm): string | null {
   if (fat !== undefined && outside(fat, 2, 70)) return 'Tỷ lệ mỡ phải từ 2% đến 70%.';
   const waist = num(f.waist);
   if (waist !== undefined && outside(waist, 30, 250)) return 'Vòng eo phải từ 30cm đến 250cm.';
+  const neck = num(f.neck ?? '');
+  if (neck !== undefined && outside(neck, 20, 80)) return 'Vòng cổ phải từ 20cm đến 80cm.';
+  const hip = num(f.hip ?? '');
+  if (hip !== undefined && outside(hip, 40, 200)) return 'Vòng hông phải từ 40cm đến 200cm.';
   return null;
 }
 
@@ -33,6 +41,8 @@ export function metricBody(date: string, f: MetricForm) {
     weight: Number(f.weight),
     ...(f.bodyFat.trim() !== '' ? { bodyFat: Number(f.bodyFat) } : {}),
     ...(f.waist.trim() !== '' ? { waist: Number(f.waist) } : {}),
+    ...((f.neck ?? '').trim() !== '' ? { neck: Number(f.neck) } : {}),
+    ...((f.hip ?? '').trim() !== '' ? { hip: Number(f.hip) } : {}),
   };
 }
 

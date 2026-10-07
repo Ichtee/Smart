@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { calorieAdvice, goalRate, weightTrend, MAX_ADJUSTMENT } from './calorieAdvice';
+import { calorieAdvice, goalRate, targetReached, weightTrend, MAX_ADJUSTMENT } from './calorieAdvice';
 import type { BodyMetric } from './bodyMetrics';
 
 const day = (offset: number) => new Date(Date.UTC(2026, 5, 1 + offset)).toISOString().slice(0, 10);
@@ -51,11 +51,42 @@ describe('weightTrend', () => {
 });
 
 describe('goalRate', () => {
-  test('cutting wants a loss, building a gain, anything else stable', () => {
-    expect(goalRate('Giảm mỡ')).toEqual({ min: -0.75, max: -0.25, aim: -0.5 });
-    expect(goalRate('Tăng cơ')).toEqual({ min: 0.1, max: 0.5, aim: 0.25 });
-    expect(goalRate('Tăng cân')).toEqual(goalRate('Tăng cơ'));
-    for (const g of ['Giữ dáng', 'Sức bền', '', null, undefined, 'xyz']) expect(goalRate(g)).toEqual({ min: -0.25, max: 0.25, aim: 0 });
+  test('fat loss: 0.5-1 % of body weight per week, aiming at the pace (0.5 / 0.7 / 1 %)', () => {
+    expect(goalRate('Giảm mỡ', 'Vừa', 70)).toEqual({ min: -0.7, max: -0.35, aim: -0.49 });
+    expect(goalRate('Giảm mỡ', 'Chậm', 70).aim).toBe(-0.35);
+    expect(goalRate('Giảm mỡ', 'Nhanh', 70).aim).toBe(-0.7);
+  });
+
+  test('fat loss never aims faster than 1 kg/week, however heavy', () => {
+    expect(goalRate('Giảm mỡ', 'Nhanh', 150)).toEqual({ min: -1, max: -0.75, aim: -1 });
+  });
+
+  test('muscle gain: 0.25-0.5 % of body weight per week', () => {
+    expect(goalRate('Tăng cơ', 'Vừa', 80)).toEqual({ min: 0.2, max: 0.4, aim: 0.3 });
+    expect(goalRate('Tăng cơ', 'Chậm', 80).aim).toBe(0.2);
+    expect(goalRate('Tăng cơ', 'Nhanh', 80).aim).toBe(0.4);
+  });
+
+  test('weight gain: 0.25-1 kg/week, aiming at what +300/400/500 kcal gives', () => {
+    expect(goalRate('Tăng cân', 'Chậm')).toEqual({ min: 0.25, max: 1, aim: 0.27 });
+    expect(goalRate('Tăng cân', 'Vừa').aim).toBe(0.36);
+    expect(goalRate('Tăng cân', 'Nhanh').aim).toBe(0.45);
+  });
+
+  test('anything else is stable, whatever the pace', () => {
+    for (const g of ['Giữ dáng', 'Sức bền', '', null, undefined, 'xyz']) expect(goalRate(g, 'Nhanh', 90)).toEqual({ min: -0.25, max: 0.25, aim: 0 });
+  });
+});
+
+describe('targetReached', () => {
+  test('in the direction of the goal only', () => {
+    expect(targetReached(64.9, 'Giảm mỡ', 65)).toBe(true);
+    expect(targetReached(65, 'Giảm mỡ', '65')).toBe(true);
+    expect(targetReached(65.1, 'Giảm mỡ', 65)).toBe(false);
+    expect(targetReached(75, 'Tăng cơ', 75)).toBe(true);
+    expect(targetReached(74, 'Tăng cân', 75)).toBe(false);
+    expect(targetReached(60, 'Giữ dáng', 65)).toBe(false);
+    for (const t of [null, undefined, '', 0, 'abc']) expect(targetReached(60, 'Giảm mỡ', t)).toBe(false);
   });
 });
 
@@ -67,10 +98,12 @@ describe('calorieAdvice', () => {
   test('inside the goal band: on track, nothing to change', () => {
     const a = calorieAdvice(series(-0.5), 'Giảm mỡ', 0);
     expect(a).toMatchObject({ status: 'on-track', delta: 0, newAdjustment: 0 });
-    expect(calorieAdvice(series(-0.25), 'Giảm mỡ').status).toBe('on-track'); // band edges count as on track
-    expect(calorieAdvice(series(-0.75), 'Giảm mỡ').status).toBe('on-track');
-    expect(calorieAdvice(series(0.1), 'Tăng cơ').status).toBe('on-track');
-    expect(calorieAdvice(series(0.5), 'Tăng cơ').status).toBe('on-track');
+    expect(calorieAdvice(series(-0.4), 'Giảm mỡ').status).toBe('on-track'); // ~70 kg: band -0.7 .. -0.35
+    expect(calorieAdvice(series(-0.65), 'Giảm mỡ').status).toBe('on-track');
+    expect(calorieAdvice(series(-0.25), 'Giảm mỡ').status).toBe('adjust'); // slower than 0.5 %/week
+    expect(calorieAdvice(series(0.2), 'Tăng cơ').status).toBe('on-track'); // band ~0.18 .. 0.35
+    expect(calorieAdvice(series(0.3), 'Tăng cơ').status).toBe('on-track');
+    expect(calorieAdvice(series(0.5), 'Tăng cơ').status).toBe('adjust'); // faster than 0.5 %/week
     expect(calorieAdvice(series(0.2), 'Giữ dáng').status).toBe('on-track');
   });
 
@@ -135,6 +168,20 @@ describe('calorieAdvice', () => {
     expect(calorieAdvice(series(-0.5), 'Giảm mỡ', 9999).newAdjustment).toBe(500);
     expect(calorieAdvice(series(-0.5), 'Giảm mỡ', -9999).newAdjustment).toBe(-500);
     expect(calorieAdvice(series(-0.5), 'Giảm mỡ', 12.4).newAdjustment).toBe(12);
+  });
+
+  test('the pace moves the aim: same trend, a faster pace asks for a bigger step', () => {
+    const slow = calorieAdvice(series(-0.2), 'Giảm mỡ', 0, { pace: 'Chậm' }); // aim ~ -0.35 -> 0.15 * 1100 = 165 -> -150
+    const fast = calorieAdvice(series(-0.2), 'Giảm mỡ', 0, { pace: 'Nhanh' }); // aim ~ -0.7 -> capped -250
+    expect(slow.delta).toBe(-150);
+    expect(fast.delta).toBe(-250);
+  });
+
+  test('reaching the target weight stops the advice and says so', () => {
+    const a = calorieAdvice(series(-0.5), 'Giảm mỡ', -100, { targetWeight: 69 }); // latest ~68.5
+    expect(a).toMatchObject({ status: 'reached', delta: 0, newAdjustment: -100 });
+    expect(calorieAdvice([m(0, 64)], 'Giảm mỡ', 0, { targetWeight: 65 }).status).toBe('reached'); // even with one weigh-in
+    expect(calorieAdvice(series(-0.5), 'Giảm mỡ', 0, { targetWeight: 60 }).status).toBe('on-track');
   });
 
   test('exposes the trend so the UI can show it', () => {

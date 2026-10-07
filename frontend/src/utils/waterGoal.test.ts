@@ -7,6 +7,7 @@ describe('waterGoalMl', () => {
     [60, 2100],
     [65, 2300],   // 2275 rounds to the nearest 50 -> 2300
     [58, 2050],   // 2030 -> 2050
+    [50, 2000],   // 1750 -> the 2 litre floor
   ])('%s kg -> %s ml', (kg, ml) => expect(waterGoalMl(kg)).toBe(ml));
 
   test('rounds to 50 ml', () => {
@@ -14,9 +15,17 @@ describe('waterGoalMl', () => {
     expect(waterGoalMl(73.3) % 50).toBe(0);
   });
 
-  test('is kept between 1.5 and 4 litres', () => {
+  test('from 60 years: 30 ml/kg', () => {
+    expect(waterGoalMl(70, 65)).toBe(2100);
+    expect(waterGoalMl(70, '60')).toBe(2100);
+    expect(waterGoalMl(70, 59)).toBe(2450);
+    expect(waterGoalMl(80, null)).toBe(2800);
+  });
+
+  test('is kept between 2 and 4 litres', () => {
+    expect(MIN_WATER_GOAL_ML).toBe(2000);
     expect(waterGoalMl(30)).toBe(MIN_WATER_GOAL_ML);
-    expect(waterGoalMl(43)).toBe(MIN_WATER_GOAL_ML); // 1505 -> 1500
+    expect(waterGoalMl(57)).toBe(MIN_WATER_GOAL_ML); // 1995 -> 2000
     expect(waterGoalMl(150)).toBe(MAX_WATER_GOAL_ML);
     expect(waterGoalMl(500)).toBe(MAX_WATER_GOAL_ML);
   });

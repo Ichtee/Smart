@@ -27,40 +27,36 @@ describe('calcBmi', () => {
   });
 });
 
-describe('bmiCategory (WHO bands)', () => {
+describe('bmiCategory (IDI & WPRO bands for Asian adults)', () => {
   test.each([
     [10, 'Thiếu cân'], [18.49, 'Thiếu cân'],
-    [18.5, 'Bình thường'], [22, 'Bình thường'], [24.9, 'Bình thường'], [24.95, 'Bình thường'], [24.999, 'Bình thường'],
-    [25, 'Thừa cân'], [27, 'Thừa cân'], [29.9, 'Thừa cân'], [29.95, 'Thừa cân'], [29.999, 'Thừa cân'],
-    [30, 'Béo phì'], [35, 'Béo phì'], [60, 'Béo phì'],
+    [18.5, 'Bình thường'], [22, 'Bình thường'], [22.9, 'Bình thường'], [22.999, 'Bình thường'],
+    [23, 'Thừa cân'], [24, 'Thừa cân'], [24.999, 'Thừa cân'],
+    [25, 'Béo phì độ I'], [27, 'Béo phì độ I'], [29.999, 'Béo phì độ I'],
+    [30, 'Béo phì độ II'], [35, 'Béo phì độ II'], [60, 'Béo phì độ II'],
   ])('BMI %s is "%s"', (bmi, label) => {
     expect(bmiCategory(bmi).label).toBe(label);
   });
 
-  test('regression: the old code called 24.9-25 and 29.9-30 "Béo phì" because of gaps between its ranges', () => {
-    expect(bmiCategory(24.95).label).not.toBe('Béo phì');
-    expect(bmiCategory(29.95).label).not.toBe('Béo phì');
-  });
-
-  test('there is no gap: sweeping 10..45 in 0.01 steps only ever yields the four bands, in order', () => {
-    const order = ['Thiếu cân', 'Bình thường', 'Thừa cân', 'Béo phì'];
+  test('there is no gap: sweeping 10..45 in 0.01 steps only ever yields the five bands, in order', () => {
+    const order = ['Thiếu cân', 'Bình thường', 'Thừa cân', 'Béo phì độ I', 'Béo phì độ II'];
     let last = 0;
     for (let bmi = 10; bmi <= 45; bmi += 0.01) {
       const idx = order.indexOf(bmiCategory(bmi).label);
       expect(idx).toBeGreaterThanOrEqual(last); // never goes back down a band
-      expect(idx).toBeGreaterThanOrEqual(0);
       last = idx;
     }
-    expect(last).toBe(3);
+    expect(last).toBe(4);
   });
 
   test('each band has its own colour class', () => {
-    const colors = [15, 22, 27, 35].map(b => bmiCategory(b).color);
-    expect(new Set(colors).size).toBe(4);
+    const colors = [15, 21, 24, 27, 35].map(b => bmiCategory(b).color);
+    expect(new Set(colors).size).toBe(5);
     colors.forEach(c => expect(c).toMatch(/^text-/));
   });
 
-  test('a real profile: 70 kg at 167.5 cm is 24.95 -> normal weight', () => {
-    expect(bmiCategory(calcBmi(70, 167.5)).label).toBe('Bình thường');
+  test('a real profile: 70 kg at 175 cm is 22.9 -> normal; 70 kg at 167.5 cm is 24.95 -> overweight for Asian adults', () => {
+    expect(bmiCategory(calcBmi(70, 175)).label).toBe('Bình thường');
+    expect(bmiCategory(calcBmi(70, 167.5)).label).toBe('Thừa cân');
   });
 });
