@@ -328,7 +328,12 @@ const updateProfile = async (req, res) => {
         user.age = ageNum;
       }
 
-      if (req.body.gender !== undefined) user.gender = req.body.gender;
+      if (req.body.gender !== undefined) {
+        if (!['Nam', 'Nữ', 'Khác', ''].includes(req.body.gender)) {
+          return res.status(400).json({ message: 'Giới tính không hợp lệ.' });
+        }
+        user.gender = req.body.gender;
+      }
 
       if (req.body.height !== undefined && req.body.height !== null && req.body.height !== '') {
         const heightNum = Number(req.body.height);
@@ -346,15 +351,42 @@ const updateProfile = async (req, res) => {
         user.weight = weightNum;
       }
 
-      if (req.body.goal !== undefined) user.goal = req.body.goal;
-      if (req.body.activityLevel !== undefined) user.activityLevel = req.body.activityLevel;
+      if (req.body.goal !== undefined) {
+        if (!['Tăng cơ', 'Giảm mỡ', 'Tăng cân', 'Giữ dáng', ''].includes(req.body.goal)) {
+          return res.status(400).json({ message: 'Mục tiêu không hợp lệ.' });
+        }
+        user.goal = req.body.goal;
+      }
+      if (req.body.activityLevel !== undefined) {
+        if (!['Ít vận động', 'Vận động nhẹ', 'Vận động vừa', 'Vận động nhiều', 'Vận động cực nhiều', ''].includes(req.body.activityLevel)) {
+          return res.status(400).json({ message: 'Mức độ vận động không hợp lệ.' });
+        }
+        user.activityLevel = req.body.activityLevel;
+      }
       if (req.body.lastActiveRoutineId !== undefined) user.lastActiveRoutineId = req.body.lastActiveRoutineId;
       if (req.body.lastActiveRoutineName !== undefined) user.lastActiveRoutineName = req.body.lastActiveRoutineName;
-      if (req.body.lastActiveDayIndex !== undefined) user.lastActiveDayIndex = req.body.lastActiveDayIndex;
+      if (req.body.lastActiveDayIndex !== undefined) {
+        const idx = Number(req.body.lastActiveDayIndex);
+        if (!Number.isInteger(idx) || idx < 0 || idx > 6) {
+          return res.status(400).json({ message: 'Chỉ số ngày không hợp lệ.' });
+        }
+        user.lastActiveDayIndex = idx;
+      }
 
       if (req.body.password) {
+        const { password: newPassword, currentPassword } = req.body;
+        if (typeof newPassword !== 'string' || newPassword !== newPassword.trim() || newPassword.length < 8 || newPassword.length > 100) {
+          return res.status(400).json({ message: 'Mật khẩu mới phải từ 8 đến 100 ký tự và không có khoảng trắng ở đầu/cuối.' });
+        }
+        // 400 (not 401) on purpose: the client treats 401 as "session expired" and logs out
+        if (typeof currentPassword !== 'string' || !currentPassword) {
+          return res.status(400).json({ message: 'Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu.' });
+        }
+        if (!(await bcrypt.compare(currentPassword, user.password))) {
+          return res.status(400).json({ message: 'Mật khẩu hiện tại không đúng.' });
+        }
         const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(req.body.password, salt);
+        user.password = await bcrypt.hash(newPassword, salt);
       }
 
       const updatedUser = await user.save();
