@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { parseOffNutriments } from '@/utils/openFoodFacts';
 
 interface BarcodeScannerModalProps {
   isOpen: boolean;
@@ -9,9 +10,9 @@ interface BarcodeScannerModalProps {
   onDetectedProduct: (product: {
     name: string;
     calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
+    protein: number | null;
+    carbs: number | null;
+    fat: number | null;
     servingSize: string;
   }) => void;
 }
@@ -125,26 +126,10 @@ export default function BarcodeScannerModal({
         // Extract best product name
         const name = p.product_name_vi || p.product_name || p.abbreviated_name || `Sản phẩm ${cleanBarcode}`;
         
-        // Extract calories (per 100g or serving)
-        let calories = Math.round(
-          Number(nutriments['energy-kcal_100g'] || nutriments['energy-kcal_serving'] || nutriments['energy-kcal'] || 0)
-        );
-
-        // Extract macros (per 100g or serving)
-        let protein = Math.round(Number(nutriments['proteins_100g'] || nutriments['proteins_serving'] || nutriments['proteins'] || 0));
-        let carbs = Math.round(Number(nutriments['carbohydrates_100g'] || nutriments['carbohydrates_serving'] || nutriments['carbohydrates'] || 0));
-        let fat = Math.round(Number(nutriments['fat_100g'] || nutriments['fat_serving'] || nutriments['fat'] || 0));
-
-        const servingSize = p.serving_size || '100g';
-
-        onDetectedProduct({
-          name,
-          calories,
-          protein,
-          carbs,
-          fat,
-          servingSize,
-        });
+        // calories, macros and serving label from one basis (per 100 g, else per serving)
+        const facts = parseOffNutriments(nutriments, p.serving_size);
+        // no energy value at all: keep the name and let the user type the calories
+        onDetectedProduct(facts ? { name, ...facts } : { name, calories: 0, protein: null, carbs: null, fat: null, servingSize: '100g' });
 
         onClose();
       } else {

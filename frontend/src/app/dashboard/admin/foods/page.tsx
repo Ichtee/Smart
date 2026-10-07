@@ -10,9 +10,9 @@ interface FoodItem {
   name: string;
   servingSize: string;
   calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
   category: string;
   image?: string;
 }
@@ -58,9 +58,9 @@ export default function AdminFoodsPage() {
     setFormName(food.name);
     setFormServingSize(food.servingSize || '1 phần');
     setFormCalories(food.calories.toString());
-    setFormProtein((food.protein || 0).toString());
-    setFormCarbs((food.carbs || 0).toString());
-    setFormFat((food.fat || 0).toString());
+    setFormProtein(food.protein == null ? '' : String(food.protein));
+    setFormCarbs(food.carbs == null ? '' : String(food.carbs));
+    setFormFat(food.fat == null ? '' : String(food.fat));
     setFormCategory(food.category || 'Tất cả');
     setFormImage(food.image || '');
     setErrorMsg('');
@@ -82,9 +82,12 @@ export default function AdminFoodsPage() {
         name: formName.trim(),
         servingSize: formServingSize.trim() || '1 phần',
         calories: Number(formCalories),
-        protein: Number(formProtein) || 0,
-        carbs: Number(formCarbs) || 0,
-        fat: Number(formFat) || 0,
+        // all three blank = macros unknown (estimated when logged), not 0 g
+        ...([formProtein, formCarbs, formFat].every(v => String(v).trim() === '') ? {} : {
+          protein: Number(formProtein) || 0,
+          carbs: Number(formCarbs) || 0,
+          fat: Number(formFat) || 0,
+        }),
         category: formCategory,
         image: formImage.trim()
       };

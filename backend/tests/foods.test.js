@@ -107,6 +107,14 @@ describe('custom food rules', () => {
     expect(String(res.body.user)).toBe(String(user._id));
   });
 
+  test('macros that were not sent are stored as unknown (null), not as 0 g', async () => {
+    const { auth } = await createUser();
+    const res = await request(app).post('/api/foods/custom').set(auth)
+      .send(customFood({ protein: undefined, carbs: undefined, fat: undefined }));
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ calories: 180, protein: null, carbs: null, fat: null });
+  });
+
   test.each([
     ['name too short', { name: 'a' }],
     ['name blank', { name: '   ' }],

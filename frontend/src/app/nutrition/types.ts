@@ -19,7 +19,16 @@ export interface DbFood {
   category?: string;
   image?: string;
   isCustom?: boolean;
-  protein?: number;
-  carbs?: number;
-  fat?: number;
+  /** null when unknown (the food was saved without macros) */
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
 }
+
+type Macro = number | null | undefined;
+
+/** Macros of one serving, or null when the food has none (it is then estimated from its calories). */
+export const foodMacros = (f: { protein?: Macro; carbs?: Macro; fat?: Macro }) =>
+  f.protein == null && f.carbs == null && f.fat == null
+    ? null
+    : { protein: f.protein ?? 0, carbs: f.carbs ?? 0, fat: f.fat ?? 0 };

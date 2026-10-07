@@ -46,9 +46,12 @@ export default function CustomFoodsTab({ dbFoods, mutateFoods, onPickFood, onBac
           name: customFormName.trim(),
           servingSize: customFormServing.trim() || '1 phần',
           calories: Number(customFormCal),
-          protein: Number(customFormProtein) || 0,
-          carbs: Number(customFormCarbs) || 0,
-          fat: Number(customFormFat) || 0,
+          // all three blank = macros unknown (estimated when logged), not 0 g
+          ...([customFormProtein, customFormCarbs, customFormFat].every(v => String(v).trim() === '') ? {} : {
+            protein: Number(customFormProtein) || 0,
+            carbs: Number(customFormCarbs) || 0,
+            fat: Number(customFormFat) || 0,
+          }),
           category: customFormCategory || 'Tất cả',
           image: customFormImage.trim() || ''
         })

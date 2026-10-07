@@ -26,15 +26,15 @@ const foodSchema = new mongoose.Schema({
   },
   protein: {
     type: Number,
-    default: 0
+    default: null // unknown: estimated from the calories when logged
   },
   carbs: {
     type: Number,
-    default: 0
+    default: null // unknown: estimated from the calories when logged
   },
   fat: {
     type: Number,
-    default: 0
+    default: null // unknown: estimated from the calories when logged
   },
   category: {
     type: String,

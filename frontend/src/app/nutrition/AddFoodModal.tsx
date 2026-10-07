@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { apiFetch } from '@/utils/api';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import CustomFoodsTab from './CustomFoodsTab';
-import type { MealItem, DbFood } from './types';
+import { foodMacros, type MealItem, type DbFood } from './types';
 import { useToast } from '@/components/ui/feedback';
 
 // Module-level so the id source is not treated as an impure call during render
@@ -37,6 +37,12 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
   const [saveAsCustomFood, setSaveAsCustomFood] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'search' | 'my_foods'>('search');
 
+  // the first few foods of the meal's category (or any meal), shown as one-tap suggestions
+  const quickFoods = useMemo(
+    () => dbFoods.filter(f => !f.isCustom && (!f.category || f.category === category || f.category === 'Tất cả')).slice(0, 5),
+    [dbFoods, category]
+  );
+
   const computedTotalCalories = useMemo(() => {
     const mult = parseFloat(portionMultiplier);
     const baseCal = parseFloat(baseCalories);
@@ -51,7 +57,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
     setFoodName(food.name);
     setServingSize(food.servingSize || '1 phần');
     setBaseCalories(food.calories.toString());
-    setBaseMacros({ protein: food.protein || 0, carbs: food.carbs || 0, fat: food.fat || 0 });
+    setBaseMacros(foodMacros(food));
     setPortionMultiplier('1');
     if (food.image) setFoodImage(food.image);
     setActiveModalTab('search');
@@ -60,15 +66,15 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
   const handleDetectedProduct = (product: {
     name: string;
     calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
+    protein: number | null;
+    carbs: number | null;
+    fat: number | null;
     servingSize: string;
   }) => {
     setFoodName(product.name);
     setServingSize(product.servingSize || '1 phần');
     setBaseCalories((product.calories || 0).toString());
-    setBaseMacros({ protein: product.protein || 0, carbs: product.carbs || 0, fat: product.fat || 0 });
+    setBaseMacros(foodMacros(product));
     setPortionMultiplier('1');
   };
 
@@ -262,7 +268,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                             setFoodName(item.name);
                             setServingSize(item.servingSize || '1 phần');
                             setBaseCalories(item.calories.toString());
-                            setBaseMacros({ protein: item.protein || 0, carbs: item.carbs || 0, fat: item.fat || 0 });
+                            setBaseMacros(foodMacros(item));
                             setPortionMultiplier('1');
                             if (item.image) setFoodImage(item.image);
                             setShowDbDropdown(false);
@@ -370,6 +376,11 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                   <span className="text-xs text-slate-400 font-bold ml-1">kcal</span>
                 </div>
               </div>
+              {computedTotalCalories > 0 && !baseMacros && (
+                <p className="text-xs text-muted-foreground -mt-2" data-testid="macro-estimated">
+                  Món này chưa có protein/carb/chất béo: app sẽ ước tính theo tỷ lệ 30/50/20 của lượng calo.
+                </p>
+              )}
 
               {/* Checkbox: Save to My Custom Foods */}
               <label className="flex items-center gap-2.5 p-3 bg-inset border border-slate-800/80 rounded-xl cursor-pointer hover:border-slate-700 transition">
@@ -444,34 +455,30 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                 )}
               </div>
 
-              {/* Quick suggestions */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Gợi ý nhanh:</label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { name: 'Phở bò', cal: 450, qty: '1 tô' },
-                    { name: 'Cơm tấm', cal: 600, qty: '1 dĩa' },
-                    { name: 'Ức gà', cal: 220, qty: '200g' },
-                    { name: 'Trứng ốp la', cal: 150, qty: '2 quả' },
-                    { name: 'Bánh mì', cal: 300, qty: '1 ổ' }
-                  ].map(sug => (
-                    <button
-                      key={sug.name}
-                      type="button"
-                      onClick={() => {
-                        setFoodName(sug.name);
-                        setServingSize(sug.qty);
-                        setBaseCalories(sug.cal.toString());
-                        setBaseMacros(null);
-                        setPortionMultiplier('1');
-                      }}
-                      className="px-2.5 py-1 bg-surface-elevated hover:bg-slate-800 border border-slate-800 rounded-lg text-xs text-slate-300 font-medium"
-                    >
-                      {sug.name} ({sug.qty} • {sug.cal} kcal)
-                    </button>
-                  ))}
+              {/* Quick suggestions: foods of the database (they carry real macros) */}
+              {quickFoods.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Gợi ý nhanh:</label>
+                  <div className="flex flex-wrap gap-2">
+                    {quickFoods.map(sug => (
+                      <button
+                        key={sug._id}
+                        type="button"
+                        onClick={() => {
+                          setFoodName(sug.name);
+                          setServingSize(sug.servingSize || '1 phần');
+                          setBaseCalories(sug.calories.toString());
+                          setBaseMacros(foodMacros(sug));
+                          setPortionMultiplier('1');
+                        }}
+                        className="px-2.5 py-1 bg-surface-elevated hover:bg-slate-800 border border-slate-800 rounded-lg text-xs text-slate-300 font-medium"
+                      >
+                        {sug.name} ({sug.servingSize || '1 phần'} • {sug.calories} kcal)
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="pt-4 flex gap-3">
                 <button

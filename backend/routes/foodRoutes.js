@@ -20,6 +20,9 @@ const initialFoods = [
   { name: 'Hạt hạnh nhân', servingSize: '30g', calories: 170, protein: 6, carbs: 6, fat: 15, category: 'Ăn Vặt' }
 ];
 
+// A macro the client did not send is unknown (null), not 0 g: the app then estimates it from the calories.
+const macroOrNull = (v) => (v === undefined || v === null || v === '' ? null : Number(v));
+
 // Same rules for creating and editing: returns an error message, or null when the macros are fine
 const foodFieldsError = ({ name, calories, protein, carbs, fat }, partial) => {
   if ((!partial || name !== undefined) && (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100)) {
@@ -112,9 +115,9 @@ router.post('/custom', protect, async (req, res) => {
       name: name.trim(),
       servingSize: servingSize || '1 phần',
       calories: Number(calories),
-      protein: Number(protein) || 0,
-      carbs: Number(carbs) || 0,
-      fat: Number(fat) || 0,
+      protein: macroOrNull(protein),
+      carbs: macroOrNull(carbs),
+      fat: macroOrNull(fat),
       category: category || 'Tất cả',
       image: image || ''
     });
@@ -166,9 +169,9 @@ router.post('/', protect, admin, async (req, res) => {
       name: name.trim(),
       servingSize: servingSize || '1 phần',
       calories: Number(calories),
-      protein: Number(protein) || 0,
-      carbs: Number(carbs) || 0,
-      fat: Number(fat) || 0,
+      protein: macroOrNull(protein),
+      carbs: macroOrNull(carbs),
+      fat: macroOrNull(fat),
       category: category || 'Tất cả',
       image: image || ''
     });

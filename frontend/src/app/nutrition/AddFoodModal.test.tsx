@@ -120,13 +120,26 @@ describe('AddFoodModal: calories and portions', () => {
     expect(total()).toBe('0');
   });
 
-  test('a quick suggestion fills name, serving and calories', async () => {
-    const { user, field, total } = setup();
-    await user.click(screen.getByRole('button', { name: /Cơm tấm \(1 dĩa/ }));
-    expect(field(NAME).value).toBe('Cơm tấm');
-    expect(field(SERVING).value).toBe('1 dĩa');
-    expect(field(CALORIES).value).toBe('600');
-    expect(total()).toBe('600');
+  test('quick suggestions are system foods of the database: they fill the form and keep the real macros', async () => {
+    const { user, field, total, submit, addedItem } = setup();
+    expect(screen.queryByRole('button', { name: /Cơm gà nhà làm \(/ })).not.toBeInTheDocument(); // custom foods are not suggested
+    await user.click(screen.getByRole('button', { name: /Phở bò \(1 tô • 450 kcal/ }));
+    expect(field(NAME).value).toBe('Phở bò');
+    expect(field(SERVING).value).toBe('1 tô');
+    expect(field(CALORIES).value).toBe('450');
+    expect(total()).toBe('450');
+    expect(screen.queryByTestId('macro-estimated')).not.toBeInTheDocument();
+    await submit();
+    expect(addedItem()).toMatchObject({ name: 'Phở bò', protein: 22, carbs: 55, fat: 12 });
+  });
+
+  test('a food saved without macros (null) is logged without them, so it is estimated, not counted as 0 g', async () => {
+    const { user, field, submit, addedItem } = setup({ dbFoods: [{ _id: 'n1', name: 'Chè đậu', servingSize: '1 ly', calories: 300, protein: null, carbs: null, fat: null }] });
+    await user.click(screen.getByRole('button', { name: /Chè đậu \(1 ly/ }));
+    expect(field(CALORIES).value).toBe('300');
+    expect(screen.getByTestId('macro-estimated')).toBeInTheDocument();
+    await submit();
+    expect(addedItem()).not.toHaveProperty('protein');
   });
 });
 
