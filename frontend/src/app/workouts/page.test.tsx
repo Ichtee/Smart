@@ -47,7 +47,7 @@ const json = (body: unknown, status = 200) =>
 type SavedLog = {
   date: string; routineId: string; routineName: string; dayName: string; dayIndex: number;
   selectedIds: string[]; completedIds: string[]; isSaved: boolean;
-  detailsMap: Record<string, { sets: number; reps: string; rir?: string; restTimeSeconds?: number; completedSets: number[] }>;
+  detailsMap: Record<string, { sets: number; reps: string; rir?: string; restTimeSeconds?: number; completedSets: number[]; setWeights?: Record<string, string | number> }>;
   exercises: { name: string; sets: number; reps: string; completed: boolean }[];
 };
 
