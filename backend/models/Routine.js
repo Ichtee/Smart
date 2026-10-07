@@ -40,6 +40,13 @@ const routineSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // null = a built-in routine managed by admins; otherwise the user who created it (and only they can change it)
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    index: true
+  },
   type: {
     type: String,
     default: 'Custom'

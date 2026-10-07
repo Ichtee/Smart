@@ -32,6 +32,21 @@ const protect = async (req, res, next) => {
   }
 };
 
+// Like protect, but anonymous (or invalid-token) requests simply continue without req.user.
+const optionalAuth = async (req, res, next) => {
+  const header = req.headers.authorization;
+  const token = (req.cookies && req.cookies.token) || (header && header.startsWith('Bearer') ? header.split(' ')[1] : null);
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id).select('-password');
+    } catch (error) {
+      req.user = null;
+    }
+  }
+  next();
+};
+
 const admin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
@@ -40,5 +55,5 @@ const admin = (req, res, next) => {
   }
 };
 
-module.exports = { protect, admin };
+module.exports = { protect, optionalAuth, admin };
 

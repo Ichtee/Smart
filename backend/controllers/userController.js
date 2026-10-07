@@ -6,6 +6,7 @@ const WorkoutLog = require('../models/WorkoutLog');
 const NutritionLog = require('../models/NutritionLog');
 const Food = require('../models/Food');
 const BodyMetric = require('../models/BodyMetric');
+const Routine = require('../models/Routine');
 const { recordWeight } = require('../utils/bodyMetrics');
 
 // Never expose these fields in API responses (reset/verification tokens would allow account takeover)
@@ -533,6 +534,7 @@ const deleteUser = async (req, res) => {
         WorkoutLog.deleteMany({ user: user._id }),
         NutritionLog.deleteMany({ user: user._id }),
         BodyMetric.deleteMany({ user: user._id }),
+        Routine.deleteMany({ owner: user._id }),
         Food.deleteMany({ user: user._id, isCustom: true }),
       ]);
       res.json({ message: 'User removed' });
