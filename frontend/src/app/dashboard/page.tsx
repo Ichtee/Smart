@@ -82,6 +82,8 @@ export default function Dashboard() {
 
   const { streak, mutate: mutateStreak } = useStreak();
   const streakDates: string[] = useMemo(() => streak?.streakDates ?? [], [streak]);
+  // The "streak" is the run of CONSECUTIVE days (what the Workouts page shows), not the number of days ever trained
+  const streakCount: number = streak?.current ?? 0;
 
   // Logs are date-ranged: the current month + week are always loaded (weekly chart, today),
   // other months load on demand when the calendar navigates there. SWR caches each range.
@@ -242,10 +244,10 @@ export default function Dashboard() {
             <div className="bg-secondary/50 p-5 rounded-2xl border border-border space-y-3">
               <div className="flex items-center justify-between text-sm md:text-base font-bold">
                 <span className="text-muted-foreground flex items-center gap-2"><Flame className="size-5 text-primary" /> Workout Streak</span>
-                <span className="text-primary font-black">{streakDates.length} ngày</span>
+                <span className="text-primary font-black">{streakCount} ngày</span>
               </div>
               <div className="w-full bg-secondary h-3 rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, streakDates.length * 10)}%` }} />
+                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, streakCount * 10)}%` }} />
               </div>
             </div>
             <div className="bg-secondary/50 p-5 rounded-2xl border border-border flex items-center justify-between">
