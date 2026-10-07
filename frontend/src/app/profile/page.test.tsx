@@ -82,7 +82,7 @@ describe('Profile: loading the form', () => {
     setup();
     const goal = screen.getByLabelText('Mục tiêu tập luyện');
     expect(within(goal).getAllByRole('option').map(o => (o as HTMLOptionElement).value)).toEqual(
-      ['', 'Tăng cơ', 'Giảm mỡ', 'Tăng cân', 'Giữ dáng', 'Sức bền']);
+      ['', 'Giảm mỡ', 'Tăng cơ', 'Tăng cân', 'Giữ dáng', 'Sức bền']);
   });
 
   test('a session that has expired (401) clears the token and goes to login', () => {
@@ -114,7 +114,10 @@ describe('Profile: the BMI card', () => {
     const { retype } = setup();
     await retype(/Cân nặng/, '90');
     expect(screen.getByText('33.1')).toBeInTheDocument();
-    expect(screen.getByText('Béo phì')).toBeInTheDocument();
+    expect(screen.getByText('Béo phì độ II')).toBeInTheDocument(); // IDI & WPRO: >= 30
+    await retype(/Cân nặng/, '64');
+    expect(screen.getByText('23.5')).toBeInTheDocument();
+    expect(screen.getByText('Thừa cân')).toBeInTheDocument(); // 23-24.9 for Asian adults
     await retype(/Cân nặng/, '45');
     expect(screen.getByText('Thiếu cân')).toBeInTheDocument();
   });
@@ -173,7 +176,7 @@ describe('Profile: saving', () => {
     expect(url).toBe('/api/users/profile');
     expect(options?.method).toBe('PUT');
     expect(JSON.parse(options!.body as string)).toEqual({
-      name: 'Dana Pham Nguyen', age: 31, gender: 'Nữ', height: 165, weight: 58, goal: 'Sức bền', metricDate: todayStr(),
+      name: 'Dana Pham Nguyen', age: 31, gender: 'Nữ', height: 165, weight: 58, goal: 'Sức bền', goalPace: 'Vừa', targetWeight: null, metricDate: todayStr(),
     });
   });
 
@@ -243,5 +246,38 @@ describe('Profile: saving', () => {
     await save();
     expect(await screen.findByText('Cập nhật hồ sơ thành công!')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('Profile: pace, target weight and body fat', () => {
+  test('the pace and the target weight are loaded and sent; a maintenance goal sends no target', async () => {
+    mockProfile({ goal: 'Giảm mỡ', goalPace: 'Nhanh', targetWeight: 55, bodyFat: 24 });
+    const { user, save } = setup();
+    expect(screen.getByRole('radio', { name: /Nhanh/ })).toHaveAttribute('aria-checked', 'true');
+    expect((screen.getByLabelText(/Cân nặng mục tiêu/) as HTMLInputElement).value).toBe('55');
+    expect(screen.getByTestId('profile-bodyfat')).toHaveTextContent('24%');
+    await user.click(screen.getByRole('radio', { name: /Chậm/ }));
+    await save();
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(1));
+    expect(JSON.parse(vi.mocked(apiFetch).mock.calls[0][1]!.body as string)).toMatchObject({ goal: 'Giảm mỡ', goalPace: 'Chậm', targetWeight: 55 });
+  });
+
+  test('a target weight that would be underweight is refused before sending', async () => {
+    mockProfile({ goal: 'Giảm mỡ', targetWeight: 48 }); // 48 / 1.65^2 = 17.6
+    const { save } = setup();
+    await save();
+    expect(await screen.findAllByRole('alert')).not.toHaveLength(0);
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  test('cutting while underweight shows a warning', () => {
+    mockProfile({ goal: 'Giảm mỡ', weight: 48 });
+    setup();
+    expect(screen.getByText(/dưới 18.5 \(thiếu cân\)/)).toBeInTheDocument();
+  });
+
+  test('without a body fat it links to the body page', () => {
+    setup();
+    expect(screen.getByRole('link', { name: 'Nhập ở trang Cơ thể' })).toHaveAttribute('href', '/body');
   });
 });

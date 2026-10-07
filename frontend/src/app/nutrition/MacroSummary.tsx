@@ -1,11 +1,12 @@
 'use client';
 import ProgressRing from '@/components/ui/ProgressRing';
-import { macroTargets, sumMacros } from '@/utils/nutritionCalc';
+import { macroTargets, sumMacros, type BodyProfile } from '@/utils/nutritionCalc';
 import type { MealItem } from './types';
 
 interface Props {
   meals: Record<string, MealItem[]>;
   targetCalories: number;
+  profile?: BodyProfile | null;
 }
 
 const MACROS = [
@@ -14,10 +15,13 @@ const MACROS = [
   { key: 'fat', label: 'Chất béo', color: 'text-fat' },
 ] as const;
 
-/** Protein / carb / fat eaten today against the 30/50/20 split of the calorie target, each with its own color. */
-export default function MacroSummary({ meals, targetCalories }: Props) {
+/**
+ * Protein / carb / fat eaten today against the targets for the profile (protein by g/kg and goal,
+ * fat 25 %, carbs the rest; see macroTargets), each with its own color.
+ */
+export default function MacroSummary({ meals, targetCalories, profile }: Props) {
   const eaten = sumMacros(Object.values(meals).flat());
-  const target = macroTargets(targetCalories);
+  const target = macroTargets(targetCalories, profile);
   return (
     <section aria-label="Dinh dưỡng đa lượng" className="rounded-2xl sm:rounded-3xl border border-border bg-card p-4 sm:p-6">
       <h2 className="mb-4 font-display text-2xl font-bold">Protein · Carb · Chất béo</h2>
@@ -32,6 +36,11 @@ export default function MacroSummary({ meals, targetCalories }: Props) {
           </div>
         ))}
       </div>
+      {eaten.estimatedCalories > 0 && (
+        <p className="mt-3 text-xs text-muted-foreground" data-testid="macro-estimate-note">
+          ≈ Gồm {eaten.estimatedCalories} kcal từ món chưa có thông tin macro (ước tính theo tỷ lệ 30/50/20).
+        </p>
+      )}
     </section>
   );
 }

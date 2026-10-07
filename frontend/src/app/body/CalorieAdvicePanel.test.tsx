@@ -46,7 +46,23 @@ describe('CalorieAdvicePanel', () => {
   test('shows the trend with its sign and the goal band', () => {
     render(<CalorieAdvicePanel metrics={series(0.3)} profile={{ ...profile, goal: 'Tăng cơ' }} />);
     expect(screen.getByTestId('trend-text')).toHaveTextContent('+0.3 kg/tuần');
-    expect(screen.getByTestId('trend-text')).toHaveTextContent('+0.1 đến +0.5 kg/tuần');
+    // 0.25-0.5 % of the latest weight (70.9 kg) per week
+    expect(screen.getByTestId('trend-text')).toHaveTextContent('+0.18 đến +0.35 kg/tuần');
+  });
+
+  test('the band follows the chosen pace and is named in the text', () => {
+    render(<CalorieAdvicePanel metrics={series(-0.5)} profile={{ ...profile, goalPace: 'Nhanh' }} />);
+    expect(screen.getByTestId('trend-text')).toHaveTextContent('(tốc độ nhanh)');
+  });
+
+  test('reaching the target weight offers to switch to maintenance', async () => {
+    vi.mocked(apiFetch).mockResolvedValue(json({}));
+    render(<CalorieAdvicePanel metrics={series(-0.5)} profile={{ ...profile, targetWeight: 69, calorieAdjustment: -100 }} />);
+    expect(screen.getByRole('status')).toHaveTextContent('đã đạt cân nặng mục tiêu 69 kg');
+    expect(screen.queryByRole('button', { name: 'Áp dụng' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Chuyển sang Giữ dáng' }));
+    expect(JSON.parse(String(vi.mocked(apiFetch).mock.calls[0][1]!.body))).toEqual({ goal: 'Giữ dáng', calorieAdjustment: 0 });
+    await waitFor(() => expect(refreshProfile).toHaveBeenCalledTimes(1));
   });
 
   test('off track: shows the old and new target and applies the adjustment', async () => {

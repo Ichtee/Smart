@@ -8,6 +8,9 @@ import { normalizeName, validateName } from '@/utils/validation';
 import { todayStr } from '@/utils/dateUtils';
 import { useProfile, refreshProfile, isUnauthorizedError } from '@/hooks/useApi';
 import { calcBmi, bmiCategory as getBmiCategory } from '@/utils/bmi';
+import { goalHasPace } from '@/utils/nutritionCalc';
+import GoalPlanFields, { goalPlanError } from '@/components/GoalPlanFields';
+import Link from 'next/link';
 import { User, Activity, Target, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function Profile() {
@@ -23,7 +26,9 @@ export default function Profile() {
     gender: '',
     height: '',
     weight: '',
-    goal: ''
+    goal: '',
+    goalPace: 'Vừa',
+    targetWeight: ''
   });
 
   // Profile comes from the shared SWR cache (no extra request when another page already loaded it)
@@ -40,7 +45,9 @@ export default function Profile() {
       gender: profile.gender || '',
       height: profile.height || '',
       weight: profile.weight || '',
-      goal: profile.goal || ''
+      goal: profile.goal || '',
+      goalPace: profile.goalPace || 'Vừa',
+      targetWeight: profile.targetWeight != null ? String(profile.targetWeight) : ''
     });
   }, [profile]);
 
@@ -97,6 +104,12 @@ export default function Profile() {
       }
     }
 
+    const goalProblem = goalPlanError(formData, formData);
+    if (goalProblem) {
+      setMessage({ text: goalProblem, type: 'error' });
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -110,6 +123,9 @@ export default function Profile() {
           height: formData.height ? Number(formData.height) : undefined,
           weight: formData.weight ? Number(formData.weight) : undefined,
           goal: formData.goal,
+          goalPace: formData.goalPace,
+          // a maintenance goal has no target weight
+          targetWeight: goalHasPace(formData.goal) && String(formData.targetWeight).trim() !== '' ? Number(formData.targetWeight) : null,
           metricDate: todayStr() // a changed weight is also logged as today's body measurement
         })
       });
@@ -287,21 +303,17 @@ export default function Profile() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label htmlFor="profile-goal" className="block text-xs sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mục tiêu tập luyện</label>
-                    <select
-                      id="profile-goal"
-                      name="goal"
-                      value={formData.goal}
-                      onChange={handleChange}
-                      className="w-full bg-background border border-input rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
-                    >
-                      <option value="">Chưa cập nhật</option>
-                      <option value="Tăng cơ">Tăng cơ (Muscle Gain)</option>
-                      <option value="Giảm mỡ">Giảm mỡ (Fat Loss)</option>
-                      <option value="Tăng cân">Tăng cân (Weight Gain)</option>
-                      <option value="Giữ dáng">Giữ dáng (Maintenance)</option>
-                      <option value="Sức bền">Sức bền (Endurance)</option>
-                    </select>
+                    <GoalPlanFields
+                      idPrefix="profile"
+                      goalLabel="Mục tiêu tập luyện"
+                      allowEmpty
+                      value={{ goal: formData.goal, goalPace: formData.goalPace, targetWeight: String(formData.targetWeight) }}
+                      onChange={v => setFormData({ ...formData, ...v })}
+                      profile={{ ...formData, activityLevel: profile?.activityLevel, bodyFat: profile?.bodyFat }}
+                      labelClassName="block text-xs sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2"
+                      selectClassName="w-full bg-background border border-input rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+                      inputClassName="w-full bg-background border border-input rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+                    />
                   </div>
                 </div>
               </div>
@@ -366,9 +378,18 @@ export default function Profile() {
                 {formData.goal && (
                   <div className="w-full mt-4 bg-background rounded-2xl p-5 border border-border flex items-center justify-between">
                     <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Mục tiêu</span>
-                    <span className="text-primary font-bold text-sm">{formData.goal}</span>
+                    <span className="text-primary font-bold text-sm">{formData.goal}{goalHasPace(formData.goal) ? ` · ${formData.goalPace}` : ''}</span>
                   </div>
                 )}
+
+                <div className="w-full mt-4 bg-background rounded-2xl p-5 border border-border flex items-center justify-between gap-3" data-testid="profile-bodyfat">
+                  <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Tỷ lệ mỡ</span>
+                  {profile?.bodyFat != null ? (
+                    <span className="font-bold text-sm">{profile.bodyFat}%</span>
+                  ) : (
+                    <Link href="/body" className="text-primary text-xs font-bold hover:underline">Nhập ở trang Cơ thể</Link>
+                  )}
+                </div>
               </div>
             </div>
           </div>

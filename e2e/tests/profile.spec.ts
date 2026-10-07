@@ -12,21 +12,22 @@ test.describe('profile', () => {
     await expect(page.getByLabel('Giới tính')).toHaveValue('Nữ');
     await expect(page.getByLabel('Tuổi')).toHaveValue('30');
     await expect(page.getByLabel(/Chiều cao/)).toHaveValue('165');
-    await expect(page.getByLabel(/Cân nặng/)).toHaveValue('58');
+    await expect(page.getByLabel('Cân nặng (kg)')).toHaveValue('58');
     await expect(page.getByLabel('Mục tiêu tập luyện')).toHaveValue('Giữ dáng');
     await expect(page.locator('input[disabled]').first()).toBeDisabled();
     await expect(page.getByText('21.3')).toBeVisible();
     await expect(page.getByText('Bình thường')).toBeVisible();
   });
 
-  test('the BMI card follows the fields live, across every band', async ({ page }) => {
+  test('the BMI card follows the fields live, across every IDI & WPRO band', async ({ page }) => {
     const user = await createActiveUser();
     await completeProfile(user, { height: 170, weight: 70 });
     await uiLogin(page, user.username, user.password);
     await nav(page, 'Hồ sơ');
 
-    const weight = page.getByLabel(/Cân nặng/);
-    for (const [kg, label] of [['50', 'Thiếu cân'], ['70', 'Bình thường'], ['80', 'Thừa cân'], ['100', 'Béo phì']] as const) {
+    const weight = page.getByLabel('Cân nặng (kg)');
+    // 170 cm: 17.3 / 20.8 / 23.5 / 27.7 / 34.6
+    for (const [kg, label] of [['50', 'Thiếu cân'], ['60', 'Bình thường'], ['68', 'Thừa cân'], ['80', 'Béo phì độ I'], ['100', 'Béo phì độ II']] as const) {
       await weight.fill(kg);
       await expect(page.getByText(label, { exact: true })).toBeVisible();
     }

@@ -8,7 +8,7 @@ const localDate = (offsetDays: number) => {
 };
 
 test.describe('water goal follows body weight', () => {
-  test('a 70 kg user gets 2450 ml, a 50 kg user 1750 ml', async ({ page }) => {
+  test('a 70 kg user gets 2450 ml (35 ml/kg), a 50 kg user the 2 litre floor', async ({ page }) => {
     const heavy = await createActiveUser();
     await completeProfile(heavy, { weight: 70 });
     await uiLogin(page, heavy.username, heavy.password);
@@ -21,7 +21,7 @@ test.describe('water goal follows body weight', () => {
     await page.context().clearCookies();
     await uiLogin(page, light.username, light.password);
     await nav(page, 'Dinh dưỡng');
-    await expect(page.getByText('ml / 1750 ml')).toBeVisible();
+    await expect(page.getByText('ml / 2000 ml')).toBeVisible();
   });
 });
 

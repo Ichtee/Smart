@@ -17,18 +17,19 @@ export default function CalorieAdvicePanel({ metrics, profile }: { metrics: Body
   const [error, setError] = useState('');
 
   const current = profile.calorieAdjustment || 0;
-  const advice = calorieAdvice(metrics, profile.goal, current);
+  const latest = metrics.length ? metrics[metrics.length - 1].weight : Number(profile.weight) || undefined;
+  const advice = calorieAdvice(metrics, profile.goal, current, { pace: profile.goalPace, targetWeight: profile.targetWeight });
   const { trend } = advice;
-  const band = goalRate(profile.goal);
+  const band = goalRate(profile.goal, profile.goalPace, latest);
 
-  const save = async (calorieAdjustment: number) => {
+  const save = async (body: { calorieAdjustment: number; goal?: string }) => {
     setError('');
     setSaving(true);
     try {
       const res = await apiFetch('/api/users/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ calorieAdjustment }),
+        body: JSON.stringify(body),
       });
       if (isUnauthorized(res)) {
         localStorage.removeItem('token');
@@ -59,7 +60,7 @@ export default function CalorieAdvicePanel({ metrics, profile }: { metrics: Body
       {trend ? (
         <p className="text-sm" data-testid="trend-text">
           Xu hướng {trend.entries} số đo gần nhất ({trend.spanDays} ngày):{' '}
-          <span className="font-black">{signed(trend.perWeek)} kg/tuần</span>. Mục tiêu của bạn nằm trong khoảng {signed(band.min)} đến {signed(band.max)} kg/tuần.
+          <span className="font-black">{signed(trend.perWeek)} kg/tuần</span>. Mục tiêu của bạn{profile.goalPace && ['Giảm mỡ', 'Tăng cơ', 'Tăng cân'].includes(profile.goal || '') ? ` (tốc độ ${profile.goalPace.toLowerCase()})` : ''} nằm trong khoảng {signed(band.min)} đến {signed(band.max)} kg/tuần.
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">
@@ -67,6 +68,15 @@ export default function CalorieAdvicePanel({ metrics, profile }: { metrics: Body
         </p>
       )}
 
+      {advice.status === 'reached' && (
+        <div className="space-y-3" role="status">
+          <p className="text-sm font-semibold text-primary">Bạn đã đạt cân nặng mục tiêu {profile.targetWeight} kg! Nên chuyển sang mục tiêu “Giữ dáng” để ăn bằng TDEE.</p>
+          <button type="button" disabled={saving} onClick={() => save({ goal: 'Giữ dáng', calorieAdjustment: 0 })} className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 disabled:opacity-50 cursor-pointer flex items-center gap-2">
+            {saving && <Loader2 className="size-4 animate-spin" />}
+            Chuyển sang Giữ dáng
+          </button>
+        </div>
+      )}
       {advice.status === 'on-track' && (
         <p role="status" className="text-sm font-semibold text-primary">Cân nặng đang đi đúng hướng, không cần thay đổi mục tiêu calo.</p>
       )}
@@ -80,7 +90,7 @@ export default function CalorieAdvicePanel({ metrics, profile }: { metrics: Body
           <p className="text-sm font-semibold" data-testid="advice-text">
             Nên {advice.delta > 0 ? 'tăng' : 'giảm'} {Math.abs(advice.delta)} kcal/ngày: mục tiêu {target} → {nextTarget} kcal.
           </p>
-          <button type="button" disabled={saving} onClick={() => save(advice.newAdjustment)} className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 disabled:opacity-50 cursor-pointer flex items-center gap-2">
+          <button type="button" disabled={saving} onClick={() => save({ calorieAdjustment: advice.newAdjustment })} className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 disabled:opacity-50 cursor-pointer flex items-center gap-2">
             {saving && <Loader2 className="size-4 animate-spin" />}
             Áp dụng
           </button>
@@ -90,7 +100,7 @@ export default function CalorieAdvicePanel({ metrics, profile }: { metrics: Body
       {current !== 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <p className="text-xs text-muted-foreground">Đang áp dụng điều chỉnh {signed(current)} kcal/ngày so với mục tiêu theo công thức.</p>
-          <button type="button" disabled={saving} onClick={() => save(0)} className="text-xs font-bold underline disabled:opacity-50 cursor-pointer">Đặt lại về 0</button>
+          <button type="button" disabled={saving} onClick={() => save({ calorieAdjustment: 0 })} className="text-xs font-bold underline disabled:opacity-50 cursor-pointer">Đặt lại về 0</button>
         </div>
       )}
     </section>

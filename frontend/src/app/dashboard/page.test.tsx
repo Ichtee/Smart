@@ -176,9 +176,28 @@ describe('Dashboard: metabolism card (uses the shared calculator)', () => {
     expect(t).toMatch(/Mục tiêu\s*Tăng cơ/);
     expect(t).toMatch(/BMR\s*1[.,]649/); // 10*70 + 6.25*175 - 5*30 + 5
     expect(t).toMatch(/TDEE\s*2[.,]556/); // x 1.55 (Vận động vừa)
-    expect(t).toContain('Tăng cơ2856 kcal');
-    expect(t).toContain('Giảm mỡ2056 kcal');
+    // medium pace: muscle gain +15 % of TDEE (383), fat loss 0.7 %/week of 70 kg (539 kcal)
+    expect(t).toContain('Tăng cơ2939 kcal');
+    expect(t).toContain('Giảm mỡ2017 kcal');
     expect(t).toContain('Giữ dáng2556 kcal');
+    expect(t).toContain('BMR theo công thức Mifflin-St Jeor');
+    const plan = screen.getByTestId('energy-plan');
+    expect(plan).toHaveTextContent('Calo mục tiêu2939 kcal/ngày');
+    expect(plan).toHaveTextContent('So với TDEE+383 kcal');
+    expect(plan).toHaveTextContent('Thay đổi dự kiến+0.35 kg/tuần');
+  });
+
+  test('pace, target weight and body fat: weeks to the goal, Katch-McArdle BMR and lean / fat mass', async () => {
+    handlers['GET /api/users/profile'] = () => json({ ...PROFILE, goal: 'Giảm mỡ', goalPace: 'Nhanh', targetWeight: 65, bodyFat: 20 });
+    await setup();
+    const t = text();
+    expect(t).toMatch(/Mục tiêu\s*Giảm mỡ · Nhanh/);
+    expect(t).toContain('BMR theo công thức Katch-McArdle');
+    expect(t).toMatch(/BMR\s*1[.,]580/); // 370 + 21.6 * 56
+    expect(t).toMatch(/Khối nạc\s*56 kg/);
+    expect(t).toMatch(/Khối mỡ \(20%\)\s*14 kg/);
+    // TDEE 2449, fast cut 770 kcal -> 0.7 kg/week -> 5 kg in 8 weeks
+    expect(screen.getByTestId('energy-plan')).toHaveTextContent('Đến 65 kgkhoảng 8 tuần');
   });
 
   test('a woman gets the female BMR constant and her activity level is respected', async () => {
@@ -190,17 +209,17 @@ describe('Dashboard: metabolism card (uses the shared calculator)', () => {
     expect(t).toMatch(/Mục tiêu\s*Giảm mỡ/);
   });
 
-  test('missing measurements fall back to the same defaults as every other page (170 cm / 65 kg)', async () => {
+  test('missing measurements: no made-up numbers, it asks for the profile instead', async () => {
     handlers['GET /api/users/profile'] = () => json({ name: 'New User', role: 'user' });
     await setup();
-    expect(text()).toContain('170 cm / 65 kg');
-    expect(text()).toMatch(/Mục tiêu\s*Giữ dáng/);
+    expect(text()).toContain('Cần đủ tuổi, chiều cao và cân nặng trong hồ sơ');
+    expect(text()).not.toContain('170 cm / 65 kg');
+    expect(screen.queryByTestId('energy-plan')).not.toBeInTheDocument();
   });
 
-  test('"Cập nhật Hồ sơ" goes to the profile page', async () => {
-    const { user } = await setup();
-    await user.click(screen.getByRole('button', { name: /Cập nhật Hồ sơ/ }));
-    expect(nav.push).toHaveBeenCalledWith('/profile');
+  test('"Cập nhật Hồ sơ" links to the profile page', async () => {
+    await setup();
+    expect(screen.getByRole('link', { name: /Cập nhật Hồ sơ/ })).toHaveAttribute('href', '/profile');
   });
 });
 
@@ -387,7 +406,7 @@ describe('Dashboard: errors and sessions', () => {
     const { user } = await setup();
 
     expect(await screen.findByText(/Không tải được hồ sơ/)).toBeInTheDocument();
-    expect(text()).toContain('170 cm / 65 kg'); // defaults while the profile is missing
+    expect(text()).toContain('Cần đủ tuổi, chiều cao và cân nặng'); // no made-up defaults while the profile is missing
 
     healthy = true;
     await user.click(screen.getByRole('button', { name: /Thử lại/ }));
@@ -438,7 +457,7 @@ describe('Dashboard: today hero', () => {
   test('the rings show today against the targets (calories, protein, water, workouts this week)', async () => {
     await setup();
     await waitFor(() => expect(screen.getByRole('progressbar', { name: 'Calo hôm nay' })).toHaveAttribute('aria-valuenow', '150'));
-    expect(screen.getByRole('progressbar', { name: 'Calo hôm nay' })).toHaveAttribute('aria-valuemax', '2856');
+    expect(screen.getByRole('progressbar', { name: 'Calo hôm nay' })).toHaveAttribute('aria-valuemax', '2939');
     expect(screen.getByRole('progressbar', { name: 'Nước uống hôm nay' })).toHaveAttribute('aria-valuenow', '1500');
     expect(screen.getByRole('progressbar', { name: 'Buổi tập tuần này' })).toHaveAttribute('aria-valuenow', '2');
     expect(screen.getByRole('progressbar', { name: 'Buổi tập tuần này' })).toHaveAttribute('aria-valuemax', '7');

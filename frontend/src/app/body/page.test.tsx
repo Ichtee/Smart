@@ -282,3 +282,50 @@ describe('Body page: calorie advice', () => {
     expect(screen.queryByRole('heading', { name: /Gợi ý điều chỉnh calo/ })).not.toBeInTheDocument();
   });
 });
+
+describe('Body page: body composition and the US Navy estimate', () => {
+  const man = { weight: 72.5, height: 175, age: 30, gender: 'Nam', activityLevel: 'Vận động vừa', goal: 'Giảm mỡ', calorieAdjustment: 0 };
+
+  test('the latest body fat gives lean / fat mass and the ACE category', async () => {
+    vi.mocked(useProfile).mockReturnValue({ profile: man } as unknown as ReturnType<typeof useProfile>);
+    await setup();
+    const card = screen.getByTestId('body-composition');
+    expect(card).toHaveTextContent('19.5%');
+    expect(card).toHaveTextContent('Trung bình (ACE)'); // men 18-24 %
+    expect(card).toHaveTextContent('Khối nạc59.2 kg'); // 73.5 * 0.805
+    expect(card).toHaveTextContent('Khối mỡ14.3 kg');
+    expect(screen.getByTestId('body-fat-change')).toHaveTextContent('—');
+  });
+
+  test('without any body fat there is no composition card', async () => {
+    vi.mocked(useProfile).mockReturnValue({ profile: man } as unknown as ReturnType<typeof useProfile>);
+    await setup([metric('2026-05-01', 70)]);
+    expect(screen.queryByTestId('body-composition')).not.toBeInTheDocument();
+  });
+
+  test('waist + neck give a Navy estimate that can be copied into the body-fat field', async () => {
+    vi.mocked(useProfile).mockReturnValue({ profile: man } as unknown as ReturnType<typeof useProfile>);
+    const { user, field } = await setup();
+    expect(screen.queryByTestId('navy-estimate')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Vòng hông/)).not.toBeInTheDocument(); // men: no hip
+    await user.type(field(/Vòng eo/), '85');
+    await user.type(field(/Vòng cổ/), '38');
+    expect(screen.getByTestId('navy-estimate')).toHaveTextContent('16.9%');
+    await user.click(screen.getByRole('button', { name: 'Dùng giá trị này' }));
+    expect(field(/Tỷ lệ mỡ/).value).toBe('16.9');
+    expect(screen.queryByTestId('navy-estimate')).not.toBeInTheDocument();
+  });
+
+  test('women also enter the hip, and the measurements are sent with the weight', async () => {
+    vi.mocked(useProfile).mockReturnValue({ profile: { ...man, gender: 'Nữ', height: 160 } } as unknown as ReturnType<typeof useProfile>);
+    const { user, field, save } = await setup();
+    await user.type(field(/Vòng eo/), '72');
+    await user.type(field(/Vòng cổ/), '34');
+    expect(screen.queryByTestId('navy-estimate')).not.toBeInTheDocument();
+    await user.type(field(/Vòng hông/), '92');
+    expect(screen.getByTestId('navy-estimate')).toHaveTextContent('24.6%');
+    await save();
+    await waitFor(() => expect(apiFetch).toHaveBeenCalled());
+    expect(JSON.parse(String(vi.mocked(apiFetch).mock.calls[0][1]!.body))).toMatchObject({ waist: 72, neck: 34, hip: 92 });
+  });
+});

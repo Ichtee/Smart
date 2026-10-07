@@ -9,6 +9,8 @@ import { toDateStr, todayStr } from '@/utils/dateUtils';
 import { formatDateVi, metricBody, summarize, validateMetricForm, type BodyMetric } from '@/utils/bodyMetrics';
 import BodyChart from './BodyChart';
 import CalorieAdvicePanel from './CalorieAdvicePanel';
+import BodyCompositionCard from './BodyCompositionCard';
+import { navyBodyFat } from '@/utils/bodyFat';
 import { Scale, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useConfirm } from '@/components/ui/feedback';
 
@@ -34,7 +36,7 @@ export default function BodyPage() {
   const { profile } = useProfile();
 
   const [date, setDate] = useState(today);
-  const [form, setForm] = useState({ weight: '', bodyFat: '', waist: '' });
+  const [form, setForm] = useState({ weight: '', bodyFat: '', waist: '', neck: '', hip: '' });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -53,7 +55,7 @@ export default function BodyPage() {
     setPrefilled(true);
   }, [summary, prefilled]);
 
-  const setField = (name: 'weight' | 'bodyFat' | 'waist') => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const setField = (name: 'weight' | 'bodyFat' | 'waist' | 'neck' | 'hip') => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [name]: e.target.value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,7 +86,7 @@ export default function BodyPage() {
       }
       await Promise.all([mutate(), refreshProfile()]); // the profile weight (and so TDEE) follows the latest entry
       setMessage({ text: 'Đã lưu số đo!', type: 'success' });
-      setForm(f => ({ ...f, bodyFat: '', waist: '' }));
+      setForm(f => ({ ...f, bodyFat: '', waist: '', neck: '', hip: '' }));
     } catch (err) {
       setMessage({ text: describeError(err), type: 'error' });
     } finally {
@@ -105,6 +107,11 @@ export default function BodyPage() {
   };
 
   const history = useMemo(() => [...metrics].reverse(), [metrics]);
+  const isWoman = profile?.gender === 'Nữ';
+  // US Navy estimate from the circumferences being typed, offered while the body-fat field is empty
+  const navyEstimate = form.bodyFat.trim() === ''
+    ? navyBodyFat({ gender: profile?.gender, height: profile?.height, waist: form.waist, neck: form.neck, hip: form.hip })
+    : null;
 
   if (isLoading && !data) {
     return (
@@ -166,6 +173,8 @@ export default function BodyPage() {
             <BodyChart metrics={metrics} />
           </div>
 
+          {profile && <BodyCompositionCard metrics={metrics} gender={profile.gender} />}
+
           {profile && <CalorieAdvicePanel metrics={metrics} profile={profile} />}
 
           <form onSubmit={handleSubmit} noValidate className="bg-card border border-border rounded-3xl p-5 sm:p-8 space-y-5">
@@ -187,7 +196,29 @@ export default function BodyPage() {
                 <label htmlFor="body-waist" className={labelClass}>Vòng eo (cm) — tùy chọn</label>
                 <input id="body-waist" type="number" inputMode="decimal" step="0.1" value={form.waist} onChange={setField('waist')} className={inputClass} />
               </div>
+              <div>
+                <label htmlFor="body-neck" className={labelClass}>Vòng cổ (cm) — tùy chọn</label>
+                <input id="body-neck" type="number" inputMode="decimal" step="0.1" value={form.neck} onChange={setField('neck')} className={inputClass} />
+              </div>
+              {isWoman && (
+                <div>
+                  <label htmlFor="body-hip" className={labelClass}>Vòng hông (cm) — tùy chọn</label>
+                  <input id="body-hip" type="number" inputMode="decimal" step="0.1" value={form.hip} onChange={setField('hip')} className={inputClass} />
+                </div>
+              )}
             </div>
+            {navyEstimate !== null ? (
+              <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-3 text-xs" data-testid="navy-estimate">
+                <span>Ước tính tỷ lệ mỡ theo công thức US Navy: <strong>{navyEstimate}%</strong> (sai số khoảng ±3.5%).</span>
+                <button type="button" onClick={() => setForm(f => ({ ...f, bodyFat: String(navyEstimate) }))} className="font-bold text-primary underline cursor-pointer">Dùng giá trị này</button>
+              </div>
+            ) : (
+              form.bodyFat.trim() === '' && (
+                <p className="text-xs text-muted-foreground">
+                  Không có máy đo? Nhập vòng eo (ngang rốn), vòng cổ{isWoman ? ' và vòng hông' : ''} để ước tính tỷ lệ mỡ theo công thức US Navy.
+                </p>
+              )
+            )}
             <p className="text-xs text-muted-foreground">Ghi lại cùng một ngày sẽ thay thế số đo của ngày đó.</p>
             <button type="submit" disabled={saving} className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 disabled:opacity-50 transition-all cursor-pointer">
               {saving ? 'Đang lưu...' : 'Lưu số đo'}

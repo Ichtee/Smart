@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import Onboarding from './page';
 import { apiFetch } from '@/utils/api';
 import { refreshProfile } from '@/hooks/useApi';
-import { calcBmr, calcTdee, calcTargetCalories } from '@/utils/nutritionCalc';
+import { calcBmr, calcTdee, calcTargetCalories, macroTargets } from '@/utils/nutritionCalc';
 import { calcBmi } from '@/utils/bmi';
 
 const nav = vi.hoisted(() => {
@@ -168,9 +168,51 @@ describe('Onboarding: step 3 (goal and activity)', () => {
     expect((screen.getByLabelText('Mục tiêu chính') as HTMLSelectElement).value).toBe('Giữ dáng');
     expect((screen.getByLabelText(/Mức độ hoạt động/) as HTMLSelectElement).value).toBe('Vận động vừa');
     expect(screen.getAllByRole('option').map(o => (o as HTMLOptionElement).value)).toEqual([
-      'Tăng cơ', 'Giảm mỡ', 'Giữ dáng', 'Ít vận động', 'Vận động nhẹ', 'Vận động vừa', 'Vận động nhiều', 'Vận động cực nhiều',
+      'Ít vận động', 'Vận động nhẹ', 'Vận động vừa', 'Vận động nhiều', 'Vận động cực nhiều',
+      'Giảm mỡ', 'Tăng cơ', 'Tăng cân', 'Giữ dáng', 'Sức bền',
     ]);
+    // a maintenance goal has no pace and no target weight
+    expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Cân nặng mục tiêu/)).not.toBeInTheDocument();
     void toResults;
+  });
+
+  test('a fat-loss goal offers three paces with their kcal and kg/week, medium selected', async () => {
+    const { user, type, next } = setup();
+    await type(/Độ tuổi/, '30');
+    await next();
+    await type(/Chiều cao/, '175');
+    await type(/Cân nặng/, '70');
+    await next();
+    await user.selectOptions(screen.getByLabelText('Mục tiêu chính'), 'Giảm mỡ');
+    const paces = screen.getAllByRole('radio');
+    expect(paces.map(r => r.textContent)).toEqual([
+      'Chậm-500 kcal/ngày-0.45 kg/tuần', 'Vừa-539 kcal/ngày-0.49 kg/tuần', 'Nhanh-770 kcal/ngày-0.7 kg/tuần',
+    ]);
+    expect(screen.getByRole('radio', { name: /Vừa/ })).toHaveAttribute('aria-checked', 'true');
+    await user.click(screen.getByRole('radio', { name: /Nhanh/ }));
+    expect(screen.getByRole('radio', { name: /Nhanh/ })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  test('a target weight shows the weeks it takes, and an underweight or wrong-way target is refused', async () => {
+    const { user, type, next } = setup();
+    await type(/Độ tuổi/, '30');
+    await next();
+    await type(/Chiều cao/, '175');
+    await type(/Cân nặng/, '70');
+    await next();
+    await user.selectOptions(screen.getByLabelText('Mục tiêu chính'), 'Giảm mỡ');
+    await type(/Cân nặng mục tiêu/, '65');
+    expect(screen.getByTestId('weeks-to-goal')).toHaveTextContent('khoảng 11 tuần để đạt 65 kg');
+
+    await type(/Cân nặng mục tiêu/, '75');
+    expect(screen.getByRole('alert')).toHaveTextContent('phải thấp hơn cân nặng hiện tại');
+    await next();
+    expect(alertMock).toHaveBeenCalledWith(expect.stringContaining('phải thấp hơn cân nặng hiện tại'));
+    expect(screen.getByText('Mục tiêu của bạn')).toBeInTheDocument(); // stays on step 3
+
+    await type(/Cân nặng mục tiêu/, '55'); // BMI 18.0
+    expect(screen.getByRole('alert')).toHaveTextContent('dưới mức 18.5');
   });
 });
 
@@ -201,9 +243,11 @@ describe('Onboarding: step 4 (the plan)', () => {
     await next();
 
     const profile = { age: '28', gender: 'Nữ', height: '165', weight: '58', goal: 'Giảm mỡ', activityLevel: 'Vận động nhẹ' };
-    expect(screen.getByText('Mục tiêu: Giảm mỡ')).toBeInTheDocument();
-    expect(screen.getAllByText(String(Math.round(calcTargetCalories(profile)))).length).toBeGreaterThan(0);
+    expect(screen.getByText('Mục tiêu: Giảm mỡ · Vừa')).toBeInTheDocument();
+    expect(screen.getByTestId('onb-target')).toHaveTextContent(String(calcTargetCalories(profile)));
     expect(calcTargetCalories(profile)).toBeLessThan(calcTdee(profile)); // a cut eats below maintenance
+    const m = macroTargets(calcTargetCalories(profile), profile);
+    expect(screen.getByTestId('onb-macros')).toHaveTextContent(`${m.protein} gProtein${m.carbs} gCarb${m.fat} gChất béo`);
   });
 
   test('Continue is replaced by the finish button; Back still works', async () => {
@@ -233,10 +277,42 @@ describe('Onboarding: finishing', () => {
     expect(url).toBe('/api/users/profile');
     expect(options?.method).toBe('PUT');
     expect(JSON.parse(options!.body as string)).toEqual({
-      age: 30, gender: 'Nam', height: 175, weight: 70, goal: 'Giữ dáng', activityLevel: 'Vận động vừa', metricDate: todayStr(),
+      age: 30, gender: 'Nam', height: 175, weight: 70, goal: 'Giữ dáng', goalPace: 'Vừa', targetWeight: null,
+      activityLevel: 'Vận động vừa', metricDate: todayStr(),
     });
     expect(order).toEqual(['refresh', 'push']);
     nav.push.mockReset();
+  });
+
+  test('the chosen pace, the target weight and an optional body fat are sent too', async () => {
+    const s = setup();
+    await s.type(/Độ tuổi/, '30');
+    await s.next();
+    await s.type(/Chiều cao/, '175');
+    await s.type(/Cân nặng \(kg\)/, '70');
+    await s.type(/Tỷ lệ mỡ/, '20');
+    await s.next();
+    await s.user.selectOptions(screen.getByLabelText('Mục tiêu chính'), 'Giảm mỡ');
+    await s.user.click(screen.getByRole('radio', { name: /Chậm/ }));
+    await s.type(/Cân nặng mục tiêu/, '66');
+    await s.next();
+    await s.user.click(screen.getByRole('button', { name: /Hoàn tất & Bắt đầu/ }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalled());
+    expect(JSON.parse(vi.mocked(apiFetch).mock.calls[0][1]!.body as string)).toMatchObject({
+      goal: 'Giảm mỡ', goalPace: 'Chậm', targetWeight: 66, bodyFat: 20,
+    });
+  });
+
+  test('a body fat outside 2-70 % is refused on step 2', async () => {
+    const s = setup();
+    await s.type(/Độ tuổi/, '30');
+    await s.next();
+    await s.type(/Chiều cao/, '175');
+    await s.type(/Cân nặng \(kg\)/, '70');
+    await s.type(/Tỷ lệ mỡ/, '80');
+    await s.next();
+    expect(alertMock).toHaveBeenCalledWith('Tỷ lệ mỡ phải từ 2% đến 70%!');
+    expect(screen.getByText('Chỉ số hình thể')).toBeInTheDocument();
   });
 
   test('a rejected save shows the server message and stays put', async () => {

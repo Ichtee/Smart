@@ -8,9 +8,10 @@ import { apiFetch } from '@/utils/api';
 import { fetcher, useProfile, useStreak, isUnauthorizedError } from '@/hooks/useApi';
 import { monthAndWeekRange, monthRange, monthKey } from '@/utils/dateUtils';
 import { waterGoalMl } from '@/utils/waterGoal';
-import { calcBmr, calcTdee, calcTargetCalories, macroTargets, sumMacros } from '@/utils/nutritionCalc';
+import { calcTargetCalories, macroTargets, sumMacros } from '@/utils/nutritionCalc';
+import MetabolismCard from './MetabolismCard';
 import Link from 'next/link';
-import { Bell, ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Dumbbell, ChevronDown, ChevronUp, Trash2, CheckCircle2, Play, ClipboardList, Utensils, BarChart3, Target, Scale } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Dumbbell, ChevronDown, ChevronUp, Trash2, CheckCircle2, Play, ClipboardList, Utensils, Target } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import ProgressRing from '@/components/ui/ProgressRing';
 import { PageSkeleton } from '@/components/ui/Skeleton';
@@ -33,6 +34,10 @@ interface ProfileData {
   gender?: string;
   activityLevel?: string;
   goal?: string;
+  goalPace?: string;
+  targetWeight?: number | null;
+  bodyFat?: number | null;
+  calorieAdjustment?: number;
   lastActiveRoutineName?: string;
   lastActiveRoutineId?: string;
 }
@@ -114,7 +119,7 @@ export default function Dashboard() {
   const { data: todayNutrition } = useSWR(`/api/nutrition?date=${todayStr}`, fetcher, logsOpts);
   const todayMeals: any[] = useMemo(() => Object.values(todayNutrition?.meals || {}).flat() as any[], [todayNutrition]);
   const todayWaterGlasses: number = todayNutrition?.waterGlasses || 0;
-  const waterGoal = waterGoalMl(profile.weight);
+  const waterGoal = waterGoalMl(profile.weight, profile.age);
 
   const weeklyCalories: number[] = useMemo(
     () => weekDates.map(d => nutritionLogs[d]?.dayCalories || 0),
@@ -145,7 +150,7 @@ export default function Dashboard() {
   const consumed = useMemo(() => sumMacros(todayMeals), [todayMeals]);
   const consumedCalories = consumed.calories;
 
-  const { protein: targetProteinGrams, carbs: targetCarbsGrams, fat: targetFatGrams } = macroTargets(targetCalories);
+  const { protein: targetProteinGrams, carbs: targetCarbsGrams, fat: targetFatGrams } = macroTargets(targetCalories, profile);
   const consumedProteinGrams = consumed.protein;
   const consumedCarbsGrams = consumed.carbs;
   const consumedFatGrams = consumed.fat;
@@ -520,58 +525,8 @@ export default function Dashboard() {
           {/* Right Column (Columns 8-12) */}
           <div className="lg:col-span-5 space-y-8">
 
-            {/* CARD 5: BMR / TDEE & GOAL ADVICE */}
-            <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-2xl space-y-5">
-              <div className="flex items-center justify-between border-b border-border pb-4">
-                <h3 className="text-base md:text-lg font-black text-foreground flex items-center gap-2"><BarChart3 className="size-5 text-primary" aria-hidden="true" /> Chỉ Số Chuyển Hóa</h3>
-                <button onClick={() => router.push('/profile')} className="text-xs text-primary hover:underline font-bold">Cập nhật Hồ sơ ↗</button>
-              </div>
-              {(() => {
-                const w = Number(profile.weight) || 65;
-                const h = Number(profile.height) || 170;
-                const bmr = calcBmr(profile);
-                const tdee = calcTdee(profile);
-                const goal = profile.goal || 'Giữ dáng';
-                const target = calcTargetCalories(profile);
-                const pct = Math.min(100, Math.round((consumedCalories / target) * 100));
-                return (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-secondary/50 p-4 rounded-2xl border border-border">
-                        <span className="text-xs text-muted-foreground block">Chiều cao / Cân nặng</span>
-                        <strong className="text-foreground text-base font-black mt-1 block">{h} cm / {w} kg</strong>
-                      </div>
-                      <div className="bg-secondary/50 p-4 rounded-2xl border border-border">
-                        <span className="text-xs text-muted-foreground block">Mục tiêu</span>
-                        <strong className="text-primary text-base font-black mt-1 block">{goal}</strong>
-                      </div>
-                    </div>
-
-                    <div className="bg-secondary/50 p-5 rounded-2xl border border-border space-y-2">
-                      <h4 className="text-xs font-bold text-primary uppercase tracking-wider">Gợi ý Calo theo mục tiêu</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between"><span className="flex items-center gap-2 text-muted-foreground"><Dumbbell className="size-4 text-success" aria-hidden="true" /> Tăng cơ</span><strong className="text-success">{tdee + 300} kcal</strong></div>
-                        <div className="flex justify-between"><span className="flex items-center gap-2 text-muted-foreground"><Flame className="size-4 text-pr" aria-hidden="true" /> Giảm mỡ</span><strong className="text-primary">{Math.max(1200, tdee - 500)} kcal</strong></div>
-                        <div className="flex justify-between"><span className="flex items-center gap-2 text-muted-foreground"><Scale className="size-4 text-warning" aria-hidden="true" /> Giữ dáng</span><strong className="text-warning">{tdee} kcal</strong></div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-secondary/50 p-4 rounded-2xl border border-border text-center">
-                        <span className="text-xs text-muted-foreground block">BMR</span>
-                        <strong className="text-foreground text-xl font-black">{bmr.toLocaleString()}</strong>
-                        <span className="text-xs text-muted-foreground block">kcal/ngày</span>
-                      </div>
-                      <div className="bg-secondary/50 p-4 rounded-2xl border border-border text-center">
-                        <span className="text-xs text-muted-foreground block">TDEE</span>
-                        <strong className="text-primary text-xl font-black">{tdee.toLocaleString()}</strong>
-                        <span className="text-xs text-muted-foreground block">kcal/ngày</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
+            {/* CARD 5: BMR / TDEE & GOAL PLAN */}
+            <MetabolismCard profile={profile} />
 
           </div>
 

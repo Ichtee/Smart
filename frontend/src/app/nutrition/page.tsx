@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { apiFetch, isUnauthorized } from '@/utils/api';
-import { calcTargetCalories, calcTdee, calcGoalAdjustment } from '@/utils/nutritionCalc';
+import { calcEnergyPlan } from '@/utils/nutritionCalc';
 import { waterGoalMl as calcWaterGoalMl, waterGoalGlasses } from '@/utils/waterGoal';
 import { useFoods, useProfile, isUnauthorizedError } from '@/hooks/useApi';
 import { useServerSave } from '@/hooks/useServerSave';
@@ -136,10 +136,12 @@ export default function Nutrition() {
 
   const profileError = !!profileFetchError && !isUnauthorizedError(profileFetchError);
   const loading = profileLoading && !profile;
-  const targetCalories = profile ? calcTargetCalories(profile) : 2000;
-  const tdee = profile ? calcTdee(profile) : 2000;
-  const calorieDeficit = profile ? calcGoalAdjustment(profile) : 0;
-  const waterGoalMl = calcWaterGoalMl(profile?.weight);
+  // one plan for the whole page; 0 until the profile is complete (the page sends you to onboarding then)
+  const plan = profile ? calcEnergyPlan(profile) : null;
+  const targetCalories = plan?.target ?? 0;
+  const tdee = plan?.tdee ?? 0;
+  const calorieDeficit = plan?.delta ?? 0;
+  const waterGoalMl = calcWaterGoalMl(profile?.weight, profile?.age);
   const targetWaterGlasses = waterGoalGlasses(waterGoalMl, mlPerGlass);
 
 
@@ -290,7 +292,7 @@ export default function Nutrition() {
           waterGlasses={waterGlasses}
         />
 
-        <MacroSummary meals={meals} targetCalories={targetCalories} />
+        <MacroSummary meals={meals} targetCalories={targetCalories} profile={profile} />
 
         {/* Meal Logging Section */}
         <MealSections

@@ -6,8 +6,9 @@ import { Logo } from '@/components/smart/logo';
 import { apiFetch, describeError } from '@/utils/api';
 import { refreshProfile } from '@/hooks/useApi';
 import { todayStr } from '@/utils/dateUtils';
-import { calcBmr, calcTdee, calcTargetCalories } from '@/utils/nutritionCalc';
-import { calcBmi } from '@/utils/bmi';
+import { calcEnergyPlan, goalHasPace, macroTargets } from '@/utils/nutritionCalc';
+import { calcBmi, bmiCategory } from '@/utils/bmi';
+import GoalPlanFields, { goalPlanError } from '@/components/GoalPlanFields';
 import { ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/feedback';
 
@@ -22,15 +23,11 @@ export default function Onboarding() {
     gender: 'Nam',
     height: '',
     weight: '',
+    bodyFat: '',
     goal: 'Giữ dáng',
+    goalPace: 'Vừa',
+    targetWeight: '',
     activityLevel: 'Vận động vừa'
-  });
-
-  const [results, setResults] = useState({
-    bmi: 0,
-    bmr: 0,
-    tdee: 0,
-    targetCalories: 0
   });
 
   useEffect(() => {
@@ -40,18 +37,10 @@ export default function Onboarding() {
     }
   }, [router]);
 
-  useEffect(() => {
-    // If we reach step 4, calculate the results
-    if (step === 4) {
-      const w = Number(formData.weight);
-      const h = Number(formData.height);
-      const bmi = calcBmi(w, h);
-      const bmr = calcBmr(formData);
-      const tdee = calcTdee(formData);
-      const targetCalories = calcTargetCalories(formData);
-      setResults({ bmi, bmr, tdee, targetCalories });
-    }
-  }, [step, formData]);
+  // the same calculation every other page uses (see nutritionCalc)
+  const bmi = calcBmi(formData.weight, formData.height);
+  const plan = calcEnergyPlan(formData);
+  const macros = plan ? macroTargets(plan.target, formData) : null;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -76,6 +65,18 @@ export default function Onboarding() {
         toast.error('Cân nặng phải từ 10kg đến 500kg!');
         return;
       }
+      const bf = formData.bodyFat.trim();
+      if (bf !== '' && (isNaN(Number(bf)) || Number(bf) < 2 || Number(bf) > 70)) {
+        toast.error('Tỷ lệ mỡ phải từ 2% đến 70%!');
+        return;
+      }
+    }
+    if (step === 3) {
+      const problem = goalPlanError(formData, formData);
+      if (problem) {
+        toast.error(problem);
+        return;
+      }
     }
     setStep(prev => Math.min(prev + 1, 4));
   };
@@ -96,6 +97,9 @@ export default function Onboarding() {
           height: Number(formData.height),
           weight: Number(formData.weight),
           goal: formData.goal,
+          goalPace: formData.goalPace,
+          targetWeight: goalHasPace(formData.goal) && formData.targetWeight.trim() !== '' ? Number(formData.targetWeight) : null,
+          ...(formData.bodyFat.trim() !== '' ? { bodyFat: Number(formData.bodyFat) } : {}),
           activityLevel: formData.activityLevel,
           metricDate: todayStr() // the starting weight is the first body measurement
         })
@@ -217,6 +221,22 @@ export default function Onboarding() {
                   className="w-full bg-background border border-input rounded-2xl px-4 py-3.5 text-foreground focus:outline-none focus:border-primary transition-colors text-base"
                 />
               </div>
+
+              <div>
+                <label htmlFor="onb-bodyfat" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tỷ lệ mỡ (%) — tùy chọn</label>
+                <input
+                  id="onb-bodyfat"
+                  type="number"
+                  name="bodyFat"
+                  inputMode="decimal"
+                  step="0.1"
+                  value={formData.bodyFat}
+                  onChange={handleChange}
+                  placeholder="VD: 20"
+                  className="w-full bg-background border border-input rounded-2xl px-4 py-3.5 text-foreground focus:outline-none focus:border-primary transition-colors text-base"
+                />
+                <p className="mt-2 text-xs text-muted-foreground">Nếu có (máy đo InBody, thước kẹp...), BMR sẽ được tính theo khối nạc (Katch-McArdle). Có thể ước tính sau ở trang Cơ thể.</p>
+              </div>
             </div>
           </div>
         )}
@@ -227,21 +247,6 @@ export default function Onboarding() {
             <p className="text-muted-foreground text-sm mb-8">Bạn đang hướng tới điều gì cùng Smart?</p>
 
             <div className="space-y-6">
-              <div>
-                <label htmlFor="onb-goal" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mục tiêu chính</label>
-                <select
-                  id="onb-goal"
-                  name="goal"
-                  value={formData.goal}
-                  onChange={handleChange}
-                  className="w-full bg-background border border-input rounded-2xl px-4 py-3.5 text-foreground focus:outline-none focus:border-primary transition-colors text-base"
-                >
-                  <option value="Tăng cơ">Tăng cơ</option>
-                  <option value="Giảm mỡ">Giảm mỡ</option>
-                  <option value="Giữ dáng">Giữ dáng</option>
-                </select>
-              </div>
-
               <div>
                 <label htmlFor="onb-activity" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mức độ hoạt động (Tần suất vận động)</label>
                 <select
@@ -258,6 +263,16 @@ export default function Onboarding() {
                   <option value="Vận động cực nhiều">Vận động cực nhiều (Vận động viên)</option>
                 </select>
               </div>
+
+              <GoalPlanFields
+                idPrefix="onb"
+                value={formData}
+                onChange={v => setFormData({ ...formData, goal: v.goal, goalPace: v.goalPace, targetWeight: v.targetWeight })}
+                profile={formData}
+                labelClassName="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2"
+                selectClassName="w-full bg-background border border-input rounded-2xl px-4 py-3.5 text-foreground focus:outline-none focus:border-primary transition-colors text-base"
+                inputClassName="w-full bg-background border border-input rounded-2xl px-4 py-3.5 text-foreground focus:outline-none focus:border-primary transition-colors text-base"
+              />
             </div>
           </div>
         )}
@@ -276,25 +291,39 @@ export default function Onboarding() {
               <div className="bg-background border border-border rounded-2xl p-5 text-center">
                 <div className="text-muted-foreground text-xs font-semibold mb-1 uppercase tracking-wider">Chỉ số BMI</div>
                 <div className="text-3xl font-mono font-bold text-primary">
-                  {results.bmi.toFixed(1)}
+                  {bmi.toFixed(1)}
                 </div>
+                {bmi > 0 && <div className={`text-xs font-semibold mt-1 ${bmiCategory(bmi).color}`}>{bmiCategory(bmi).label}</div>}
               </div>
               <div className="bg-background border border-border rounded-2xl p-5 text-center">
                 <div className="text-muted-foreground text-xs font-semibold mb-1 uppercase tracking-wider">TDEE (Calo)</div>
                 <div className="text-3xl font-mono font-bold text-foreground">
-                  {Math.round(results.tdee)}
+                  {plan?.tdee ?? 0}
                 </div>
               </div>
             </div>
 
             <div className="bg-surface-elevated border border-primary/30 rounded-2xl p-6 text-center shadow-lg mb-8 relative overflow-hidden group">
               <div className="relative z-10">
-                <div className="text-primary text-xs font-semibold uppercase tracking-[0.2em] mb-2">Mục tiêu: {formData.goal}</div>
+                <div className="text-primary text-xs font-semibold uppercase tracking-[0.2em] mb-2">Mục tiêu: {formData.goal}{plan?.pace ? ` · ${plan.pace}` : ''}</div>
                 <div className="text-xs text-muted-foreground mb-2">Lượng Calo khuyến nghị nạp mỗi ngày:</div>
-                <div className="text-5xl font-mono font-extrabold text-foreground">
-                  {Math.round(results.targetCalories)}
+                <div className="text-5xl font-mono font-extrabold text-foreground" data-testid="onb-target">
+                  {plan?.target ?? 0}
                 </div>
                 <div className="text-primary text-xs font-semibold mt-2">Kcal / Ngày</div>
+                {plan && plan.weeklyChangeKg !== 0 && (
+                  <div className="text-xs text-muted-foreground mt-3">
+                    Dự kiến {plan.weeklyChangeKg > 0 ? '+' : ''}{plan.weeklyChangeKg} kg/tuần
+                    {plan.weeksToGoal !== null && <> · khoảng {plan.weeksToGoal} tuần để đạt {formData.targetWeight} kg</>}
+                  </div>
+                )}
+                {macros && (
+                  <div className="grid grid-cols-3 gap-2 mt-4 text-xs" data-testid="onb-macros">
+                    <div><span className="block font-bold text-protein">{macros.protein} g</span><span className="text-muted-foreground">Protein</span></div>
+                    <div><span className="block font-bold text-carb">{macros.carbs} g</span><span className="text-muted-foreground">Carb</span></div>
+                    <div><span className="block font-bold text-fat">{macros.fat} g</span><span className="text-muted-foreground">Chất béo</span></div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
