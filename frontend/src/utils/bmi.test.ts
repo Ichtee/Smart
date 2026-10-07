@@ -4,7 +4,7 @@ import { calcBmi, bmiCategory } from './bmi';
 describe('calcBmi', () => {
   test('kg / m^2', () => {
     expect(calcBmi(70, 175)).toBeCloseTo(22.857, 3);
-    expect(calcBmi(58, 165)).toBeCloseTo(21.303, 3);
+    expect(calcBmi(58, 165)).toBeCloseTo(21.304, 3);
     expect(calcBmi(100, 200)).toBe(25);
   });
 
