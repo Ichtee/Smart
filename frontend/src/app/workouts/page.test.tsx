@@ -340,7 +340,7 @@ describe('Workouts: saving the plan', () => {
     expect(screen.getByText(/Đã chốt lịch tập thành công/)).toBeInTheDocument();
     expect(exerciseTicks()).toHaveLength(2);
     expect(lockedTicks()).toHaveLength(0);
-    expect(screen.queryByRole('button', { name: '+' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Tăng số/ })).not.toBeInTheDocument();
     expect(screen.getByText('0%')).toBeInTheDocument();
   });
 
@@ -431,6 +431,28 @@ describe('Workouts: ticking exercises and sets', () => {
 
     await user.click(screen.getByRole('button', { name: /Bỏ qua/ }));
     expect(screen.queryByText('Nghỉ giữa set/bài:')).not.toBeInTheDocument();
+  });
+
+  test('the rest timer floats on screen (role timer) and names the exercise it is for', async () => {
+    const { user, saveAndWait, exerciseTicks } = await setup();
+    await saveAndWait();
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument();
+    await user.click(exerciseTicks()[0]);
+    const timer = await screen.findByRole('timer', { name: 'Đồng hồ nghỉ' });
+    expect(timer).toHaveTextContent('Squat');
+    expect(timer.parentElement).toBe(document.body); // outside the scrolling card, so it stays visible
+  });
+
+  test('the "Hoàn thành buổi tập!" banner appears only when every exercise is done', async () => {
+    const { user, saveAndWait, exerciseTicks } = await setup();
+    await saveAndWait();
+    await user.click(exerciseTicks()[0]);
+    await screen.findByText('50%');
+    expect(screen.queryByText('Hoàn thành buổi tập!')).not.toBeInTheDocument();
+    await user.click(exerciseTicks()[1]);
+    expect(await screen.findByText('Hoàn thành buổi tập!')).toBeInTheDocument();
+    await user.click(exerciseTicks()[1]); // un-tick: not finished any more
+    await waitFor(() => expect(screen.queryByText('Hoàn thành buổi tập!')).not.toBeInTheDocument());
   });
 
   test('un-ticking an exercise clears its sets and stops its timer', async () => {
@@ -591,8 +613,8 @@ describe('Workouts: restoring a saved day from the server', () => {
 describe('Workouts: editing the plan before saving', () => {
   test('sets can be changed with - and +, never below 1 or above 50', async () => {
     const { user } = await setup();
-    const minus = () => screen.getAllByRole('button', { name: '-' })[0];
-    const plus = () => screen.getAllByRole('button', { name: '+' })[0];
+    const minus = () => screen.getAllByRole('button', { name: /^Giảm số hiệp/ })[0];
+    const plus = () => screen.getAllByRole('button', { name: /^Tăng số hiệp/ })[0];
 
     await user.click(plus());
     expect(screen.getAllByDisplayValue('5').length).toBeGreaterThan(0);
@@ -612,8 +634,8 @@ describe('Workouts: editing the plan before saving', () => {
 
   test('reps can be changed with - and + (never below 1)', async () => {
     const { user } = await setup();
-    const repsMinus = () => screen.getAllByRole('button', { name: '-' })[1]; // [sets, reps] of the first exercise
-    const repsPlus = () => screen.getAllByRole('button', { name: '+' })[1];
+    const repsMinus = () => screen.getAllByRole('button', { name: /^Giảm số lần/ })[0]; // [sets, reps] of the first exercise
+    const repsPlus = () => screen.getAllByRole('button', { name: /^Tăng số lần/ })[0];
     await user.click(repsPlus());
     expect(screen.getAllByDisplayValue('9').length).toBeGreaterThan(0); // 8 -> 9
     for (let i = 0; i < 9; i++) await user.click(repsMinus()); // 9 -> would be 0
@@ -622,8 +644,8 @@ describe('Workouts: editing the plan before saving', () => {
 
   test('edited sets/reps are what gets saved', async () => {
     const { user, saveAndWait } = await setup();
-    await user.click(screen.getAllByRole('button', { name: '+' })[0]); // squat sets 4 -> 5
-    await user.click(screen.getAllByRole('button', { name: '+' })[1]); // squat reps 8 -> 9
+    await user.click(screen.getAllByRole('button', { name: /^Tăng số hiệp/ })[0]); // squat sets 4 -> 5
+    await user.click(screen.getAllByRole('button', { name: /^Tăng số lần/ })[0]); // squat reps 8 -> 9
     await saveAndWait();
     expect(lastPost().detailsMap['e-squat']).toMatchObject({ sets: 5, reps: '9' });
     expect(lastPost().exercises[0]).toMatchObject({ name: 'Squat', sets: 5, reps: '9' });

@@ -37,7 +37,7 @@ test.describe('onboarding', () => {
     await page.getByRole('button', { name: /Hoàn tất/ }).click();
 
     await page.waitForURL(/\/dashboard/);
-    await expect(page.getByText(/Welcome Back/)).toContainText(user.name);
+    await expect(page.getByText(/Xin chào/)).toContainText(user.name);
     await expect(page.locator('main')).toContainText(/165 cm \/ 58\s*kg/);
 
     const { body } = await loginApi(user.username, user.password);

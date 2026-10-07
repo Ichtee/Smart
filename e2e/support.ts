@@ -71,7 +71,7 @@ export async function uiLogin(page: Page, identifier: string, password: string, 
   await page.waitForURL(landing, { timeout: 20_000 });
 }
 
-export const greeting = async (page: Page) => ((await page.getByText(/Welcome Back/).textContent()) ?? '').trim();
+export const greeting = async (page: Page) => ((await page.getByText(/Xin chào/).textContent()) ?? '').trim();
 
 /** Click a sidebar link (client-side navigation, so the SWR cache is exercised). */
 export const nav = (page: Page, label: string) => page.locator('aside').getByRole('link', { name: label }).click();

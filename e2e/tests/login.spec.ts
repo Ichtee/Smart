@@ -14,7 +14,7 @@ test.describe('login', () => {
     await completeProfile(user);
     for (const id of [user.username, user.email, user.email.toUpperCase(), `  ${user.email}  `]) {
       await uiLogin(page, id, user.password);
-      await expect(page.getByText(/Welcome Back/)).toContainText(user.name);
+      await expect(page.getByText(/Xin chào/)).toContainText(user.name);
       await page.evaluate(() => localStorage.clear());
       await page.context().clearCookies();
     }

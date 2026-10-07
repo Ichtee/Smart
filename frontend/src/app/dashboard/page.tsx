@@ -9,7 +9,11 @@ import { fetcher, useProfile, useStreak, isUnauthorizedError } from '@/hooks/use
 import { monthAndWeekRange, monthRange, monthKey } from '@/utils/dateUtils';
 import { waterGoalMl } from '@/utils/waterGoal';
 import { calcBmr, calcTdee, calcTargetCalories, macroTargets, sumMacros } from '@/utils/nutritionCalc';
-import { Bell, ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Trophy, Dumbbell, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { Bell, ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Dumbbell, ChevronDown, ChevronUp, Trash2, CheckCircle2, Play, ClipboardList, Utensils, BarChart3, Target, Scale } from 'lucide-react';
+import Card from '@/components/ui/Card';
+import ProgressRing from '@/components/ui/ProgressRing';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 import { useConfirm, useToast } from '@/components/ui/feedback';
 
 const MUSCLE_NAMES_VI: Record<string, string> = {
@@ -182,18 +186,17 @@ export default function Dashboard() {
     return count;
   }, [streakDates, getWeekDaysMonToSun]);
 
+  const trainedToday = streakDates.includes(todayStr);
+  const todayLabel = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' });
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center text-foreground font-sans">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-base font-bold text-muted-foreground">Đang tải Dashboard...</span>
-        </div>
+      <div className="min-h-screen bg-background text-foreground">
+        <main className="mx-auto max-w-5xl p-4 md:p-8"><PageSkeleton rows={3} /></main>
       </div>
     );
   }
 
-  const todayDateString = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
   const maxCalInWeek = Math.max(targetCalories, ...weeklyCalories, 100);
   const svgPoints = weeklyCalories.map((val, idx) => {
     const x = (idx / 6) * 460 + 20;
@@ -214,8 +217,8 @@ export default function Dashboard() {
 
         <header className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-border">
           <div className="flex items-center gap-4">
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground">Dashboard</h1>
-            <span className="text-muted-foreground text-base md:text-lg font-semibold">| Welcome Back, {userName}!</span>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">Tổng quan</h1>
+            <span className="text-muted-foreground text-base md:text-lg font-semibold">Xin chào, {userName}!</span>
           </div>
           <div className="flex items-center gap-4">
             <GoogleTranslate />
@@ -224,57 +227,78 @@ export default function Dashboard() {
                 <ShieldCheck className="size-5" /> Admin Panel
               </button>
             )}
-            <button className="relative p-3 rounded-full bg-card hover:bg-surface-elevated border border-border transition text-foreground cursor-pointer">
-              <Bell className="size-5 text-muted-foreground" />
-              <span className="absolute top-2 right-2 size-2.5 rounded-full bg-primary animate-pulse" />
-            </button>
-            <button onClick={() => router.push('/profile')} className="size-11 rounded-full bg-primary/15 border border-primary/30 text-primary flex items-center justify-center font-extrabold text-base cursor-pointer hover:scale-105 transition">
+                        <button onClick={() => router.push('/profile')} aria-label="Hồ sơ" className="size-11 rounded-full bg-primary/15 border border-primary/30 text-primary flex items-center justify-center font-extrabold text-base cursor-pointer hover:scale-105 transition">
               <User className="size-5" />
             </button>
           </div>
         </header>
 
-        <div className="bg-card border border-border p-6 md:p-8 rounded-3xl shadow-2xl space-y-6">
-          <h2 className="text-lg md:text-2xl font-black text-foreground">Activity & Training Metrics</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-secondary/50 p-5 rounded-2xl border border-border space-y-3">
-              <div className="flex items-center justify-between text-sm md:text-base font-bold">
-                <span className="text-muted-foreground flex items-center gap-2"><Dumbbell className="size-5 text-primary" /> Workouts (Tuần)</span>
-                <span className="text-foreground font-black">{completedThisWeek} / 7</span>
-              </div>
-              <div className="w-full bg-secondary h-3 rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, Math.round((completedThisWeek / 7) * 100))}%` }} />
-              </div>
+        {/* Today: what to do now, and how the day is going */}
+        <section aria-label="Hôm nay" className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+          <Card tone="highlight" className="xl:col-span-2 flex flex-col justify-between gap-6">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">{todayLabel}</p>
+              <h2 className="mt-1 font-display text-4xl md:text-5xl font-bold">Buổi tập hôm nay</h2>
+              <p className="mt-2 flex items-center gap-2 text-lg font-semibold text-foreground">
+                <Dumbbell className="size-5 text-primary shrink-0" />
+                <span className="truncate">{profile.lastActiveRoutineName || 'Lịch tập tự do'}</span>
+              </p>
             </div>
-            <div className="bg-secondary/50 p-5 rounded-2xl border border-border space-y-3">
-              <div className="flex items-center justify-between text-sm md:text-base font-bold">
-                <span className="text-muted-foreground flex items-center gap-2"><Flame className="size-5 text-primary" /> Workout Streak</span>
-                <span className="text-primary font-black">{streakCount} ngày</span>
-              </div>
-              <div className="w-full bg-secondary h-3 rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, streakCount * 10)}%` }} />
-              </div>
-            </div>
-            <div className="bg-secondary/50 p-5 rounded-2xl border border-border flex items-center justify-between">
+            <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="text-sm md:text-base font-bold text-muted-foreground flex items-center gap-2"><Droplets className="size-5 text-primary" /> Uống Nước</p>
-                <p className="text-2xl md:text-3xl font-black text-foreground mt-1">{todayWaterGlasses * 250} <span className="text-xs md:text-sm font-semibold text-muted-foreground">ml</span></p>
+                <p className="text-sm font-semibold text-muted-foreground">Chuỗi ngày tập</p>
+                <p className="flex items-center gap-2 font-display text-6xl font-bold leading-none text-pr">
+                  <Flame className="size-10 shrink-0" aria-hidden="true" />
+                  <span>{streakCount}</span>
+                  <span className="text-xl font-semibold text-muted-foreground"> ngày</span>
+                </p>
               </div>
-              <div className="relative size-14 flex items-center justify-center">
-                <svg className="size-full -rotate-90" viewBox="0 0 36 36">
-                  <path className="text-secondary" strokeWidth="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  <path className="text-primary" strokeDasharray={`${Math.min(100, Math.round(((todayWaterGlasses * 250) / waterGoal) * 100))}, 100`} strokeWidth="4" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                </svg>
+              {trainedToday ? (
+                <span className="inline-flex min-h-14 items-center gap-2 rounded-xl border border-success/40 bg-success/10 px-5 text-base font-bold text-success">
+                  <CheckCircle2 className="size-5" /> Đã tập hôm nay
+                </span>
+              ) : (
+                <Link href="/workouts" className="inline-flex min-h-14 items-center gap-2 rounded-xl bg-primary px-6 text-base font-bold text-primary-foreground shadow-lg shadow-primary/25 transition hover:opacity-90 active:scale-[0.98]">
+                  <Play className="size-5 fill-current" /> Bắt đầu
+                </Link>
+              )}
+            </div>
+          </Card>
+
+          <Card className="xl:col-span-3">
+            <h2 className="mb-4 font-display text-2xl font-bold">Hôm nay bạn đã đạt</h2>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="flex flex-col items-center gap-2 text-center">
+                <p className="text-sm font-semibold text-muted-foreground">Calo</p>
+                <ProgressRing value={consumedCalories} max={targetCalories} label="Calo hôm nay" colorClass="text-primary" size={104}>
+                  <span className="font-display text-2xl font-bold leading-none">{consumedCalories}</span>
+                  <span className="text-xs text-muted-foreground">/ {targetCalories} kcal</span>
+                </ProgressRing>
+              </div>
+              <div className="flex flex-col items-center gap-2 text-center">
+                <p className="text-sm font-semibold text-muted-foreground">Protein</p>
+                <ProgressRing value={consumedProteinGrams} max={targetProteinGrams} label="Protein hôm nay" colorClass="text-protein" size={104}>
+                  <span className="font-display text-2xl font-bold leading-none">{Math.round(consumedProteinGrams)}</span>
+                  <span className="text-xs text-muted-foreground">/ {targetProteinGrams} g</span>
+                </ProgressRing>
+              </div>
+              <div className="flex flex-col items-center gap-2 text-center">
+                <p className="text-sm font-semibold text-muted-foreground">Uống nước</p>
+                <ProgressRing value={todayWaterGlasses * 250} max={waterGoal} label="Nước uống hôm nay" colorClass="text-fat" size={104}>
+                  <span className="font-display text-2xl font-bold leading-none">{todayWaterGlasses * 250}</span>
+                  <span className="text-xs text-muted-foreground">/ {waterGoal} ml</span>
+                </ProgressRing>
+              </div>
+              <div className="flex flex-col items-center gap-2 text-center">
+                <p className="text-sm font-semibold text-muted-foreground">Buổi tập tuần này</p>
+                <ProgressRing value={completedThisWeek} max={7} label="Buổi tập tuần này" colorClass="text-success" size={104}>
+                  <span className="font-display text-2xl font-bold leading-none">{completedThisWeek}</span>
+                  <span className="text-xs text-muted-foreground">/ 7 buổi</span>
+                </ProgressRing>
               </div>
             </div>
-            <div className="bg-secondary/50 p-5 rounded-2xl border border-border flex items-center justify-between">
-              <div>
-                <p className="text-sm md:text-base font-bold text-muted-foreground flex items-center gap-2"><Trophy className="size-5 text-primary" /> Lịch Tập Hiện Tại</p>
-                <p className="text-base md:text-lg font-black text-foreground mt-1 truncate max-w-[180px]">{profile.lastActiveRoutineName || 'Lịch tập tự do'}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+          </Card>
+        </section>
 
         {/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -366,7 +390,7 @@ export default function Dashboard() {
               <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-2xl space-y-5 animate-in fade-in duration-300">
                 <div className="flex items-center justify-between flex-wrap gap-2 border-b border-border pb-4">
                   <h3 className="text-base md:text-xl font-black text-foreground flex items-center gap-2">
-                    📋 Chi tiết nhật ký ngày <span className="text-primary">{selectedDiaryDate}</span>
+                    <ClipboardList className="size-5 text-primary" aria-hidden="true" /> Chi tiết nhật ký ngày <span className="text-primary">{selectedDiaryDate}</span>
                   </h3>
                   <div className="flex items-center gap-2">
                     {streakDates.includes(selectedDiaryDate) && (
@@ -399,11 +423,11 @@ export default function Dashboard() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="bg-secondary/50 p-4 rounded-2xl border border-border">
                           <span className="text-xs text-muted-foreground font-medium block">Lịch tập (Routine)</span>
-                          <strong className="text-primary font-black text-sm md:text-base mt-0.5 block">🏋️ {log.routineName || 'Tự do'}</strong>
+                          <strong className="text-primary font-black text-sm md:text-base mt-0.5 flex items-center gap-1.5"><Dumbbell className="size-4" aria-hidden="true" /> {log.routineName || 'Tự do'}</strong>
                         </div>
                         <div className="bg-secondary/50 p-4 rounded-2xl border border-border">
                           <span className="text-xs text-muted-foreground font-medium block">Buổi tập (Day)</span>
-                          <strong className="text-success font-black text-sm md:text-base mt-0.5 block">🎯 {log.dayName || '-'}</strong>
+                          <strong className="text-success font-black text-sm md:text-base mt-0.5 flex items-center gap-1.5"><Target className="size-4" aria-hidden="true" /> {log.dayName || '-'}</strong>
                         </div>
                       </div>
 
@@ -424,7 +448,7 @@ export default function Dashboard() {
                                 <div key={idx} className="p-3.5 bg-secondary/50 border border-border rounded-2xl flex items-center justify-between gap-3 text-sm">
                                   <div className="space-y-0.5 min-w-0">
                                     <span className="font-extrabold text-foreground block truncate">{idx+1}. {ex.name}</span>
-                                    {ex.muscle && <span className="text-primary text-xs font-semibold block">🎯 {MUSCLE_NAMES_VI[ex.muscle.toLowerCase()] || ex.muscle}</span>}
+                                    {ex.muscle && <span className="text-primary text-xs font-semibold flex items-center gap-1"><Target className="size-3.5" aria-hidden="true" /> {MUSCLE_NAMES_VI[ex.muscle.toLowerCase()] || ex.muscle}</span>}
                                   </div>
                                   <div className="flex items-center gap-2 shrink-0 text-xs">
                                     <span className="bg-background px-3 py-1 rounded-xl border border-border font-bold">Hiệp: <strong className="text-primary">{ex.sets}</strong></span>
@@ -443,7 +467,7 @@ export default function Dashboard() {
                 {/* Nutrition Details for Selected Day */}
                 <div className="pt-4 border-t border-border space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-black text-foreground flex items-center gap-2">🥗 Nhật ký ăn uống ngày <span className="text-primary">{selectedDiaryDate}</span></h4>
+                    <h4 className="text-sm font-black text-foreground flex items-center gap-2"><Utensils className="size-4 text-primary" aria-hidden="true" /> Nhật ký ăn uống ngày <span className="text-primary">{selectedDiaryDate}</span></h4>
                     <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-xl border border-primary/20">
                       {Object.values(selectedDateMeals).flat().reduce((s: number, i: any) => s + (i.calories || 0), 0)} kcal
                     </span>
@@ -499,7 +523,7 @@ export default function Dashboard() {
             {/* CARD 5: BMR / TDEE & GOAL ADVICE */}
             <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-2xl space-y-5">
               <div className="flex items-center justify-between border-b border-border pb-4">
-                <h3 className="text-base md:text-lg font-black text-foreground flex items-center gap-2">📊 Chỉ Số Chuyển Hóa</h3>
+                <h3 className="text-base md:text-lg font-black text-foreground flex items-center gap-2"><BarChart3 className="size-5 text-primary" aria-hidden="true" /> Chỉ Số Chuyển Hóa</h3>
                 <button onClick={() => router.push('/profile')} className="text-xs text-primary hover:underline font-bold">Cập nhật Hồ sơ ↗</button>
               </div>
               {(() => {
@@ -526,9 +550,9 @@ export default function Dashboard() {
                     <div className="bg-secondary/50 p-5 rounded-2xl border border-border space-y-2">
                       <h4 className="text-xs font-bold text-primary uppercase tracking-wider">Gợi ý Calo theo mục tiêu</h4>
                       <div className="space-y-2 text-sm">
-                        <div className="flex justify-between"><span className="text-muted-foreground">🏋️ Tăng cơ</span><strong className="text-success">{tdee + 300} kcal</strong></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">🔥 Giảm mỡ</span><strong className="text-primary">{Math.max(1200, tdee - 500)} kcal</strong></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">⚖️ Giữ dáng</span><strong className="text-warning">{tdee} kcal</strong></div>
+                        <div className="flex justify-between"><span className="flex items-center gap-2 text-muted-foreground"><Dumbbell className="size-4 text-success" aria-hidden="true" /> Tăng cơ</span><strong className="text-success">{tdee + 300} kcal</strong></div>
+                        <div className="flex justify-between"><span className="flex items-center gap-2 text-muted-foreground"><Flame className="size-4 text-pr" aria-hidden="true" /> Giảm mỡ</span><strong className="text-primary">{Math.max(1200, tdee - 500)} kcal</strong></div>
+                        <div className="flex justify-between"><span className="flex items-center gap-2 text-muted-foreground"><Scale className="size-4 text-warning" aria-hidden="true" /> Giữ dáng</span><strong className="text-warning">{tdee} kcal</strong></div>
                       </div>
                     </div>
 

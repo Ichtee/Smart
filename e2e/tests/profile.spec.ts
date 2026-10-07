@@ -64,7 +64,7 @@ test.describe('profile', () => {
     await page.getByRole('button', { name: /Lưu thay đổi/ }).click();
     await expect(page.getByText('Cập nhật hồ sơ thành công!')).toBeVisible();
     await nav(page, 'Tổng quan');
-    await expect(page.getByText(/Welcome Back/)).toBeVisible();
+    await expect(page.getByText(/Xin chào/)).toBeVisible();
     expect(await greeting(page)).toContain('After Name');
   });
 

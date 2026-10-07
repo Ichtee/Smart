@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import Dashboard from './page';
 import { clearApiCache } from '@/hooks/useApi';
+import { macroTargets } from '@/utils/nutritionCalc';
 
 const nav = vi.hoisted(() => {
   const push = vi.fn();
@@ -83,7 +84,7 @@ const setup = async () => {
   const user = userEvent.setup({ delay: null, advanceTimers: vi.advanceTimersByTime });
   // an isolated SWR cache per test; the global helpers (clearApiCache) are also used in beforeEach
   const utils = render(<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}><Dashboard /></SWRConfig>);
-  await screen.findByText(/Welcome Back/);
+  await screen.findByText(/Xin chào/);
   const day = (n: number) => screen.getByRole('button', { name: new RegExp(`^${n}(\\s|$)`) });
   return { user, ...utils, day };
 };
@@ -94,12 +95,12 @@ describe('Dashboard: loading and header', () => {
     let release!: (r: Response) => void;
     handlers['GET /api/users/profile'] = () => new Promise<Response>(r => { release = r; });
     render(<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}><Dashboard /></SWRConfig>);
-    expect(await screen.findByText('Đang tải Dashboard...')).toBeInTheDocument();
-    expect(screen.queryByText(/Welcome Back/)).not.toBeInTheDocument();
+    expect(await screen.findByRole('status', { name: 'Đang tải' })).toBeInTheDocument();
+    expect(screen.queryByText(/Xin chào/)).not.toBeInTheDocument();
 
     await act(async () => { release(json(PROFILE)); });
-    expect(await screen.findByText('| Welcome Back, Dana Pham!')).toBeInTheDocument();
-    expect(screen.queryByText('Đang tải Dashboard...')).not.toBeInTheDocument();
+    expect(await screen.findByText('Xin chào, Dana Pham!')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Đang tải' })).not.toBeInTheDocument();
   });
 
   test('normal users get no Admin Panel button; the profile icon goes to /profile', async () => {
@@ -133,26 +134,26 @@ describe('Dashboard: activity metrics', () => {
   test('counts the workouts of the CURRENT week (Mon-Sun), not the whole month', async () => {
     await setup();
     // 20 Sep is outside the week; 5 and 7 Oct are inside
-    expect(text()).toContain('Workouts (Tuần)2 / 7');
+    expect(text()).toMatch(/Buổi tập tuần này\s*2\s*\/\s*7 buổi/);
   });
 
   test('the streak card shows the CONSECUTIVE streak from the server, not how many days were ever trained', async () => {
     await setup();
     // 3 days trained in total, but the current run is 1 day: the card must say 1, like the Workouts page
-    expect(text()).toContain('Workout Streak1 ngày');
-    expect(text()).not.toContain('Workout Streak3 ngày');
+    expect(text()).toContain('Chuỗi ngày tập1 ngày');
+    expect(text()).not.toContain('Chuỗi ngày tập3 ngày');
   });
 
   test('a zero streak reads 0, never NaN or blank', async () => {
     handlers['GET /api/workouts/streak'] = () => json({ streakDates: [], current: 0, longest: 0, total: 0 });
     await setup();
-    expect(text()).toContain('Workout Streak0 ngày');
-    expect(text()).toContain('Workouts (Tuần)0 / 7');
+    expect(text()).toContain('Chuỗi ngày tập0 ngày');
+    expect(text()).toMatch(/Buổi tập tuần này\s*0\s*\/\s*7 buổi/);
   });
 
   test('water today is glasses x 250 ml', async () => {
     await setup();
-    await waitFor(() => expect(text()).toContain('Uống Nước1500'));
+    await waitFor(() => expect(text()).toMatch(/Uống nước\s*1500/));
   });
 
   test('shows the routine the user last used, or "Lịch tập tự do" when there is none', async () => {
@@ -278,8 +279,8 @@ describe('Dashboard: day detail', () => {
 
     expect(await screen.findByText(/Chi tiết nhật ký ngày/)).toHaveTextContent('2026-10-05');
     expect(screen.getByText('✓ Đã hoàn thành buổi tập')).toBeInTheDocument();
-    expect(text()).toContain('🏋️ Push Pull Legs');
-    expect(text()).toContain('🎯 Thứ 2: Push');
+    expect(text()).toContain('Lịch tập (Routine) Push Pull Legs');
+    expect(text()).toContain('Buổi tập (Day) Thứ 2: Push');
 
     // only COMPLETED exercises are listed
     expect(screen.getByText('1. Bench Press')).toBeInTheDocument();
@@ -366,7 +367,7 @@ describe('Dashboard: deleting a workout log', () => {
     await waitFor(() => expect(calls('GET', '/api/workouts/logs').length).toBeGreaterThan(logsBefore));
     await waitFor(() => expect(calls('GET', '/api/workouts/streak').length).toBeGreaterThan(streakBefore));
     await waitFor(() => expect(screen.queryByRole('button', { name: /Xóa nhật ký/ })).not.toBeInTheDocument());
-    expect(text()).toContain('Workouts (Tuần)1 / 7'); // 5 Oct no longer counts
+    expect(text()).toMatch(/Buổi tập tuần này\s*1\s*\/\s*7 buổi/); // 5 Oct no longer counts
   });
 
   test('a failed delete is reported and nothing disappears', async () => {
@@ -391,7 +392,7 @@ describe('Dashboard: errors and sessions', () => {
     healthy = true;
     await user.click(screen.getByRole('button', { name: /Thử lại/ }));
     await waitFor(() => expect(screen.queryByText(/Không tải được hồ sơ/)).not.toBeInTheDocument());
-    expect(await screen.findByText('| Welcome Back, Dana Pham!')).toBeInTheDocument();
+    expect(await screen.findByText('Xin chào, Dana Pham!')).toBeInTheDocument();
     expect(text()).toContain('175 cm / 70 kg');
   });
 
@@ -415,7 +416,32 @@ describe('Dashboard: errors and sessions', () => {
     handlers['GET /api/nutrition'] = () => json({}, 500);
     await setup();
     expect(screen.getByText('October 2026')).toBeInTheDocument();
-    expect(text()).toContain('Workout Streak1 ngày');
+    expect(text()).toContain('Chuỗi ngày tập1 ngày');
     expect(within(document.body).queryByText(/NaN/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Dashboard: today hero', () => {
+  test('trained today: says so and has no start link', async () => {
+    await setup();
+    expect(screen.getByText('Đã tập hôm nay')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Bắt đầu/ })).not.toBeInTheDocument();
+  });
+
+  test('not trained today: a big "Bắt đầu" link opens the workouts page', async () => {
+    handlers['GET /api/workouts/streak'] = () => json({ streakDates: ['2026-10-05'], current: 0, longest: 2, total: 1 });
+    await setup();
+    expect(screen.getByRole('link', { name: /Bắt đầu/ })).toHaveAttribute('href', '/workouts');
+    expect(screen.queryByText('Đã tập hôm nay')).not.toBeInTheDocument();
+  });
+
+  test('the rings show today against the targets (calories, protein, water, workouts this week)', async () => {
+    await setup();
+    await waitFor(() => expect(screen.getByRole('progressbar', { name: 'Calo hôm nay' })).toHaveAttribute('aria-valuenow', '150'));
+    expect(screen.getByRole('progressbar', { name: 'Calo hôm nay' })).toHaveAttribute('aria-valuemax', '2856');
+    expect(screen.getByRole('progressbar', { name: 'Nước uống hôm nay' })).toHaveAttribute('aria-valuenow', '1500');
+    expect(screen.getByRole('progressbar', { name: 'Buổi tập tuần này' })).toHaveAttribute('aria-valuenow', '2');
+    expect(screen.getByRole('progressbar', { name: 'Buổi tập tuần này' })).toHaveAttribute('aria-valuemax', '7');
+    expect(screen.getByRole('progressbar', { name: 'Protein hôm nay' })).toHaveAttribute('aria-valuenow', String(Math.round(macroTargets(150).protein))); // a food without macros is estimated from its calories
   });
 });

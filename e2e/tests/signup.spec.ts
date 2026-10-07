@@ -94,7 +94,7 @@ test.describe('sign-up: the normal path', () => {
     await page.getByRole('button', { name: /Tiếp tục/ }).click();
     await page.getByRole('button', { name: /Hoàn tất/ }).click();
     await page.waitForURL(/\/dashboard/);
-    await expect(page.getByText(/Welcome Back/)).toContainText(alice.name);
+    await expect(page.getByText(/Xin chào/)).toContainText(alice.name);
     expect(await page.evaluate(() => localStorage.getItem('token'))).toBeTruthy();
   });
 
