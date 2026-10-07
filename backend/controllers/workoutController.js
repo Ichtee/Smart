@@ -1,5 +1,5 @@
 const WorkoutLog = require('../models/WorkoutLog');
-const { parseDateRange } = require('../utils/dateRange');
+const { parseDateRange, isValidDate } = require('../utils/dateRange');
 const { sanitizeDetailsMap, computeRecords } = require('../utils/records');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -37,6 +37,9 @@ const getWorkoutLog = async (req, res) => {
     const date = req.query.date;
     if (!date) {
       return res.status(400).json({ message: 'Vui lòng cung cấp tham số date (YYYY-MM-DD)' });
+    }
+    if (!isValidDate(date)) {
+      return res.status(400).json({ message: 'Định dạng ngày phải là YYYY-MM-DD' });
     }
 
     const log = await WorkoutLog.findOne({ user: req.user._id, date });
@@ -86,7 +89,7 @@ const saveWorkoutLog = async (req, res) => {
     }
 
     // Validate date format YYYY-MM-DD
-    if (!DATE_RE.test(date)) {
+    if (!isValidDate(date)) {
       return res.status(400).json({ message: 'Định dạng ngày phải là YYYY-MM-DD' });
     }
 
@@ -97,6 +100,11 @@ const saveWorkoutLog = async (req, res) => {
       return res.status(400).json({ message: 'Không thể đánh dấu hoàn thành bài tập cho ngày trong tương lai.' });
     }
 
+    // A completed exercise must be one of the selected ones (drops stray ids that would inflate streaks/records)
+    const selected = Array.isArray(selectedIds) ? selectedIds : [];
+    const chosen = new Set(selected.map(String));
+    const completed = Array.isArray(completedIds) ? completedIds.filter(id => chosen.has(String(id))) : [];
+
     const updatedLog = await WorkoutLog.findOneAndUpdate(
       { user: req.user._id, date },
       {
@@ -106,8 +114,8 @@ const saveWorkoutLog = async (req, res) => {
         routineName: routineName || '',
         dayName: dayName || '',
         dayIndex: dayIndex !== undefined ? dayIndex : 0,
-        selectedIds: selectedIds || [],
-        completedIds: completedIds || [],
+        selectedIds: selected,
+        completedIds: completed,
         detailsMap: sanitizeDetailsMap(detailsMap) || {},
         exercises: exercises || [],
         isSaved: isSaved !== undefined ? isSaved : false
@@ -211,6 +219,9 @@ const deleteWorkoutLog = async (req, res) => {
     const date = req.query.date;
     if (!date) {
       return res.status(400).json({ message: 'Vui lòng cung cấp tham số date (YYYY-MM-DD)' });
+    }
+    if (!isValidDate(date)) {
+      return res.status(400).json({ message: 'Định dạng ngày phải là YYYY-MM-DD' });
     }
 
     await WorkoutLog.deleteOne({ user: req.user._id, date });

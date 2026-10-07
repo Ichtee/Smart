@@ -73,7 +73,7 @@ const createRoutine = async (req, res) => {
 // @access  Private/Admin
 const updateRoutine = async (req, res) => {
   try {
-    const routine = await Routine.findOne({ id: req.params.id });
+    const routine = await Routine.findOne({ id: String(req.params.id), owner: null });
 
     if (!routine) {
       return res.status(404).json({ message: 'Routine not found' });
@@ -98,7 +98,7 @@ const updateRoutine = async (req, res) => {
     if (schedule !== undefined) updateData.schedule = schedule;
 
     const updatedRoutine = await Routine.findOneAndUpdate(
-      { id: req.params.id },
+      { _id: routine._id },
       updateData,
       { returnDocument: 'after', runValidators: true }
     );
@@ -116,7 +116,7 @@ const updateRoutine = async (req, res) => {
 // @access  Public (should be Admin later)
 const deleteRoutine = async (req, res) => {
   try {
-    const routine = await Routine.findOne({ id: req.params.id });
+    const routine = await Routine.findOne({ id: String(req.params.id), owner: null });
 
     if (!routine) {
       return res.status(404).json({ message: 'Routine not found' });

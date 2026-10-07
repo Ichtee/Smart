@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const WorkoutLog = require('../models/WorkoutLog');
 const NutritionLog = require('../models/NutritionLog');
@@ -529,6 +530,7 @@ const getAllUsers = async (req, res) => {
 // @access  Private/Admin
 const deleteUser = async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'User not found' });
     const user = await User.findById(req.params.id);
 
     if (user) {
@@ -559,10 +561,14 @@ const deleteUser = async (req, res) => {
 // @access  Private/Admin
 const updateUserRoleAndStatus = async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'User not found' });
     const user = await User.findById(req.params.id);
 
     if (user) {
       // Allow modifying role and isEmailVerified
+      if (req.body.role !== undefined && !['user', 'admin'].includes(req.body.role)) {
+        return res.status(400).json({ message: 'Invalid role' });
+      }
       if (req.body.role) {
         // Prevent an admin from changing their own role (optional safety check)
         if (req.user._id.toString() === user._id.toString() && req.body.role !== 'admin') {

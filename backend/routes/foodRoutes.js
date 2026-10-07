@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const Food = require('../models/Food');
-const User = require('../models/User');
-const { protect, admin } = require('../middleware/authMiddleware');
+const { protect, optionalAuth, admin } = require('../middleware/authMiddleware');
 
 // Escape user input before using it inside a RegExp (prevents 500s on '(' and ReDoS patterns)
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -21,6 +20,21 @@ const initialFoods = [
   { name: 'Hạt hạnh nhân', servingSize: '30g', calories: 170, protein: 6, carbs: 6, fat: 15, category: 'Ăn Vặt' }
 ];
 
+// Same rules for creating and editing: returns an error message, or null when the macros are fine
+const foodFieldsError = ({ name, calories, protein, carbs, fat }, partial) => {
+  if ((!partial || name !== undefined) && (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100)) {
+    return 'Tên món ăn phải từ 2 đến 100 ký tự.';
+  }
+  if ((!partial || calories !== undefined) && (calories === undefined || calories === null || calories === '' || isNaN(Number(calories)) || Number(calories) <= 0 || Number(calories) > 10000)) {
+    return 'Lượng Calo phải là số dương hợp lệ (1 - 10,000 kcal).';
+  }
+  const macros = { Protein: protein, Carbs: carbs, Fat: fat };
+  for (const [label, v] of Object.entries(macros)) {
+    if (v !== undefined && (v === null || v === '' || isNaN(Number(v)) || Number(v) < 0 || Number(v) > 5000)) return `${label} phải là số không âm.`;
+  }
+  return null;
+};
+
 // Seed initial system foods if collection is empty
 const seedFoodsIfEmpty = async () => {
   try {
@@ -31,26 +45,6 @@ const seedFoodsIfEmpty = async () => {
   } catch (e) {
     console.error('Failed to seed initial foods:', e);
   }
-};
-
-// Optional user extractor middleware from Auth Header / Cookie
-const optionalAuth = async (req, res, next) => {
-  try {
-    let token;
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    } else if (req.cookies && req.cookies.token) {
-      token = req.cookies.token;
-    }
-
-    if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select('-password');
-    }
-  } catch (e) {
-    // Ignore invalid token in optional auth
-  }
-  next();
 };
 
 // GET all food items (System foods + User's own custom foods)
@@ -135,6 +129,7 @@ router.post('/custom', protect, async (req, res) => {
 // DELETE custom food item (User endpoint - only own custom food)
 router.delete('/custom/:id', protect, async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Không tìm thấy món ăn cá nhân của bạn để xóa' });
     const food = await Food.findOneAndDelete({ _id: req.params.id, user: req.user._id, isCustom: true });
     if (!food) return res.status(404).json({ message: 'Không tìm thấy món ăn cá nhân của bạn để xóa' });
     res.json({ message: 'Đã xóa món ăn cá nhân thành công' });
@@ -188,7 +183,10 @@ router.post('/', protect, admin, async (req, res) => {
 // PUT update food item (Admin only)
 router.put('/:id', protect, admin, async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Không tìm thấy món ăn' });
     const { name, servingSize, calories, protein, carbs, fat, category, image } = req.body;
+    const problem = foodFieldsError(req.body, true);
+    if (problem) return res.status(400).json({ message: problem });
     const food = await Food.findByIdAndUpdate(
       req.params.id,
       {
@@ -214,6 +212,7 @@ router.put('/:id', protect, admin, async (req, res) => {
 // DELETE food item (Admin only)
 router.delete('/:id', protect, admin, async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Không tìm thấy món ăn' });
     const food = await Food.findByIdAndDelete(req.params.id);
     if (!food) return res.status(404).json({ message: 'Không tìm thấy món ăn' });
     res.json({ message: 'Xóa món ăn thành công' });
