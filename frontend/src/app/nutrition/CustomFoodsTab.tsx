@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { apiFetch } from '@/utils/api';
 import type { DbFood } from './types';
+import { useConfirm, useToast } from '@/components/ui/feedback';
 
 interface CustomFoodsTabProps {
   dbFoods: DbFood[];
@@ -12,6 +13,8 @@ interface CustomFoodsTabProps {
 }
 
 export default function CustomFoodsTab({ dbFoods, mutateFoods, onPickFood, onBackToSearch }: CustomFoodsTabProps) {
+  const confirm = useConfirm();
+  const toast = useToast();
   // Direct custom food creation inside tab 2
   const [showCreateCustomForm, setShowCreateCustomForm] = useState(false);
   const [customFormName, setCustomFormName] = useState('');
@@ -31,7 +34,7 @@ export default function CustomFoodsTab({ dbFoods, mutateFoods, onPickFood, onBac
     setSavingCustomFood(true);
     try {
       if (!localStorage.getItem('token')) {
-        alert('Bạn cần đăng nhập để tạo món ăn cá nhân!');
+        toast.error('Bạn cần đăng nhập để tạo món ăn cá nhân!');
         return;
       }
 
@@ -64,10 +67,10 @@ export default function CustomFoodsTab({ dbFoods, mutateFoods, onPickFood, onBac
         mutateFoods();
       } else {
         const data = await res.json();
-        alert(data.message || 'Lỗi khi lưu món ăn cá nhân');
+        toast.error(data.message || 'Lỗi khi lưu món ăn cá nhân');
       }
     } catch (err) {
-      alert('Lỗi kết nối khi lưu món ăn cá nhân');
+      toast.error('Lỗi kết nối khi lưu món ăn cá nhân');
     } finally {
       setSavingCustomFood(false);
     }
@@ -236,15 +239,15 @@ export default function CustomFoodsTab({ dbFoods, mutateFoods, onPickFood, onBac
                   <span className="text-xs font-black text-primary">{item.calories} kcal</span>
                   <button
                     type="button"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      if (!confirm(`Xóa món "${item.name}" khỏi "Món ăn của tôi"?`)) return;
+                      if (!(await confirm({ message: `Xóa món "${item.name}" khỏi "Món ăn của tôi"?`, tone: 'danger' }))) return;
                       apiFetch(`/api/foods/custom/${item._id}`, { method: 'DELETE' })
                         .then(res => {
                           if (!res.ok) throw new Error(`HTTP ${res.status}`);
                           mutateFoods();
                         })
-                        .catch(() => alert('Không xóa được món ăn. Vui lòng thử lại.'));
+                        .catch(() => toast.error('Không xóa được món ăn. Vui lòng thử lại.'));
                     }}
                     className="text-slate-500 hover:text-destructive p-1 text-sm font-bold"
                     title="Xóa món ăn cá nhân"

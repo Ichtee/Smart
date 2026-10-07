@@ -10,6 +10,7 @@ import { monthAndWeekRange, monthRange, monthKey } from '@/utils/dateUtils';
 import { waterGoalMl } from '@/utils/waterGoal';
 import { calcBmr, calcTdee, calcTargetCalories, macroTargets, sumMacros } from '@/utils/nutritionCalc';
 import { Bell, ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Trophy, Dumbbell, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { useConfirm, useToast } from '@/components/ui/feedback';
 
 const MUSCLE_NAMES_VI: Record<string, string> = {
   chest: 'Ngực (Chest)', 'upper-back': 'Lưng trên', 'lower-back': 'Lưng dưới', lats: 'Cơ xô (Lats)',
@@ -35,6 +36,8 @@ interface ProfileData {
 const EMPTY_MEALS: Record<string, any[]> = { 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] };
 
 export default function Dashboard() {
+  const confirm = useConfirm();
+  const toast = useToast();
   const router = useRouter();
 
 
@@ -123,15 +126,15 @@ export default function Dashboard() {
   const selectedDateWater: number = diaryNutrition?.waterGlasses || 0;
 
   const handleDeleteWorkoutLog = useCallback(async (targetDate: string) => {
-    if (!confirm(`Xóa nhật ký tập ngày ${targetDate}?`)) return;
+    if (!(await confirm({ message: `Xóa nhật ký tập ngày ${targetDate}?`, tone: 'danger' }))) return;
     try {
       const res = await apiFetch(`/api/workouts?date=${targetDate}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await Promise.all([mutateWCurrent(), mutateWViewed(), mutateStreak()]);
     } catch {
-      alert('Không xóa được nhật ký tập. Vui lòng thử lại.');
+      toast.error('Không xóa được nhật ký tập. Vui lòng thử lại.');
     }
-  }, [mutateWCurrent, mutateWViewed, mutateStreak]);
+  }, [confirm, toast, mutateWCurrent, mutateWViewed, mutateStreak]);
 
   const targetCalories = useMemo(() => calcTargetCalories(profile), [profile]);
 

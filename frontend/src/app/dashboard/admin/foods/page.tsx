@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react';
 import { apiFetch } from '@/utils/api';
 import { useFoods } from '@/hooks/useApi';
+import { useConfirm, useToast } from '@/components/ui/feedback';
 
 interface FoodItem {
   _id: string;
@@ -16,6 +17,8 @@ interface FoodItem {
 }
 
 export default function AdminFoodsPage() {
+  const confirm = useConfirm();
+  const toast = useToast();
   const { foods: foodData, isLoading: loading, mutate: mutateFoods } = useFoods();
   const foods: FoodItem[] = Array.isArray(foodData) ? foodData : [];
   const [search, setSearch] = useState('');
@@ -111,7 +114,7 @@ export default function AdminFoodsPage() {
   };
 
   const handleDeleteFood = async (id: string, name: string) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa món ăn "${name}" khỏi cơ sở dữ liệu?`)) return;
+    if (!(await confirm({ message: `Bạn có chắc chắn muốn xóa món ăn "${name}" khỏi cơ sở dữ liệu?`, tone: 'danger' }))) return;
 
     try {
       const res = await apiFetch(`/api/foods/${id}`, { method: 'DELETE' });
@@ -119,10 +122,10 @@ export default function AdminFoodsPage() {
       if (res.ok) {
         mutateFoods();
       } else {
-        alert('Xóa món ăn thất bại');
+        toast.error('Xóa món ăn thất bại');
       }
     } catch (err) {
-      alert('Lỗi kết nối khi xóa món ăn');
+      toast.error('Lỗi kết nối khi xóa món ăn');
     }
   };
 

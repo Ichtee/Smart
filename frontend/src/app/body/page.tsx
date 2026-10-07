@@ -10,10 +10,12 @@ import { metricBody, summarize, validateMetricForm, type BodyMetric } from '@/ut
 import BodyChart from './BodyChart';
 import CalorieAdvicePanel from './CalorieAdvicePanel';
 import { Scale, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useConfirm } from '@/components/ui/feedback';
 
 const HISTORY_DAYS = 180;
 
 export default function BodyPage() {
+  const confirm = useConfirm();
   const router = useRouter();
   const today = todayStr();
   const range = useMemo(() => {
@@ -91,7 +93,7 @@ export default function BodyPage() {
   };
 
   const handleDelete = async (target: string) => {
-    if (!confirm(`Xóa số đo ngày ${target}?`)) return;
+    if (!(await confirm({ message: `Xóa số đo ngày ${target}?`, tone: 'danger' }))) return;
     setMessage(null);
     try {
       const res = await apiFetch(`/api/body-metrics?date=${target}`, { method: 'DELETE' });

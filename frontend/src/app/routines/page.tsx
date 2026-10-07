@@ -10,6 +10,7 @@ import {
   MAX_EXERCISES_PER_DAY, type DayMode, type DraftDay, type LibraryExercise, type RoutineDraft,
 } from './routineDraft';
 import { ClipboardList, Loader2, Plus, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useConfirm } from '@/components/ui/feedback';
 
 const MODE_LABELS: Record<DayMode, string> = { off: 'Không tập', train: 'Ngày tập', rest: 'Ngày nghỉ' };
 const MAX_ROUTINES = 10;
@@ -17,6 +18,7 @@ const MAX_ROUTINES = 10;
 type Notice = { text: string; type: 'success' | 'error' } | null;
 
 export default function RoutinesPage() {
+  const confirm = useConfirm();
   const router = useRouter();
   const { routines, error, isLoading, mutate } = useRoutines();
   const { exercises: library } = useExercises();
@@ -74,7 +76,7 @@ export default function RoutinesPage() {
   };
 
   const handleDelete = async (r: any) => {
-    if (!confirm(`Xóa lịch tập "${r.name}"?`)) return;
+    if (!(await confirm({ message: `Xóa lịch tập "${r.name}"?`, tone: 'danger' }))) return;
     setNotice(null);
     try {
       const res = await apiFetch(`/api/routines/mine/${r.id}`, { method: 'DELETE' });

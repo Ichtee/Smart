@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/utils/api';
 import { useRoutines, useExercises } from '@/hooks/useApi';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useConfirm, useToast } from '@/components/ui/feedback';
 
 function SearchableExerciseSelect({
   value,
@@ -236,6 +237,8 @@ function QuickAddExerciseBar({
 }
 
 export default function RoutineManagement() {
+  const confirm = useConfirm();
+  const toast = useToast();
   const router = useRouter();
   const { isAdmin, checking, authError } = useAdmin();
   const { routines: routineData, isLoading: routinesLoading, mutate: mutateRoutines } = useRoutines(isAdmin);
@@ -311,14 +314,14 @@ export default function RoutineManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa lịch tập này?')) return;
+    if (!(await confirm({ message: 'Bạn có chắc chắn muốn xóa lịch tập này?', tone: 'danger' }))) return;
     try {
       const res = await apiFetch(`/api/routines/${id}`, { method: 'DELETE' });
       if (res.ok) {
         mutateRoutines();
       } else {
         const error = await res.json();
-        alert(error.message || 'Lỗi khi xóa lịch tập');
+        toast.error(error.message || 'Lỗi khi xóa lịch tập');
       }
     } catch (err) {
       console.error('Failed to delete routine', err);
@@ -384,7 +387,7 @@ export default function RoutineManagement() {
         mutateRoutines();
       } else {
         const error = await res.json();
-        alert(error.message || 'Lỗi khi lưu lịch tập');
+        toast.error(error.message || 'Lỗi khi lưu lịch tập');
       }
     } catch (err) {
       console.error('Failed to save routine', err);

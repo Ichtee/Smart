@@ -9,8 +9,10 @@ import { todayStr } from '@/utils/dateUtils';
 import { calcBmr, calcTdee, calcTargetCalories } from '@/utils/nutritionCalc';
 import { calcBmi } from '@/utils/bmi';
 import { ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
+import { useToast } from '@/components/ui/feedback';
 
 export default function Onboarding() {
+  const toast = useToast();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -59,7 +61,7 @@ export default function Onboarding() {
     if (step === 1) {
       const a = Number(formData.age);
       if (isNaN(a) || a <= 0 || a > 120) {
-        alert('Tuổi phải là số dương hợp lệ (từ 1 đến 120)!');
+        toast.error('Tuổi phải là số dương hợp lệ (từ 1 đến 120)!');
         return;
       }
     }
@@ -67,11 +69,11 @@ export default function Onboarding() {
       const h = Number(formData.height);
       const w = Number(formData.weight);
       if (isNaN(h) || h < 30 || h > 300) {
-        alert('Chiều cao phải từ 30cm đến 300cm!');
+        toast.error('Chiều cao phải từ 30cm đến 300cm!');
         return;
       }
       if (isNaN(w) || w < 10 || w > 500) {
-        alert('Cân nặng phải từ 10kg đến 500kg!');
+        toast.error('Cân nặng phải từ 10kg đến 500kg!');
         return;
       }
     }
@@ -104,10 +106,10 @@ export default function Onboarding() {
         router.push('/dashboard');
       } else {
         const data = await res.json().catch(() => ({}));
-        alert(data.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+        toast.error(data.message || 'Có lỗi xảy ra, vui lòng thử lại.');
       }
     } catch (err) {
-      alert(describeError(err)); // used to be silent: the button just stopped spinning
+      toast.error(describeError(err)); // used to be silent: the button just stopped spinning
     } finally {
       setSaving(false);
     }

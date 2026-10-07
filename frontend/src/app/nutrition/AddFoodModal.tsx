@@ -4,6 +4,7 @@ import { apiFetch } from '@/utils/api';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import CustomFoodsTab from './CustomFoodsTab';
 import type { MealItem, DbFood } from './types';
+import { useToast } from '@/components/ui/feedback';
 
 // Module-level so the id source is not treated as an impure call during render
 const newMealItemId = () => Date.now().toString();
@@ -20,6 +21,7 @@ interface AddFoodModalProps {
 }
 
 export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods, onAddItem, onClose }: AddFoodModalProps) {
+  const toast = useToast();
   // The form owns its own state: it is created fresh every time the modal opens.
   const [foodName, setFoodName] = useState('');
   const [servingSize, setServingSize] = useState('1 phần');
@@ -108,19 +110,19 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
   const handleAddFood = (e: React.FormEvent) => {
     e.preventDefault();
     if (!dayLoaded) {
-      alert('Dữ liệu ngày này chưa tải xong. Vui lòng đợi giây lát hoặc bấm Thử lại.');
+      toast.error('Dữ liệu ngày này chưa tải xong. Vui lòng đợi giây lát hoặc bấm Thử lại.');
       return;
     }
     const trimmedFoodName = foodName.trim().replace(/\s+/g, ' ');
     if (!trimmedFoodName || computedTotalCalories <= 0) return;
 
     if (trimmedFoodName.length < 2 || trimmedFoodName.length > 60) {
-      alert('Tên món ăn không được chứa toàn khoảng trắng, độ dài từ 2 đến 60 ký tự!');
+      toast.error('Tên món ăn không được chứa toàn khoảng trắng, độ dài từ 2 đến 60 ký tự!');
       return;
     }
 
     if (computedTotalCalories > 10000) {
-      alert('Lượng Calo tổng phải là số dương hợp lệ (tối đa 10,000 kcal)!');
+      toast.error('Lượng Calo tổng phải là số dương hợp lệ (tối đa 10,000 kcal)!');
       return;
     }
 

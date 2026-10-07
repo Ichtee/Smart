@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import AuthGuard from '@/components/AuthGuard';
+import { FeedbackProvider } from '@/components/ui/feedback';
 
 // The app used to mirror workout/nutrition data into localStorage (smart_* keys). The server is now
 // the only source of truth, so remove those stale copies once instead of leaving them to rot.
@@ -22,9 +23,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <LanguageProvider>
-      <AuthGuard>
-        {children}
-      </AuthGuard>
+      <FeedbackProvider>
+        <AuthGuard>
+          {children}
+        </AuthGuard>
+      </FeedbackProvider>
     </LanguageProvider>
   );
 }
