@@ -6,7 +6,7 @@ import { clearApiCache } from '@/hooks/useApi';
 
 const nav = vi.hoisted(() => ({ push: vi.fn(), path: '/records' }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: nav.push }), usePathname: () => nav.path }));
-vi.mock('@/hooks/useApi', () => ({ clearApiCache: vi.fn() }));
+vi.mock('@/hooks/useApi', () => ({ clearApiCache: vi.fn(), useProfile: () => ({ profile: { name: 'Nguyễn Văn An', email: 'an@example.com' } }) }));
 
 beforeEach(() => {
   nav.push.mockClear();
@@ -24,11 +24,17 @@ describe('Sidebar', () => {
     ['Khối lượng', '/volume'],
     ['Dinh dưỡng', '/nutrition'],
     ['Cơ thể', '/body'],
-    ['Hồ sơ', '/profile'],
   ])('the desktop sidebar links to %s', (label, href) => {
     render(<Sidebar />);
     const desktop = within(screen.getByRole('navigation', { name: 'Điều hướng chính' }));
     expect(desktop.getByRole('link', { name: label })).toHaveAttribute('href', href);
+  });
+
+  test('the profile is the account card at the bottom: name, email and the initial of the given name', () => {
+    render(<Sidebar />);
+    const card = within(screen.getByRole('complementary')).getByRole('link', { name: 'Hồ sơ' });
+    expect(card).toHaveAttribute('href', '/profile');
+    expect(card).toHaveTextContent('ANguyễn Văn Anan@example.com');
   });
 
   test('the desktop sidebar groups the pages', () => {

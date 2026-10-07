@@ -6,7 +6,7 @@ import { Logo } from './smart/logo';
 import ThemeToggle from './ThemeToggle';
 import { LayoutGrid, Dumbbell, Utensils, Scale, User, LogOut, Trophy, CalendarDays, BarChart3, Menu, X } from 'lucide-react';
 import { API_URL } from '@/utils/api';
-import { clearApiCache } from '@/hooks/useApi';
+import { clearApiCache, useProfile } from '@/hooks/useApi';
 
 const GROUPS = [
   { title: null, items: [{ label: 'Tổng quan', href: '/dashboard', icon: LayoutGrid }] },
@@ -26,12 +26,13 @@ const GROUPS = [
       { label: 'Cơ thể', href: '/body', icon: Scale },
     ],
   },
-  { title: null, items: [{ label: 'Hồ sơ', href: '/profile', icon: User }] },
 ];
+// the profile sits in the account card at the bottom of the desktop sidebar
+const PROFILE_ITEM = { label: 'Hồ sơ', href: '/profile', icon: User };
 
 // The four most used pages sit in the mobile bottom bar; everything else is under "Thêm".
 const MOBILE_MAIN = ['/dashboard', '/workouts', '/nutrition', '/body'];
-const ALL_ITEMS = GROUPS.flatMap(g => g.items);
+const ALL_ITEMS = [...GROUPS.flatMap(g => g.items), PROFILE_ITEM];
 const MOBILE_ITEMS = MOBILE_MAIN.map(h => ALL_ITEMS.find(i => i.href === h)!);
 const MORE_ITEMS = ALL_ITEMS.filter(i => !MOBILE_MAIN.includes(i.href));
 
@@ -39,6 +40,10 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { profile } = useProfile();
+  const displayName: string = profile?.name || profile?.username || 'Tài khoản';
+  const initial = displayName.trim().split(/\s+/).pop()?.charAt(0).toUpperCase() || '?';
+  const profileActive = pathname === PROFILE_ITEM.href;
 
   useEffect(() => { setMoreOpen(false); }, [pathname]);
   useEffect(() => {
@@ -68,51 +73,66 @@ export default function Sidebar() {
       <div className="hidden md:block w-64 lg:w-72 shrink-0 h-screen" />
 
       {/* Desktop Left Vertical Sidebar (Fixed to Viewport) */}
-      <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-border bg-card/60 backdrop-blur-2xl p-5 fixed top-0 bottom-0 left-0 h-screen z-40 select-none overflow-y-auto">
-        <div className="mb-6 pt-2 px-2">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <Logo size="lg" />
-          </Link>
-        </div>
+      <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-border bg-card/60 backdrop-blur-2xl px-4 py-5 fixed top-0 bottom-0 left-0 h-screen z-40 select-none overflow-y-auto">
+        <Link href="/dashboard" className="flex items-center gap-3 px-3 pb-5 mb-4 border-b border-border">
+          <Logo size="lg" />
+        </Link>
 
-        <nav className="flex-1 space-y-4" aria-label="Điều hướng chính">
+        <nav className="flex-1 space-y-6" aria-label="Điều hướng chính">
           {GROUPS.map((group, gi) => (
-            <div key={gi} className="space-y-1.5">
+            <div key={gi}>
               {group.title && (
-                <p className="px-4 pt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground/80">{group.title}</p>
+                <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">{group.title}</p>
               )}
-              {group.items.map((item) => {
-                const isActive = pathname === item.href;
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-base font-bold transition-all duration-200 cursor-pointer ${
-                      isActive
-                        ? 'bg-primary/15 text-primary border border-primary/30 shadow-lg glow-primary'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-surface-elevated border border-transparent'
-                    }`}
-                  >
-                    <Icon className="size-5 shrink-0" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors duration-150 cursor-pointer ${
+                        isActive
+                          ? 'bg-primary/10 text-primary before:absolute before:-left-4 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-primary'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-surface-elevated'
+                      }`}
+                    >
+                      <Icon className="size-[18px] shrink-0" strokeWidth={isActive ? 2.25 : 2} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </nav>
 
-        <div className="pt-4 border-t border-border mt-4 flex items-center gap-2">
-          <button
-            onClick={handleLogout}
-            className="flex-1 flex items-center gap-3 px-4 py-3 rounded-2xl text-base font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+        <div className="mt-6 pt-4 border-t border-border space-y-1">
+          <Link
+            href={PROFILE_ITEM.href}
+            aria-label={PROFILE_ITEM.label}
+            aria-current={profileActive ? 'page' : undefined}
+            className={`flex items-center gap-3 rounded-xl p-2 transition-colors cursor-pointer ${profileActive ? 'bg-primary/10' : 'hover:bg-surface-elevated'}`}
           >
-            <LogOut className="size-5" />
-            <span>Đăng xuất</span>
-          </button>
-          <ThemeToggle />
+            <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary">{initial}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-foreground">{displayName}</span>
+              <span className="block truncate text-xs text-muted-foreground">{profile?.email || 'Xem hồ sơ'}</span>
+            </span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+            >
+              <LogOut className="size-[18px]" />
+              <span>Đăng xuất</span>
+            </button>
+            <ThemeToggle className="size-9" />
+          </div>
         </div>
       </aside>
 
