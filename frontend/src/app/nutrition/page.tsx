@@ -182,8 +182,7 @@ export default function Nutrition() {
 
   const { save: saveToServer, retry: retrySave, status: saveStatus } = useServerSave();
 
-  // Persist a full snapshot of one day. The date is captured now (not when the queued request runs)
-  // and other pages are notified only after the server confirms the save.
+  // Persist a full snapshot of one day. The date is captured now, not when the queued request runs.
   const pushNutritionToBackend = (
     date: string,
     glasses: number,
@@ -194,7 +193,7 @@ export default function Nutrition() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ date, waterGlasses: glasses, mlPerGlass: mlGlass, meals: dayMeals })
-    })).then(ok => { if (ok) notifyStorageChange(date); });
+    }));
   };
 
   // Load meals & water for selectedDate from the server (the only copy of the data).
@@ -275,14 +274,6 @@ export default function Nutrition() {
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const da = String(d.getDate()).padStart(2, '0');
     setSelectedDate(`${y}-${m}-${da}`);
-  };
-
-  // Helper to notify other tabs / components of real-time storage changes
-  const notifyStorageChange = (dateStr: string) => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new CustomEvent('smart_nutrition_updated', { detail: { date: dateStr } }));
-    }
   };
 
   // Update Water Glasses with persistence for selectedDate
