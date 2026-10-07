@@ -28,20 +28,20 @@ describe('body metrics', () => {
       const { auth } = await createUser();
       const res = await save(auth, { date: day(0), weight: 70.5, bodyFat: 18.2, waist: 82 });
       expect(res.status).toBe(200);
-      expect(res.body.metric).toEqual({ date: day(0), weight: 70.5, bodyFat: 18.2, waist: 82 });
+      expect(res.body.metric).toEqual({ date: day(0), weight: 70.5, bodyFat: 18.2, waist: 82, neck: null, hip: null });
     });
 
     test('body fat and waist are optional (null when absent)', async () => {
       const { auth } = await createUser();
       const res = await save(auth, { date: day(0), weight: 70 });
-      expect(res.body.metric).toEqual({ date: day(0), weight: 70, bodyFat: null, waist: null });
+      expect(res.body.metric).toEqual({ date: day(0), weight: 70, bodyFat: null, waist: null, neck: null, hip: null });
     });
 
     test('blank optional fields count as absent; numeric strings are accepted', async () => {
       const { auth } = await createUser();
       const res = await save(auth, { date: day(0), weight: '70.5', bodyFat: '', waist: null });
       expect(res.status).toBe(200);
-      expect(res.body.metric).toMatchObject({ weight: 70.5, bodyFat: null, waist: null });
+      expect(res.body.metric).toMatchObject({ weight: 70.5, bodyFat: null, waist: null, neck: null, hip: null });
     });
 
     test('saving the same day again replaces it (one measurement per day) and clears omitted fields', async () => {
@@ -49,7 +49,7 @@ describe('body metrics', () => {
       await save(auth, { date: day(0), weight: 70, bodyFat: 20 });
       await save(auth, { date: day(0), weight: 69 });
       expect(await BodyMetric.countDocuments({ user: user._id })).toBe(1);
-      expect((await list(auth)).body).toEqual([{ date: day(0), weight: 69, bodyFat: null, waist: null }]);
+      expect((await list(auth)).body).toEqual([{ date: day(0), weight: 69, bodyFat: null, waist: null, neck: null, hip: null }]);
     });
 
     test.each([
@@ -136,7 +136,7 @@ describe('body metrics', () => {
       const res = await request(app).put('/api/users/profile').set(auth).send({ weight: 72, metricDate: day(0) });
       expect(res.status).toBe(200);
       expect(res.body.weight).toBe(72);
-      expect((await list(auth)).body).toEqual([{ date: day(0), weight: 72, bodyFat: null, waist: null }]);
+      expect((await list(auth)).body).toEqual([{ date: day(0), weight: 72, bodyFat: null, waist: null, neck: null, hip: null }]);
       expect(await profileWeight(user)).toBe(72);
     });
 
@@ -158,6 +158,66 @@ describe('body metrics', () => {
       const res = await request(app).put('/api/users/profile').set(auth).send({ weight: 60, metricDate: day(-20) });
       expect(res.body.weight).toBe(75); // the latest measurement still wins
       expect(await profileWeight(user)).toBe(75);
+    });
+  });
+
+  describe('neck and hip (US Navy body-fat estimate)', () => {
+    test('are stored and returned', async () => {
+      const { auth } = await createUser();
+      const res = await save(auth, { date: day(0), weight: 60, waist: 72, neck: 34, hip: 92 });
+      expect(res.status).toBe(200);
+      expect(res.body.metric).toMatchObject({ waist: 72, neck: 34, hip: 92 });
+    });
+
+    test.each([
+      ['neck too small', { neck: 19 }],
+      ['neck too big', { neck: 81 }],
+      ['hip too small', { hip: 39 }],
+      ['hip too big', { hip: 201 }],
+      ['neck not a number', { neck: 'abc' }],
+    ])('%s is rejected', async (_, extra) => {
+      const { auth } = await createUser();
+      expect((await save(auth, { date: day(0), weight: 70, ...extra })).status).toBe(400);
+    });
+  });
+
+  describe('the profile body fat follows the latest measurement that has one', () => {
+    const profileFat = async (user) => (await User.findById(user._id)).bodyFat;
+
+    test('saving a body fat updates the profile; a later weigh-in without one keeps it', async () => {
+      const { user, auth } = await createUser();
+      await save(auth, { date: day(-2), weight: 70, bodyFat: 20 });
+      expect(await profileFat(user)).toBe(20);
+      await save(auth, { date: day(-1), weight: 69.5 });
+      expect(await profileFat(user)).toBe(20);
+      await save(auth, { date: day(0), weight: 69, bodyFat: 19 });
+      expect(await profileFat(user)).toBe(19);
+    });
+
+    test('deleting falls back to the previous body fat, or null when none is left', async () => {
+      const { user, auth } = await createUser();
+      await save(auth, { date: day(-1), weight: 70, bodyFat: 20 });
+      await save(auth, { date: day(0), weight: 69, bodyFat: 19 });
+      await remove(auth, day(0));
+      expect(await profileFat(user)).toBe(20);
+      await remove(auth, day(-1));
+      expect(await profileFat(user)).toBeNull();
+    });
+
+    test('the profile form can send a body fat: it is logged with that day\'s weight', async () => {
+      const { user, auth } = await createUser({ weight: 70 });
+      const res = await request(app).put('/api/users/profile').set(auth).send({ bodyFat: 22, metricDate: day(0) });
+      expect(res.status).toBe(200);
+      expect(res.body.bodyFat).toBe(22);
+      expect((await list(auth)).body).toEqual([{ date: day(0), weight: 70, bodyFat: 22, waist: null, neck: null, hip: null }]);
+      expect(await profileFat(user)).toBe(22);
+    });
+
+    test('an invalid body fat from the profile form is rejected', async () => {
+      const { auth } = await createUser({ weight: 70 });
+      for (const bodyFat of [1, 71, 'abc']) {
+        expect((await request(app).put('/api/users/profile').set(auth).send({ bodyFat })).status).toBe(400);
+      }
     });
   });
 
@@ -201,7 +261,7 @@ describe('body metrics', () => {
     test('never exposes internal fields', async () => {
       const { auth } = await createUser();
       await save(auth, { date: day(0), weight: 70 });
-      expect(Object.keys((await list(auth)).body[0]).sort()).toEqual(['bodyFat', 'date', 'waist', 'weight']);
+      expect(Object.keys((await list(auth)).body[0]).sort()).toEqual(['bodyFat', 'date', 'hip', 'neck', 'waist', 'weight']);
     });
   });
 

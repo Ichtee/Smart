@@ -1,6 +1,6 @@
 const BodyMetric = require('../models/BodyMetric');
 const { parseDateRange, isValidDate } = require('../utils/dateRange');
-const { syncProfileWeight, isTooFarAhead } = require('../utils/bodyMetrics');
+const { syncProfileFromMetrics, isTooFarAhead } = require('../utils/bodyMetrics');
 
 // A number from the body, or undefined when absent/blank. NaN (garbage, objects, arrays) is returned as NaN.
 const optionalNumber = (v) => (v === undefined || v === null || v === '' ? undefined : (typeof v === 'number' || typeof v === 'string' ? Number(v) : NaN));
@@ -12,6 +12,8 @@ const serialize = (m) => ({
   weight: m.weight,
   bodyFat: m.bodyFat ?? null,
   waist: m.waist ?? null,
+  neck: m.neck ?? null,
+  hip: m.hip ?? null,
 });
 
 // @desc    Measurements in a date range, oldest first
@@ -55,13 +57,21 @@ const saveBodyMetric = async (req, res) => {
     if (waist !== undefined && !inRange(waist, 30, 250)) {
       return res.status(400).json({ message: 'Vòng eo phải từ 30cm đến 250cm.' });
     }
+    const neck = optionalNumber(req.body.neck);
+    if (neck !== undefined && !inRange(neck, 20, 80)) {
+      return res.status(400).json({ message: 'Vòng cổ phải từ 20cm đến 80cm.' });
+    }
+    const hip = optionalNumber(req.body.hip);
+    if (hip !== undefined && !inRange(hip, 40, 200)) {
+      return res.status(400).json({ message: 'Vòng hông phải từ 40cm đến 200cm.' });
+    }
 
     const saved = await BodyMetric.findOneAndUpdate(
       { user: req.user._id, date },
-      { user: req.user._id, date, weight, bodyFat: bodyFat ?? null, waist: waist ?? null },
+      { user: req.user._id, date, weight, bodyFat: bodyFat ?? null, waist: waist ?? null, neck: neck ?? null, hip: hip ?? null },
       { upsert: true, returnDocument: 'after', runValidators: true, setDefaultsOnInsert: true }
     );
-    const profileWeight = await syncProfileWeight(req.user._id);
+    const profileWeight = await syncProfileFromMetrics(req.user._id);
 
     return res.status(200).json({ metric: serialize(saved), profileWeight });
   } catch (error) {
@@ -81,7 +91,7 @@ const deleteBodyMetric = async (req, res) => {
     const result = await BodyMetric.deleteOne({ user: req.user._id, date });
     if (result.deletedCount === 0) return res.status(404).json({ message: 'Không có số đo nào cho ngày này' });
 
-    const profileWeight = await syncProfileWeight(req.user._id);
+    const profileWeight = await syncProfileFromMetrics(req.user._id);
     return res.status(200).json({ message: 'Đã xóa số đo', profileWeight });
   } catch (error) {
     console.error('Error deleting body metric:', error);

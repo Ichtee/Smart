@@ -73,6 +73,26 @@ const userSchema = new mongoose.Schema({
     max: 500,
     default: 0
   },
+  // How fast the goal is pursued (sets the calorie deficit/surplus on the client)
+  goalPace: {
+    type: String,
+    enum: ['Chậm', 'Vừa', 'Nhanh', ''],
+    default: 'Vừa'
+  },
+  // kg the user wants to reach (optional)
+  targetWeight: {
+    type: Number,
+    min: 10,
+    max: 500,
+    default: null
+  },
+  // % body fat of the latest measurement that has one (kept in sync by syncProfileFromMetrics)
+  bodyFat: {
+    type: Number,
+    min: 2,
+    max: 70,
+    default: null
+  },
   activityLevel: {
     type: String,
     enum: ['Ít vận động', 'Vận động nhẹ', 'Vận động vừa', 'Vận động nhiều', 'Vận động cực nhiều', ''],

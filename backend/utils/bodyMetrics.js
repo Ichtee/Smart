@@ -8,24 +8,36 @@ const utcToday = () => new Date().toISOString().slice(0, 10);
 const isTooFarAhead = (date) => date > new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
 /**
- * The profile weight is always the weight of the most recent measurement, so TDEE and calorie targets
- * follow the latest weigh-in, while correcting an old entry never changes the current weight.
+ * The profile weight is always the weight of the most recent measurement, and the profile body fat the
+ * body fat of the most recent measurement that has one, so TDEE and calorie targets follow the latest
+ * weigh-in, while correcting an old entry never changes the current values.
  */
-const syncProfileWeight = async (userId) => {
+const syncProfileFromMetrics = async (userId) => {
   const latest = await BodyMetric.findOne({ user: userId }).sort({ date: -1 });
-  if (latest) await User.updateOne({ _id: userId }, { weight: latest.weight });
+  const latestFat = await BodyMetric.findOne({ user: userId, bodyFat: { $ne: null } }).sort({ date: -1 });
+  const update = { bodyFat: latestFat ? latestFat.bodyFat : null };
+  if (latest) update.weight = latest.weight;
+  await User.updateOne({ _id: userId }, update);
   return latest ? latest.weight : null;
 };
 
-/** Upsert the weight of one day (used when the profile/onboarding form changes the weight). */
-const recordWeight = async (userId, weight, date) => {
+/**
+ * Upsert the weight (and, when given, the body fat) of one day: used when the profile/onboarding form
+ * changes them.
+ */
+const recordWeight = async (userId, weight, date, bodyFat) => {
   const day = isValidDate(date) && !isTooFarAhead(date) ? date : utcToday();
+  const set = { user: userId, date: day, weight };
+  if (bodyFat !== undefined) set.bodyFat = bodyFat;
   await BodyMetric.findOneAndUpdate(
     { user: userId, date: day },
-    { user: userId, date: day, weight },
+    set,
     { upsert: true, runValidators: true, setDefaultsOnInsert: true }
   );
-  return syncProfileWeight(userId);
+  return syncProfileFromMetrics(userId);
 };
 
-module.exports = { syncProfileWeight, recordWeight, isTooFarAhead, utcToday };
+// old name, kept for callers that only care about the weight
+const syncProfileWeight = syncProfileFromMetrics;
+
+module.exports = { syncProfileFromMetrics, syncProfileWeight, recordWeight, isTooFarAhead, utcToday };

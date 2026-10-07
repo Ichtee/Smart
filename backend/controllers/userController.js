@@ -273,6 +273,9 @@ const loginUser = async (req, res) => {
         gender: user.gender,
         goal: user.goal,
         calorieAdjustment: user.calorieAdjustment || 0,
+        goalPace: user.goalPace || 'Vừa',
+        targetWeight: user.targetWeight ?? null,
+        bodyFat: user.bodyFat ?? null,
         activityLevel: user.activityLevel,
         role: user.role,
         lastActiveRoutineId: user.lastActiveRoutineId || 'ppl',
@@ -420,6 +423,7 @@ const updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     let newWeight; // set when this request changes the weight: it is also logged as a body measurement
+    let newBodyFat; // set when this request sends a body fat: logged with the weight of that day
 
     if (user) {
       if (req.body.name !== undefined) {
@@ -470,6 +474,32 @@ const updateProfile = async (req, res) => {
         if (req.body.goal !== user.goal) user.calorieAdjustment = 0;
         user.goal = req.body.goal;
       }
+      if (req.body.goalPace !== undefined) {
+        if (!['Chậm', 'Vừa', 'Nhanh', ''].includes(req.body.goalPace)) {
+          return res.status(400).json({ message: 'Tốc độ mục tiêu không hợp lệ.' });
+        }
+        // the adjustment was tuned for the old pace too
+        if (req.body.goalPace !== user.goalPace) user.calorieAdjustment = 0;
+        user.goalPace = req.body.goalPace;
+      }
+      if (req.body.targetWeight !== undefined) {
+        if (req.body.targetWeight === null || req.body.targetWeight === '') {
+          user.targetWeight = null;
+        } else {
+          const target = Number(req.body.targetWeight);
+          if (!Number.isFinite(target) || target < 10 || target > 500) {
+            return res.status(400).json({ message: 'Cân nặng mục tiêu phải từ 10kg đến 500kg.' });
+          }
+          user.targetWeight = target;
+        }
+      }
+      if (req.body.bodyFat !== undefined && req.body.bodyFat !== null && req.body.bodyFat !== '') {
+        const fat = Number(req.body.bodyFat);
+        if (!Number.isFinite(fat) || fat < 2 || fat > 70) {
+          return res.status(400).json({ message: 'Tỷ lệ mỡ phải từ 2% đến 70%.' });
+        }
+        newBodyFat = fat;
+      }
       if (req.body.calorieAdjustment !== undefined) {
         const adj = req.body.calorieAdjustment;
         if (!Number.isInteger(adj) || adj < -500 || adj > 500) {
@@ -510,9 +540,15 @@ const updateProfile = async (req, res) => {
       }
 
       const updatedUser = await user.save();
-      const currentWeight = newWeight !== undefined
-        ? (await recordWeight(updatedUser._id, newWeight, req.body.metricDate)) ?? updatedUser.weight
-        : updatedUser.weight;
+      // a changed weight or a sent body fat is also logged as that day's body measurement, and the
+      // profile then follows the latest measurement (weight and body fat)
+      let currentWeight = updatedUser.weight;
+      let currentBodyFat = updatedUser.bodyFat ?? null;
+      if ((newWeight !== undefined || newBodyFat !== undefined) && updatedUser.weight) {
+        currentWeight = (await recordWeight(updatedUser._id, updatedUser.weight, req.body.metricDate, newBodyFat)) ?? updatedUser.weight;
+        const synced = await User.findById(updatedUser._id).select('bodyFat');
+        currentBodyFat = synced?.bodyFat ?? null;
+      }
 
       const freshToken = generateToken(updatedUser);
       // the cookie wins over the Bearer header in protect, so it has to carry the new version too
@@ -527,6 +563,9 @@ const updateProfile = async (req, res) => {
         weight: currentWeight,
         goal: updatedUser.goal,
         calorieAdjustment: updatedUser.calorieAdjustment || 0,
+        goalPace: updatedUser.goalPace || 'Vừa',
+        targetWeight: updatedUser.targetWeight ?? null,
+        bodyFat: currentBodyFat,
         activityLevel: updatedUser.activityLevel,
         role: updatedUser.role,
         lastActiveRoutineId: updatedUser.lastActiveRoutineId,
