@@ -274,7 +274,7 @@ const findPendingByToken = async (token) => {
 const checkVerificationToken = async (req, res) => {
   try {
     const { user, error } = await findPendingByToken(req.params.token);
-    if (error) return res.status(400).json({ message: error });
+    if (error) return res.status(400).json({ message: error, linkInvalid: true });
     res.status(200).json({ valid: true, name: user.name, email: user.email });
   } catch (error) {
     console.error('checkVerificationToken error:', error);
@@ -291,7 +291,7 @@ const completeRegistration = async (req, res) => {
     if (passwordError) return res.status(400).json({ message: passwordError });
 
     const { user, error } = await findPendingByToken(req.params.token);
-    if (error) return res.status(400).json({ message: error });
+    if (error) return res.status(400).json({ message: error, linkInvalid: true });
 
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(req.body.password, salt);

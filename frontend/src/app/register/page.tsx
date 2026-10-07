@@ -3,13 +3,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/smart/logo';
 import { API_URL } from '@/utils/api';
+import { normalizeName, validateName, validateUsername, validateEmail } from '@/utils/validation';
 import { ArrowRight, AlertCircle, MailCheck, AlertTriangle } from 'lucide-react';
 
 export default function Register() {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
 
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -19,36 +19,13 @@ export default function Register() {
     e.preventDefault();
     setError('');
 
-    const trimmedName = name.trim().replace(/\s+/g, ' ');
-    if (trimmedName.length < 2 || trimmedName.length > 50) {
-      setError('Họ và tên không được chứa toàn khoảng trắng, độ dài từ 2 đến 50 ký tự.');
-      return;
-    }
-
+    const trimmedName = normalizeName(name);
     const trimmedUsername = username.trim();
-    if (/\s/.test(trimmedUsername) || trimmedUsername.length < 3 || trimmedUsername.length > 30) {
-      setError('Tên đăng nhập không được chứa khoảng trắng, độ dài từ 3 đến 30 ký tự.');
-      return;
-    }
-
-    if (!/^[a-zA-Z0-9_-]+$/.test(trimmedUsername)) {
-      setError('Tên đăng nhập chỉ được chứa chữ cái, chữ số, gạch dưới (_) và gạch nối (-).');
-      return;
-    }
-
     const trimmedEmail = email.trim();
-    if (/\s/.test(trimmedEmail) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setError('Email không được chứa dấu cách và phải đúng định dạng (VD: user@example.com).');
-      return;
-    }
 
-    if (password !== password.trim()) {
-      setError('Mật khẩu không được chứa khoảng trắng ở đầu hoặc cuối.');
-      return;
-    }
-
-    if (password.length < 8 || password.length > 100) {
-      setError('Mật khẩu phải từ 8 đến 100 ký tự.');
+    const problem = validateName(name) ?? validateUsername(username) ?? validateEmail(email);
+    if (problem) {
+      setError(problem);
       return;
     }
 
@@ -61,7 +38,6 @@ export default function Register() {
           name: trimmedName,
           username: trimmedUsername,
           email: trimmedEmail.toLowerCase(),
-          password
         }),
       });
       const data = await res.json();
@@ -90,12 +66,12 @@ export default function Register() {
             <div className="space-y-2">
               <h1 className="text-2xl font-bold tracking-tight text-foreground">Xác minh Email</h1>
               <p className="text-sm text-muted-foreground font-medium">
-                Một liên kết xác thực đã được gửi đến email <span className="text-primary font-semibold">{email}</span>.
+                Chúng tôi đã gửi một liên kết đến email <span className="text-primary font-semibold">{email}</span>. Mở liên kết đó để <strong className="text-foreground">đặt mật khẩu</strong> và kích hoạt tài khoản.
               </p>
             </div>
             <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 p-4 rounded-2xl text-xs font-medium leading-relaxed text-left">
               <AlertTriangle className="size-4 shrink-0 mt-0.5" />
-              <span>Vui lòng kích hoạt tài khoản trong vòng 10 phút. Sau thời gian này, tài khoản chưa xác thực sẽ tự động bị xóa.</span>
+              <span>Liên kết có hiệu lực trong 10 phút. Sau thời gian này, tài khoản chưa kích hoạt sẽ tự động bị xóa.</span>
             </div>
             <Link href="/login" className="block w-full py-3.5 rounded-full bg-primary hover:brightness-110 text-primary-foreground font-semibold text-sm transition-all shadow-lg glow-primary text-center">
               Quay lại đăng nhập
@@ -107,7 +83,7 @@ export default function Register() {
               <Link href="/">
                 <Logo size="lg" />
               </Link>
-              <p className="text-xs text-muted-foreground font-medium mt-3">Tạo tài khoản Smart Fitness mới</p>
+              <p className="text-xs text-muted-foreground font-medium mt-3">Tạo tài khoản Smart Fitness mới. Bạn sẽ đặt mật khẩu sau khi xác nhận email.</p>
             </div>
 
             {error && (
@@ -149,18 +125,6 @@ export default function Register() {
                   className="w-full px-4 py-3 bg-background border border-input rounded-2xl focus:outline-none focus:border-primary transition text-sm text-foreground placeholder:text-muted-foreground"
                   placeholder="name@example.com..."
                   required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mật khẩu</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-background border border-input rounded-2xl focus:outline-none focus:border-primary transition text-sm text-foreground placeholder:text-muted-foreground"
-                  placeholder="Tối thiểu 8 ký tự..."
-                  required
-                  minLength={8}
                 />
               </div>
               <button

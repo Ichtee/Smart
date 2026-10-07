@@ -274,6 +274,7 @@ describe('email link, step 1: GET /api/users/verify/:token only checks the link'
     const res = await request(app).get(`/api/users/verify/${token}`);
     expect(res.status).toBe(400);
     expect(res.body.message).toBeDefined();
+    expect(res.body.linkInvalid).toBe(true); // lets the UI tell "dead link" from "bad password"
   });
 });
 
@@ -313,6 +314,7 @@ describe('email link, step 2: POST /api/users/verify/:token sets the password an
     const { token } = await signup();
     const res = await complete(token, password);
     expect(res.status).toBe(400);
+    expect(res.body.linkInvalid).toBeUndefined(); // the link is fine, the password is not
 
     const user = await User.findOne({ username: 'vana' }).lean();
     expect(user.isEmailVerified).toBe(false);
@@ -344,7 +346,9 @@ describe('email link, step 2: POST /api/users/verify/:token sets the password an
   test('an expired link cannot be completed, and no password is stored', async () => {
     const { token } = await signup();
     await User.updateOne({ username: 'vana' }, { verificationTokenExpires: new Date(Date.now() - 1000) });
-    expect((await complete(token, 'password123')).status).toBe(400);
+    const res = await complete(token, 'password123');
+    expect(res.status).toBe(400);
+    expect(res.body.linkInvalid).toBe(true);
     const user = await User.findOne({ username: 'vana' }).lean();
     expect(user.isEmailVerified).toBe(false);
     expect(user.password).toBeUndefined();
