@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/utils/api';
+import { normalizeName, validateName } from '@/utils/validation';
 import { useProfile, refreshProfile, isUnauthorizedError } from '@/hooks/useApi';
 import { calcBmi, bmiCategory as getBmiCategory } from '@/utils/bmi';
 import { User, Activity, Target, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
@@ -63,9 +64,10 @@ export default function Profile() {
     setMessage({ text: '', type: '' });
 
     // Business Logic Validations
-    const trimmedName = formData.name ? formData.name.trim().replace(/\s+/g, ' ') : '';
-    if (trimmedName.length < 2 || trimmedName.length > 50) {
-      setMessage({ text: 'Họ và tên không được chứa toàn khoảng trắng, độ dài từ 2 đến 50 ký tự!', type: 'error' });
+    const trimmedName = normalizeName(formData.name);
+    const nameProblem = validateName(trimmedName);
+    if (nameProblem) {
+      setMessage({ text: nameProblem, type: 'error' });
       return;
     }
 
