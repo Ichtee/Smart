@@ -323,7 +323,23 @@ const completeRegistration = async (req, res) => {
   }
 };
 
-const RESEND_MESSAGE = 'Nếu tài khoản đang chờ xác thực, email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư.';
+// New sign-up link for a pending account (valid 10 minutes), emailed to its owner.
+const sendFreshVerificationEmail = async (user, subject) => {
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  user.verificationToken = verificationToken;
+  user.verificationTokenExpires = new Date(Date.now() + 10 * 60 * 1000);
+  await user.save();
+
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  await sendEmail({
+    to: user.email,
+    to_name: user.name,
+    verify_url: `${frontendUrl}/verify?token=${verificationToken}`,
+    subject,
+  });
+};
+
+const RESEND_MESSAGE ='Nếu tài khoản đang chờ xác thực, email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư.';
 
 // @desc    Resend verification email
 // @route   POST /api/users/resend-verification
@@ -347,22 +363,8 @@ const resendVerification = async (req, res) => {
       return res.status(200).json({ message: RESEND_MESSAGE });
     }
 
-    // Generate new token and extend expiry by 10 minutes
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    user.verificationToken = verificationToken;
-    user.verificationTokenExpires = new Date(Date.now() + 10 * 60 * 1000);
-    await user.save();
-
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const verifyUrl = `${frontendUrl}/verify?token=${verificationToken}`;
-
     try {
-      await sendEmail({
-        to: user.email,
-        to_name: user.name,
-        verify_url: verifyUrl,
-        subject: 'Xác thực tài khoản Smart App (Gửi lại)',
-      });
+      await sendFreshVerificationEmail(user, 'Xác thực tài khoản Smart App (Gửi lại)');
     } catch (emailErr) {
       console.error('resendVerification sendEmail error:', emailErr);
       return res.status(500).json({
@@ -599,6 +601,8 @@ const updateUserRoleAndStatus = async (req, res) => {
   }
 };
 
+const FORGOT_MESSAGE = 'Nếu email tồn tại trong hệ thống, link đặt lại mật khẩu đã được gửi tới hòm thư của bạn.';
+
 // @desc    Forgot password — send reset email
 // @route   POST /api/users/forgot-password
 // @access  Public
@@ -615,6 +619,18 @@ const forgotPassword = async (req, res) => {
     // Always return success to prevent email enumeration attacks
     if (!user) {
       return res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
+    }
+
+    // A pending account has no password to reset (and could not log in with a new one anyway):
+    // send the sign-up link so its owner finishes registering instead.
+    if (!user.isEmailVerified) {
+      try {
+        await sendFreshVerificationEmail(user, 'Hoàn tất đăng ký Smart App');
+      } catch (emailErr) {
+        console.error('forgotPassword (pending) sendEmail error:', emailErr);
+        return res.status(500).json({ message: `Lỗi gửi email: ${emailErr.message}` });
+      }
+      return res.status(200).json({ message: FORGOT_MESSAGE });
     }
 
     // Generate a secure reset token
@@ -641,7 +657,7 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    res.status(200).json({ message: 'Nếu email tồn tại trong hệ thống, link đặt lại mật khẩu đã được gửi tới hòm thư của bạn.' });
+    res.status(200).json({ message: FORGOT_MESSAGE });
   } catch (error) {
     console.error('forgotPassword error:', error);
     res.status(500).json({ message: 'Server error sending reset email' });

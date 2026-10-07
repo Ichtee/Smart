@@ -803,6 +803,23 @@ describe('forgot / reset password', () => {
     expect(lastEmail().body.template_params.verify_url).toBe(`http://localhost:3000/reset-password/${fresh.resetPasswordToken}`);
   });
 
+  test('a pending account gets a sign-up link instead of a reset link, and the same answer as everyone', async () => {
+    const { user } = await createUser({ isEmailVerified: false, verificationToken: 'old-token' });
+    const res = await request(app).post('/api/users/forgot-password').send({ email: user.email });
+    expect(res.status).toBe(200);
+
+    const fresh = await User.findById(user._id);
+    expect(fresh.resetPasswordToken).toBeUndefined();
+    expect(fresh.verificationToken).toHaveLength(64);
+    expect(fresh.verificationToken).not.toBe('old-token');
+    expect(lastEmail().body.template_params.verify_url).toBe(`http://localhost:3000/verify?token=${fresh.verificationToken}`);
+    expect(lastEmail().body.template_id).not.toBe('tpl_forgot_test');
+
+    const verified = await createUser();
+    const other = await request(app).post('/api/users/forgot-password').send({ email: verified.user.email });
+    expect(other.body).toEqual(res.body);
+  });
+
   test('the email is matched case-insensitively and ignoring surrounding spaces', async () => {
     const { user } = await createUser({ email: 'mixed@example.com' });
     const res = await request(app).post('/api/users/forgot-password').send({ email: '  Mixed@Example.COM ' });
