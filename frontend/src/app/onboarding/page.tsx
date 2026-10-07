@@ -6,6 +6,7 @@ import { Logo } from '@/components/smart/logo';
 import { apiFetch } from '@/utils/api';
 import { refreshProfile } from '@/hooks/useApi';
 import { calcBmr, calcTdee, calcTargetCalories } from '@/utils/nutritionCalc';
+import { calcBmi } from '@/utils/bmi';
 import { ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
 
 export default function Onboarding() {
@@ -41,8 +42,7 @@ export default function Onboarding() {
     if (step === 4) {
       const w = Number(formData.weight);
       const h = Number(formData.height);
-      const hInM = h / 100;
-      const bmi = w / (hInM * hInM);
+      const bmi = calcBmi(w, h);
       const bmr = calcBmr(formData);
       const tdee = calcTdee(formData);
       const targetCalories = calcTargetCalories(formData);

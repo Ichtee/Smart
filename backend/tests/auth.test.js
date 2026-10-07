@@ -649,6 +649,25 @@ describe('profile', () => {
     expect(fresh.name).toBe(user.name);
   });
 
+  // These are exactly the options of the goal / gender selects on the profile + onboarding pages.
+  // A value offered by the UI but refused here means users cannot save their profile at all.
+  test.each(['Tăng cơ', 'Giảm mỡ', 'Tăng cân', 'Giữ dáng', 'Sức bền', ''])('accepts the goal option %j', async (goal) => {
+    const { auth } = await createUser();
+    const res = await request(app).put('/api/users/profile').set(auth).send({ goal });
+    expect(res.status).toBe(200);
+    expect(res.body.goal).toBe(goal);
+  });
+
+  test.each(['Nam', 'Nữ', 'Khác', ''])('accepts the gender option %j', async (gender) => {
+    const { auth } = await createUser();
+    expect((await request(app).put('/api/users/profile').set(auth).send({ gender })).status).toBe(200);
+  });
+
+  test.each(['Ít vận động', 'Vận động nhẹ', 'Vận động vừa', 'Vận động nhiều', 'Vận động cực nhiều'])('accepts the activity option %j', async (activityLevel) => {
+    const { auth } = await createUser();
+    expect((await request(app).put('/api/users/profile').set(auth).send({ activityLevel })).status).toBe(200);
+  });
+
   test('boundary values are accepted', async () => {
     const { auth } = await createUser();
     for (const body of [{ age: 1 }, { age: 120 }, { height: 30 }, { height: 300 }, { weight: 10 }, { weight: 500 }, { lastActiveDayIndex: 0 }, { lastActiveDayIndex: 6 }]) {

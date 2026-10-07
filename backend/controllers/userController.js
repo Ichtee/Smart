@@ -430,7 +430,7 @@ const updateProfile = async (req, res) => {
       }
 
       if (req.body.goal !== undefined) {
-        if (!['Tăng cơ', 'Giảm mỡ', 'Tăng cân', 'Giữ dáng', ''].includes(req.body.goal)) {
+        if (!['Tăng cơ', 'Giảm mỡ', 'Tăng cân', 'Giữ dáng', 'Sức bền', ''].includes(req.body.goal)) {
           return res.status(400).json({ message: 'Mục tiêu không hợp lệ.' });
         }
         user.goal = req.body.goal;

@@ -4,6 +4,7 @@ import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/utils/api';
 import { useProfile, refreshProfile, isUnauthorizedError } from '@/hooks/useApi';
+import { calcBmi, bmiCategory as getBmiCategory } from '@/utils/bmi';
 import { User, Activity, Target, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function Profile() {
@@ -134,28 +135,8 @@ export default function Profile() {
   };
 
   // Calculate BMI
-  let bmi = 0;
-  let bmiCategory = '';
-  let bmiColor = '';
-
-  if (formData.height && formData.weight) {
-    const heightInMeters = Number(formData.height) / 100;
-    bmi = Number(formData.weight) / (heightInMeters * heightInMeters);
-
-    if (bmi < 18.5) {
-      bmiCategory = 'Thiếu cân';
-      bmiColor = 'text-blue-400';
-    } else if (bmi >= 18.5 && bmi < 24.9) {
-      bmiCategory = 'Bình thường';
-      bmiColor = 'text-emerald-400';
-    } else if (bmi >= 25 && bmi < 29.9) {
-      bmiCategory = 'Thừa cân';
-      bmiColor = 'text-amber-400';
-    } else {
-      bmiCategory = 'Béo phì';
-      bmiColor = 'text-rose-400';
-    }
-  }
+  const bmi = calcBmi(formData.weight, formData.height);
+  const { label: bmiCategory, color: bmiColor } = bmi > 0 ? getBmiCategory(bmi) : { label: '', color: '' };
 
   if (loading) {
     return (
