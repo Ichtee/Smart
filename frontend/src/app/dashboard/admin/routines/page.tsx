@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch, isUnauthorized } from '@/utils/api';
+import { apiFetch } from '@/utils/api';
+import { useRoutines, useExercises } from '@/hooks/useApi';
+import { useAdmin } from '@/hooks/useAdmin';
 
 function SearchableExerciseSelect({
   value,
@@ -235,10 +237,12 @@ function QuickAddExerciseBar({
 
 export default function RoutineManagement() {
   const router = useRouter();
-  const [routines, setRoutines] = useState<any[]>([]);
-  const [exercises, setExercises] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [authError, setAuthError] = useState('');
+  const { isAdmin, checking, authError } = useAdmin();
+  const { routines: routineData, isLoading: routinesLoading, mutate: mutateRoutines } = useRoutines(isAdmin);
+  const { exercises: exerciseData } = useExercises(isAdmin); // for the dynamic muscle categories
+  const routines: any[] = Array.isArray(routineData) ? routineData : [];
+  const exercises: any[] = Array.isArray(exerciseData) ? exerciseData : [];
+  const loading = checking || (isAdmin && routinesLoading);
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -283,58 +287,6 @@ export default function RoutineManagement() {
     'Chủ nhật': 7,
   };
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await apiFetch('/api/users/profile');
-        if (isUnauthorized(res)) {
-          router.push('/login');
-          return;
-        }
-        const user = await res.json();
-
-        if (res.ok && user.role === 'admin') {
-          fetchRoutines();
-          fetchExercises(); // Pre-fetch exercises to extract dynamic categories
-        } else {
-          setAuthError('Từ chối truy cập: Bạn không có quyền Quản trị viên.');
-          setLoading(false);
-        }
-      } catch (err) {
-        setAuthError('Lỗi xác thực.');
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  const fetchRoutines = async () => {
-    try {
-      const res = await apiFetch('/api/routines');
-      if (!res.ok) throw new Error(`Lỗi Server: ${res.status}`);
-      const data = await res.json();
-      setRoutines(data);
-    } catch (err) {
-      console.error('Failed to fetch routines', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-
-  const fetchExercises = async () => {
-    try {
-      const res = await apiFetch('/api/exercises');
-      if (!res.ok) throw new Error(`Lỗi Server: ${res.status}`);
-      const data = await res.json();
-      setExercises(data);
-    } catch (err) {
-      console.error('Failed to fetch exercises', err);
-    }
-  };
-
   // Trích xuất danh sách Category (Muscle Group) duy nhất từ Database
   const dynamicCategories = Array.from(new Set(exercises.map(ex => ex.muscle))).filter(Boolean);
 
@@ -363,7 +315,7 @@ export default function RoutineManagement() {
     try {
       const res = await apiFetch(`/api/routines/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        setRoutines(routines.filter(r => r.id !== id));
+        mutateRoutines();
       } else {
         const error = await res.json();
         alert(error.message || 'Lỗi khi xóa lịch tập');
@@ -429,7 +381,7 @@ export default function RoutineManagement() {
 
       if (res.ok) {
         setIsModalOpen(false);
-        fetchRoutines();
+        mutateRoutines();
       } else {
         const error = await res.json();
         alert(error.message || 'Lỗi khi lưu lịch tập');

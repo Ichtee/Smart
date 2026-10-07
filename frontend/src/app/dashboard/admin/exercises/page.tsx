@@ -1,7 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch, isUnauthorized } from '@/utils/api';
+import { apiFetch } from '@/utils/api';
+import { useExercises } from '@/hooks/useApi';
+import { useAdmin } from '@/hooks/useAdmin';
 
 const MUSCLE_NAMES_VI: Record<string, string> = {
   chest: 'Ngực (Chest)',
@@ -34,9 +36,10 @@ const getYouTubeEmbedUrl = (url?: string): string => {
 
 export default function AdminExercises() {
   const router = useRouter();
-  const [exercises, setExercises] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [authError, setAuthError] = useState('');
+  const { isAdmin, checking, authError } = useAdmin();
+  const { exercises: exerciseData, isLoading: exercisesLoading, mutate: mutateExercises } = useExercises(isAdmin);
+  const exercises: any[] = Array.isArray(exerciseData) ? exerciseData : [];
+  const loading = checking || (isAdmin && exercisesLoading);
   
   // Search and Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,43 +80,6 @@ export default function AdminExercises() {
   const equipmentOptions = [
     'Machine', 'Cable Machine', 'Smith Machine', 'Barbell', 'Dumbbell', 'Bodyweight', 'Assisted Machine', 'Bench'
   ];
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await apiFetch('/api/users/profile');
-        if (isUnauthorized(res)) {
-          router.push('/login');
-          return;
-        }
-        const user = await res.json();
-
-        if (res.ok && user.role === 'admin') {
-          fetchExercises();
-        } else {
-          setAuthError('Từ chối truy cập: Bạn không có quyền Quản trị viên (Admin).');
-          setLoading(false);
-        }
-      } catch (err) {
-        setAuthError('Lỗi xác thực.');
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  const fetchExercises = async () => {
-    try {
-      const res = await apiFetch('/api/exercises');
-      const data = await res.json();
-      setExercises(data);
-    } catch (err) {
-      console.error('Failed to fetch exercises', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const resetForm = () => {
     setFormData({
@@ -169,7 +135,7 @@ export default function AdminExercises() {
         const isEdit = !!editingId;
         const currentName = formData.name;
         resetForm();
-        fetchExercises();
+        mutateExercises();
         setPopup({
           show: true,
           type: 'success',
@@ -227,7 +193,7 @@ export default function AdminExercises() {
       const res = await apiFetch(`/api/exercises/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (res.ok) {
-        fetchExercises();
+        mutateExercises();
         setPopup({
           show: true,
           type: 'success',

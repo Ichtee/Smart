@@ -1,13 +1,15 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch, isUnauthorized } from '@/utils/api';
+import { apiFetch } from '@/utils/api';
+import { useAdminUsers } from '@/hooks/useApi';
+import { useAdmin } from '@/hooks/useAdmin';
 
 export default function UserManagement() {
   const router = useRouter();
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [authError, setAuthError] = useState('');
+  const { isAdmin, checking, authError } = useAdmin();
+  const { users, isLoading: usersLoading, mutate: mutateUsers } = useAdminUsers(isAdmin);
+  const loading = checking || (isAdmin && usersLoading);
   
   // Search state
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,44 +26,6 @@ export default function UserManagement() {
     confirmText?: string;
     onConfirm?: () => void;
   } | null>(null);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await apiFetch('/api/users/profile');
-        if (isUnauthorized(res)) {
-          router.push('/login');
-          return;
-        }
-        const user = await res.json();
-
-        if (res.ok && user.role === 'admin') {
-          fetchUsers();
-        } else {
-          setAuthError('Từ chối truy cập: Bạn không có quyền Quản trị viên (Admin).');
-          setLoading(false);
-        }
-      } catch (err) {
-        setAuthError('Lỗi xác thực.');
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      const res = await apiFetch('/api/users');
-      if (!res.ok) throw new Error(`Lỗi Server: ${res.status}`);
-      const data = await res.json();
-      setUsers(Array.isArray(data) ? data : (data.users || []));
-    } catch (err) {
-      console.error('Failed to fetch users', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const confirmDeleteUser = (user: any) => {
     setPopup({
@@ -80,7 +44,7 @@ export default function UserManagement() {
       const res = await apiFetch(`/api/users/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setSelectedUser(null);
-        fetchUsers();
+        mutateUsers();
         setPopup({
           show: true,
           type: 'success',
@@ -116,7 +80,7 @@ export default function UserManagement() {
         })
       });
       if (res.ok) {
-        fetchUsers();
+        mutateUsers();
         setPopup({
           show: true,
           type: 'success',
@@ -125,7 +89,7 @@ export default function UserManagement() {
         });
       } else {
         const error = await res.json();
-        fetchUsers();
+        mutateUsers();
         setPopup({
           show: true,
           type: 'error',

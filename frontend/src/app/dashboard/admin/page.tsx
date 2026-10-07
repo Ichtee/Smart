@@ -1,58 +1,15 @@
 'use client';
-import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch, isUnauthorized } from '@/utils/api';
+import { useAdminUsers, useExercises } from '@/hooks/useApi';
+import { useAdmin } from '@/hooks/useAdmin';
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [stats, setStats] = useState({ users: 0, exercises: 0 });
-  const [loading, setLoading] = useState(true);
-  const [authError, setAuthError] = useState('');
-
-  useEffect(() => {
-    const checkAuthAndFetchStats = async () => {
-      try {
-        const profileRes = await apiFetch('/api/users/profile');
-        if (isUnauthorized(profileRes)) {
-          router.push('/login');
-          return;
-        }
-        const user = await profileRes.json();
-
-        if (profileRes.ok && user.role === 'admin') {
-          const [usersRes, exercisesRes] = await Promise.all([
-            apiFetch('/api/users'),
-            apiFetch('/api/exercises')
-          ]);
-
-          let usersCount = 0;
-          let exercisesCount = 0;
-
-          if (usersRes.ok) {
-            const usersData = await usersRes.json();
-            usersCount = Array.isArray(usersData) ? usersData.length : (usersData.total || usersData.users?.length || 0);
-          }
-          if (exercisesRes.ok) {
-            const exercisesData = await exercisesRes.json();
-            exercisesCount = exercisesData.length || 0;
-          }
-
-          setStats({
-            users: usersCount,
-            exercises: exercisesCount
-          });
-        } else {
-          setAuthError('Từ chối truy cập: Bạn không có quyền Quản trị viên.');
-        }
-      } catch (err) {
-        setAuthError('Lỗi xác thực.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuthAndFetchStats();
-  }, []);
+  const { isAdmin, checking, authError } = useAdmin();
+  const { total: usersCount, isLoading: usersLoading } = useAdminUsers(isAdmin);
+  const { exercises, isLoading: exercisesLoading } = useExercises(isAdmin);
+  const stats = { users: usersCount, exercises: Array.isArray(exercises) ? exercises.length : 0 };
+  const loading = checking || (isAdmin && (usersLoading || exercisesLoading));
 
   if (authError) {
     return (

@@ -1,6 +1,7 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { apiFetch } from '@/utils/api';
+import { useFoods } from '@/hooks/useApi';
 
 interface FoodItem {
   _id: string;
@@ -15,8 +16,8 @@ interface FoodItem {
 }
 
 export default function AdminFoodsPage() {
-  const [foods, setFoods] = useState<FoodItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { foods: foodData, isLoading: loading, mutate: mutateFoods } = useFoods();
+  const foods: FoodItem[] = Array.isArray(foodData) ? foodData : [];
   const [search, setSearch] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('Tất cả');
 
@@ -33,25 +34,6 @@ export default function AdminFoodsPage() {
   const [formImage, setFormImage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-
-  const fetchFoods = async () => {
-    try {
-      setLoading(true);
-      const res = await apiFetch('/api/foods');
-      if (res.ok) {
-        const data = await res.json();
-        setFoods(data);
-      }
-    } catch (err) {
-      console.error('Lỗi lấy danh sách món ăn:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchFoods();
-  }, []);
 
   const openCreateModal = () => {
     setEditingFood(null);
@@ -116,7 +98,7 @@ export default function AdminFoodsPage() {
 
       if (res.ok) {
         setIsModalOpen(false);
-        fetchFoods();
+        mutateFoods();
       } else {
         const data = await res.json();
         setErrorMsg(data.message || 'Thao tác thất bại');
@@ -135,7 +117,7 @@ export default function AdminFoodsPage() {
       const res = await apiFetch(`/api/foods/${id}`, { method: 'DELETE' });
 
       if (res.ok) {
-        fetchFoods();
+        mutateFoods();
       } else {
         alert('Xóa món ăn thất bại');
       }

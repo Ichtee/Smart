@@ -77,18 +77,19 @@ export const refreshProfile = async () => {
   }
 };
 
-export function useRoutines() {
-  const { data, error, isLoading, mutate } = useSWR('/api/routines', fetcher, STATIC);
+/** `enabled` false skips the request (admin pages wait until the visitor is known to be an admin). */
+export function useRoutines(enabled = true) {
+  const { data, error, isLoading, mutate } = useSWR(enabled ? '/api/routines' : null, fetcher, STATIC);
   return { routines: data as any[] | undefined, error, isLoading, mutate };
 }
 
-export function useExercises() {
-  const { data, error, isLoading, mutate } = useSWR('/api/exercises', fetcher, STATIC);
+export function useExercises(enabled = true) {
+  const { data, error, isLoading, mutate } = useSWR(enabled ? '/api/exercises' : null, fetcher, STATIC);
   return { exercises: data as any[] | undefined, error, isLoading, mutate };
 }
 
-export function useFoods() {
-  const { data, error, isLoading, mutate } = useSWR('/api/foods', fetcher, STATIC);
+export function useFoods(enabled = true) {
+  const { data, error, isLoading, mutate } = useSWR(enabled ? '/api/foods' : null, fetcher, STATIC);
   return { foods: data as any[] | undefined, error, isLoading, mutate };
 }
 
@@ -97,4 +98,12 @@ export function useStreak() {
   const key = `/api/workouts/streak?today=${toDateStr(new Date())}`;
   const { data, error, isLoading, mutate } = useSWR(key, fetcher, { revalidateOnFocus: true, shouldRetryOnError: false });
   return { streak: data, error, isLoading, mutate };
+}
+
+/** All accounts (admin only). Always fresh on mount; the API returns a bare array or { users, total }. */
+export function useAdminUsers(enabled: boolean) {
+  const { data, error, isLoading, mutate } = useSWR(enabled ? '/api/users' : null, fetcher, { revalidateOnFocus: false, shouldRetryOnError: false });
+  const users: any[] = Array.isArray(data) ? data : (data?.users || []);
+  const total: number = Array.isArray(data) ? data.length : (data?.total || users.length);
+  return { users, total, error, isLoading, mutate };
 }
