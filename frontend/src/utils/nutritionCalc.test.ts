@@ -165,3 +165,28 @@ describe('sumMacros', () => {
     expect(sumMacros(items)).toMatchObject({ protein: 4, carbs: 4, fat: 4 });
   });
 });
+
+describe('calorieAdjustment (from the weight-trend advice)', () => {
+  const base = { ...man, activityLevel: 'Vận động vừa' };
+  const tdee = calcTdee(base);
+
+  test('is added on top of the goal target for every goal', () => {
+    expect(calcTargetCalories({ ...base, goal: 'Giảm mỡ', calorieAdjustment: 150 })).toBe(tdee - 500 + 150);
+    expect(calcTargetCalories({ ...base, goal: 'Tăng cơ', calorieAdjustment: -100 })).toBe(tdee + 300 - 100);
+    expect(calcTargetCalories({ ...base, goal: 'Giữ dáng', calorieAdjustment: 50 })).toBe(tdee + 50);
+    expect(calcTargetCalories({ ...base, calorieAdjustment: -50 })).toBe(tdee - 50);
+  });
+
+  test('0, null, undefined and junk change nothing', () => {
+    const plain = calcTargetCalories({ ...base, goal: 'Giảm mỡ' });
+    for (const v of [0, null, undefined, NaN, 'abc' as unknown as number]) {
+      expect(calcTargetCalories({ ...base, goal: 'Giảm mỡ', calorieAdjustment: v })).toBe(plain);
+    }
+  });
+
+  test('never drops below 1200 kcal, and the displayed goal adjustment includes it', () => {
+    const small = { weight: 40, height: 150, age: 60, gender: 'Nữ', activityLevel: 'Ít vận động', goal: 'Giảm mỡ', calorieAdjustment: -300 };
+    expect(calcTargetCalories(small)).toBe(1200);
+    expect(calcGoalAdjustment({ ...base, goal: 'Giữ dáng', calorieAdjustment: 100 })).toBe(100);
+  });
+});

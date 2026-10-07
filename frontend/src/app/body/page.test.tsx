@@ -16,11 +16,12 @@ vi.mock('@/components/Sidebar', () => ({ default: () => <aside /> }));
 vi.mock('@/hooks/useApi', () => ({
   fetcher: vi.fn(),
   refreshProfile: vi.fn(async () => undefined),
+  useProfile: vi.fn(() => ({ profile: undefined as unknown })),
   isUnauthorizedError: (e: unknown) => (e as { status?: number } | null)?.status === 401,
 }));
 vi.mock('@/utils/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/utils/api')>()), apiFetch: vi.fn() }));
 
-import { fetcher } from '@/hooks/useApi';
+import { fetcher, useProfile } from '@/hooks/useApi';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -44,6 +45,7 @@ beforeEach(() => {
   vi.mocked(fetcher).mockReset();
   vi.mocked(apiFetch).mockReset();
   vi.mocked(refreshProfile).mockClear();
+  vi.mocked(useProfile).mockReturnValue({ profile: undefined } as unknown as ReturnType<typeof useProfile>);
   vi.mocked(apiFetch).mockResolvedValue(json({ metric: {}, profileWeight: 72 }));
   localStorage.clear();
   vi.stubGlobal('confirm', vi.fn(() => true));
@@ -261,5 +263,22 @@ describe('Body page: loading problems', () => {
     expect(nav.push).not.toHaveBeenCalled();
     await userEvent.setup({ delay: null }).click(within(alert).getByRole('button', { name: 'Thử lại' }));
     expect(await screen.findByText('72.5 / 75')).toBeInTheDocument();
+  });
+});
+
+describe('Body page: calorie advice', () => {
+  const PROFILE = { weight: 72.5, height: 175, age: 30, gender: 'Nam', activityLevel: 'Vận động vừa', goal: 'Giảm mỡ', calorieAdjustment: 0 };
+  const FLAT = [metric('2026-05-01', 72), metric('2026-05-08', 72), metric('2026-05-15', 72), metric('2026-05-22', 72)];
+
+  test('shows the advice once the profile is loaded', async () => {
+    vi.mocked(useProfile).mockReturnValue({ profile: PROFILE } as unknown as ReturnType<typeof useProfile>);
+    await setup(FLAT);
+    expect(screen.getByRole('heading', { name: /Gợi ý điều chỉnh calo/ })).toBeInTheDocument();
+    expect(screen.getByTestId('advice-text')).toHaveTextContent('Nên giảm');
+  });
+
+  test('is not shown without a profile', async () => {
+    await setup(FLAT);
+    expect(screen.queryByRole('heading', { name: /Gợi ý điều chỉnh calo/ })).not.toBeInTheDocument();
   });
 });

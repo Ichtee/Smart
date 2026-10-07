@@ -272,6 +272,7 @@ const loginUser = async (req, res) => {
         age: user.age,
         gender: user.gender,
         goal: user.goal,
+        calorieAdjustment: user.calorieAdjustment || 0,
         activityLevel: user.activityLevel,
         role: user.role,
         lastActiveRoutineId: user.lastActiveRoutineId || 'ppl',
@@ -465,7 +466,16 @@ const updateProfile = async (req, res) => {
         if (!['Tăng cơ', 'Giảm mỡ', 'Tăng cân', 'Giữ dáng', 'Sức bền', ''].includes(req.body.goal)) {
           return res.status(400).json({ message: 'Mục tiêu không hợp lệ.' });
         }
+        // an adjustment tuned for the old goal does not carry over to a different one
+        if (req.body.goal !== user.goal) user.calorieAdjustment = 0;
         user.goal = req.body.goal;
+      }
+      if (req.body.calorieAdjustment !== undefined) {
+        const adj = req.body.calorieAdjustment;
+        if (!Number.isInteger(adj) || adj < -500 || adj > 500) {
+          return res.status(400).json({ message: 'Điều chỉnh calo phải là số nguyên từ -500 đến 500.' });
+        }
+        user.calorieAdjustment = adj;
       }
       if (req.body.activityLevel !== undefined) {
         if (!['Ít vận động', 'Vận động nhẹ', 'Vận động vừa', 'Vận động nhiều', 'Vận động cực nhiều', ''].includes(req.body.activityLevel)) {
@@ -516,6 +526,7 @@ const updateProfile = async (req, res) => {
         height: updatedUser.height,
         weight: currentWeight,
         goal: updatedUser.goal,
+        calorieAdjustment: updatedUser.calorieAdjustment || 0,
         activityLevel: updatedUser.activityLevel,
         role: updatedUser.role,
         lastActiveRoutineId: updatedUser.lastActiveRoutineId,

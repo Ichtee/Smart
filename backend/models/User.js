@@ -66,6 +66,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  // kcal/day added to the goal-based calorie target (set by the weight-trend advice on the body page)
+  calorieAdjustment: {
+    type: Number,
+    min: -500,
+    max: 500,
+    default: 0
+  },
   activityLevel: {
     type: String,
     enum: ['Ít vận động', 'Vận động nhẹ', 'Vận động vừa', 'Vận động nhiều', 'Vận động cực nhiều', ''],

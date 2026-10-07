@@ -8,6 +8,8 @@ export interface BodyProfile {
   gender?: string | null;
   activityLevel?: string | null;
   goal?: string | null;
+  /** kcal/day added to the goal target (from the weight-trend advice) */
+  calorieAdjustment?: number | null;
 }
 
 export const ACTIVITY_MULTIPLIERS: Record<string, number> = {
@@ -41,9 +43,12 @@ export function calcTdee(p: BodyProfile): number {
 
 export function calcTargetCalories(p: BodyProfile): number {
   const tdee = calcTdee(p);
-  if (p.goal === 'Giảm mỡ') return Math.max(1200, tdee - 500);
-  if (p.goal === 'Tăng cơ' || p.goal === 'Tăng cân') return tdee + 300;
-  return tdee;
+  let target = tdee;
+  if (p.goal === 'Giảm mỡ') target = Math.max(1200, tdee - 500);
+  else if (p.goal === 'Tăng cơ' || p.goal === 'Tăng cân') target = tdee + 300;
+  const adjustment = Number(p.calorieAdjustment);
+  if (Number.isFinite(adjustment) && adjustment !== 0) target = Math.max(1200, target + Math.round(adjustment));
+  return target;
 }
 
 /** Signed calorie adjustment vs TDEE for the goal (for display). */

@@ -4,10 +4,11 @@ import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import { apiFetch, describeError } from '@/utils/api';
-import { fetcher, refreshProfile, isUnauthorizedError } from '@/hooks/useApi';
+import { fetcher, refreshProfile, useProfile, isUnauthorizedError } from '@/hooks/useApi';
 import { toDateStr, todayStr } from '@/utils/dateUtils';
 import { metricBody, summarize, validateMetricForm, type BodyMetric } from '@/utils/bodyMetrics';
 import BodyChart from './BodyChart';
+import CalorieAdvicePanel from './CalorieAdvicePanel';
 import { Scale, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 const HISTORY_DAYS = 180;
@@ -28,6 +29,7 @@ export default function BodyPage() {
   );
   const metrics = useMemo(() => data ?? [], [data]);
   const summary = summarize(metrics);
+  const { profile } = useProfile();
 
   const [date, setDate] = useState(today);
   const [form, setForm] = useState({ weight: '', bodyFat: '', waist: '' });
@@ -161,6 +163,8 @@ export default function BodyPage() {
             <h2 className="text-lg font-bold mb-4">Cân nặng theo thời gian</h2>
             <BodyChart metrics={metrics} />
           </div>
+
+          {profile && <CalorieAdvicePanel metrics={metrics} profile={profile} />}
 
           <form onSubmit={handleSubmit} noValidate className="bg-card border border-border rounded-3xl p-5 sm:p-8 space-y-5">
             <h2 className="text-lg font-bold">Ghi số đo</h2>

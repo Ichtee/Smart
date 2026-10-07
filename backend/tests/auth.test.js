@@ -718,6 +718,54 @@ describe('profile', () => {
     expect(res.body.goal).toBe(goal);
   });
 
+  describe('calorieAdjustment (weight-trend advice)', () => {
+    const put = (auth, body) => request(app).put('/api/users/profile').set(auth).send(body);
+
+    test('login returns the saved adjustment', async () => {
+      const { auth, user } = await createUser();
+      await put(auth, { calorieAdjustment: -150 });
+      const res = await loginAs(user.username, 'password123');
+      expect(res.status).toBe(200);
+      expect(res.body.calorieAdjustment).toBe(-150);
+    });
+
+    test('defaults to 0 and is saved and returned by PUT and GET', async () => {
+      const { auth } = await createUser();
+      expect((await request(app).get('/api/users/profile').set(auth)).body.calorieAdjustment).toBe(0);
+      const res = await put(auth, { calorieAdjustment: -150 });
+      expect(res.status).toBe(200);
+      expect(res.body.calorieAdjustment).toBe(-150);
+      expect((await request(app).get('/api/users/profile').set(auth)).body.calorieAdjustment).toBe(-150);
+    });
+
+    test.each([-500, 0, 500])('accepts the limit %i', async (calorieAdjustment) => {
+      const { auth } = await createUser();
+      expect((await put(auth, { calorieAdjustment })).body.calorieAdjustment).toBe(calorieAdjustment);
+    });
+
+    test.each([[501], [-501], [10.5], ['100'], [null], [NaN], [[100]]])('rejects %j and keeps the old value', async (calorieAdjustment) => {
+      const { auth, user } = await createUser();
+      await put(auth, { calorieAdjustment: 200 });
+      const res = await put(auth, { calorieAdjustment });
+      expect(res.status).toBe(400);
+      expect((await User.findById(user._id)).calorieAdjustment).toBe(200);
+    });
+
+    test('changing the goal resets it, saving the same goal keeps it', async () => {
+      const { auth, user } = await createUser();
+      await put(auth, { goal: 'Giảm mỡ', calorieAdjustment: -150 });
+      await put(auth, { goal: 'Giảm mỡ' });
+      expect((await User.findById(user._id)).calorieAdjustment).toBe(-150);
+      const res = await put(auth, { goal: 'Tăng cơ' });
+      expect(res.body.calorieAdjustment).toBe(0);
+    });
+
+    test('a goal change together with a new adjustment keeps the new adjustment', async () => {
+      const { auth } = await createUser();
+      expect((await put(auth, { goal: 'Tăng cơ', calorieAdjustment: 100 })).body.calorieAdjustment).toBe(100);
+    });
+  });
+
   test.each(['Nam', 'Nữ', 'Khác', ''])('accepts the gender option %j', async (gender) => {
     const { auth } = await createUser();
     expect((await request(app).put('/api/users/profile').set(auth).send({ gender })).status).toBe(200);
