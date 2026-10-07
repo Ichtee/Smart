@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { API_URL, apiFetch, isUnauthorized } from '@/utils/api';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import { calcTargetCalories, calcTdee, calcGoalAdjustment } from '@/utils/nutritionCalc';
+import { useFoods, useProfile, isUnauthorizedError } from '@/hooks/useApi';
+import { useServerSave } from '@/hooks/useServerSave';
+import SaveStatusBanner from '@/components/SaveStatusBanner';
 
 interface MealItem {
   id: string;
@@ -17,14 +20,24 @@ interface MealItem {
   fat?: number;
 }
 
+// Module-level so the id source is not treated as an impure call during render
+const newMealItemId = () => Date.now().toString();
+
+interface DbFood {
+  _id: string;
+  name: string;
+  servingSize: string;
+  calories: number;
+  category?: string;
+  image?: string;
+  isCustom?: boolean;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+}
+
 export default function Nutrition() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [profileError, setProfileError] = useState(false);
-  const [profileRetryTick, setProfileRetryTick] = useState(0);
-  const [targetCalories, setTargetCalories] = useState(2000);
-  const [tdee, setTdee] = useState(2000);
-  const [calorieDeficit, setCalorieDeficit] = useState(0);
 
   // Water Tracker State
   const [waterGlasses, setWaterGlasses] = useState(4);
@@ -69,18 +82,9 @@ export default function Nutrition() {
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
 
   // Live Food Database State
-  const [dbFoods, setDbFoods] = useState<Array<{
-    _id: string;
-    name: string;
-    servingSize: string;
-    calories: number;
-    category?: string;
-    image?: string;
-    isCustom?: boolean;
-    protein?: number;
-    carbs?: number;
-    fat?: number;
-  }>>([]);
+  // Food database from the shared SWR cache (system foods + the user's custom foods)
+  const { foods: dbFoodsData, mutate: mutateFoods } = useFoods();
+  const dbFoods: DbFood[] = useMemo(() => (dbFoodsData as DbFood[] | undefined) ?? [], [dbFoodsData]);
   const [showDbDropdown, setShowDbDropdown] = useState(false);
   const [saveAsCustomFood, setSaveAsCustomFood] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'search' | 'my_foods'>('search');
@@ -96,20 +100,6 @@ export default function Nutrition() {
   const [customFormCategory, setCustomFormCategory] = useState('Tất cả');
   const [customFormImage, setCustomFormImage] = useState('');
   const [savingCustomFood, setSavingCustomFood] = useState(false);
-
-  const fetchFoodsFromDb = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/foods`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-        credentials: 'include'
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setDbFoods(data);
-      }
-    } catch (e) {}
-  };
 
   const handleCreateCustomFoodDirectly = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,7 +142,7 @@ export default function Nutrition() {
         setCustomFormCategory('Tất cả');
         setCustomFormImage('');
         setShowCreateCustomForm(false);
-        fetchFoodsFromDb();
+        mutateFoods();
       } else {
         const data = await res.json();
         alert(data.message || 'Lỗi khi lưu món ăn cá nhân');
@@ -163,10 +153,6 @@ export default function Nutrition() {
       setSavingCustomFood(false);
     }
   };
-
-  useEffect(() => {
-    fetchFoodsFromDb();
-  }, []);
 
   const computedTotalCalories = useMemo(() => {
     const mult = parseFloat(portionMultiplier);
@@ -194,107 +180,61 @@ export default function Nutrition() {
     setPortionMultiplier('1');
   };
 
-  const pushNutritionToBackend = async (
-    targetWaterGlasses: number,
-    targetMlPerGlass: number,
-    targetMeals: Record<string, MealItem[]>
-  ) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
+  const { save: saveToServer, retry: retrySave, status: saveStatus } = useServerSave();
 
-      await fetch(`${API_URL}/api/nutrition`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          date: selectedDate,
-          waterGlasses: targetWaterGlasses,
-          mlPerGlass: targetMlPerGlass,
-          meals: targetMeals
-        })
-      });
-    } catch (err) {
-      console.error('Failed to push nutrition log to API:', err);
-    }
+  // Persist a full snapshot of one day. The date is captured now (not when the queued request runs)
+  // and other pages are notified only after the server confirms the save.
+  const pushNutritionToBackend = (
+    date: string,
+    glasses: number,
+    mlGlass: number,
+    dayMeals: Record<string, MealItem[]>
+  ) => {
+    saveToServer(() => apiFetch('/api/nutrition', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, waterGlasses: glasses, mlPerGlass: mlGlass, meals: dayMeals })
+    })).then(ok => { if (ok) notifyStorageChange(date); });
   };
 
-  // Load meals & water for selectedDate with real-time event synchronization
+  // Load meals & water for selectedDate from the server (the only copy of the data).
+  // `loadedDate` / `dayLoadErrorDate` are keyed by date so switching days never shows stale state.
+  const [loadedDate, setLoadedDate] = useState<string | null>(null);
+  const [dayLoadErrorDate, setDayLoadErrorDate] = useState<string | null>(null);
+  const [dayRetryTick, setDayRetryTick] = useState(0);
+  const dayLoaded = loadedDate === selectedDate;
+  const dayLoadError = dayLoadErrorDate === selectedDate;
+
   useEffect(() => {
     let isCancelled = false;
 
     const loadNutrition = async () => {
-      let loadedFromApi = false;
-      let targetWater = 0;
-      let targetMl = mlPerGlass || 250;
-      let targetMeals: Record<string, MealItem[]> = {
-        'Bữa Sáng': [],
-        'Bữa Trưa': [],
-        'Bữa Tối': [],
-        'Ăn Vặt': []
-      };
+      try {
+        const res = await apiFetch(`/api/nutrition?date=${selectedDate}`);
+        if (isCancelled) return;
+        if (isUnauthorized(res)) {
+          localStorage.removeItem('token');
+          router.push('/login');
+          return;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const apiLog = await res.json();
+        if (isCancelled) return;
 
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const res = await fetch(`${API_URL}/api/nutrition?date=${selectedDate}`, {
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-            credentials: 'include'
-          });
-          if (res.ok) {
-            const apiLog = await res.json();
-            if (apiLog) {
-              targetWater = apiLog.waterGlasses || 0;
-              targetMl = apiLog.mlPerGlass || 250;
-              targetMeals = {
-                'Bữa Sáng': apiLog.meals?.['Bữa Sáng'] || [],
-                'Bữa Trưa': apiLog.meals?.['Bữa Trưa'] || [],
-                'Bữa Tối': apiLog.meals?.['Bữa Tối'] || [],
-                'Ăn Vặt': apiLog.meals?.['Ăn Vặt'] || []
-              };
-              loadedFromApi = true;
-            }
-          }
-        } catch (e) { }
+        setWaterGlasses(apiLog.waterGlasses || 0);
+        setMlPerGlass(apiLog.mlPerGlass || 250);
+        setMeals({
+          'Bữa Sáng': apiLog.meals?.['Bữa Sáng'] || [],
+          'Bữa Trưa': apiLog.meals?.['Bữa Trưa'] || [],
+          'Bữa Tối': apiLog.meals?.['Bữa Tối'] || [],
+          'Ăn Vặt': apiLog.meals?.['Ăn Vặt'] || []
+        });
+        setLoadedDate(selectedDate);
+        setDayLoadErrorDate(null);
+      } catch (err) {
+        console.error('Failed to load nutrition log', err);
+        if (!isCancelled) setDayLoadErrorDate(selectedDate);
       }
-
-      if (!token && !loadedFromApi) {
-        try {
-          let savedWater = localStorage.getItem(`smart_water_${selectedDate}`);
-          let savedMeals = localStorage.getItem(`smart_meals_${selectedDate}`);
-
-          // Auto-migrate data logged under yesterday if today is empty due to previous UTC bug
-          if (selectedDate === todayStr && !savedMeals) {
-            const yesterdayDate = new Date();
-            yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-            const yStr = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}-${String(yesterdayDate.getDate()).padStart(2, '0')}`;
-            const yesterdayMeals = localStorage.getItem(`smart_meals_${yStr}`);
-            if (yesterdayMeals) {
-              localStorage.setItem(`smart_meals_${selectedDate}`, yesterdayMeals);
-              savedMeals = yesterdayMeals;
-            }
-            const yesterdayWater = localStorage.getItem(`smart_water_${yStr}`);
-            if (yesterdayWater && !savedWater) {
-              localStorage.setItem(`smart_water_${selectedDate}`, yesterdayWater);
-              savedWater = yesterdayWater;
-            }
-          }
-
-          targetWater = savedWater ? parseInt(savedWater, 10) || 0 : 0;
-          if (savedMeals) {
-            targetMeals = JSON.parse(savedMeals);
-          }
-        } catch (e) { }
-      }
-
-      if (isCancelled) return;
-
-      setWaterGlasses(targetWater);
-      setMlPerGlass(targetMl);
-      setMeals(targetMeals);
     };
 
     loadNutrition();
@@ -302,48 +242,29 @@ export default function Nutrition() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedDate, todayStr]);
+  }, [selectedDate, dayRetryTick, router]);
+
+
+  // Profile comes from the shared SWR cache (one request for all pages)
+  const { profile, error: profileFetchError, isLoading: profileLoading, mutate: mutateProfile } = useProfile();
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          router.push('/login');
-          return;
-        }
+    if (isUnauthorizedError(profileFetchError)) {
+      localStorage.removeItem('token');
+      router.push('/login');
+    }
+  }, [profileFetchError, router]);
 
-        setProfileError(false);
-        const res = await apiFetch('/api/users/profile');
+  useEffect(() => {
+    if (profile && (!profile.height || !profile.weight)) router.push('/onboarding');
+  }, [profile, router]);
 
-        if (res.ok) {
-          const user = await res.json();
+  const profileError = !!profileFetchError && !isUnauthorizedError(profileFetchError);
+  const loading = profileLoading && !profile;
+  const targetCalories = profile ? calcTargetCalories(profile) : 2000;
+  const tdee = profile ? calcTdee(profile) : 2000;
+  const calorieDeficit = profile ? calcGoalAdjustment(profile) : 0;
 
-          if (!user.height || !user.weight) {
-            router.push('/onboarding');
-            return;
-          }
-
-          setTdee(calcTdee(user));
-          setCalorieDeficit(calcGoalAdjustment(user));
-          setTargetCalories(calcTargetCalories(user));
-        } else if (isUnauthorized(res)) {
-          localStorage.removeItem('token');
-          router.push('/login');
-        } else {
-          // 429 / 5xx: session is still valid, just let the user retry
-          setProfileError(true);
-        }
-      } catch (err) {
-        console.error('Failed to fetch profile', err);
-        setProfileError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [router, profileRetryTick]);
 
   // Date navigation helpers using local date arithmetic
   const changeDateByDays = (days: number) => {
@@ -366,11 +287,10 @@ export default function Nutrition() {
 
   // Update Water Glasses with persistence for selectedDate
   const updateWater = (delta: number) => {
+    if (!dayLoaded) return; // never overwrite a day that has not loaded
     const newVal = Math.max(0, waterGlasses + delta);
     setWaterGlasses(newVal);
-    localStorage.setItem(`smart_water_${selectedDate}`, newVal.toString());
-    pushNutritionToBackend(newVal, mlPerGlass, meals);
-    notifyStorageChange(selectedDate);
+    pushNutritionToBackend(selectedDate, newVal, mlPerGlass, meals);
   };
 
   // Handle Image Upload reading STRICTLY from process.env without any hardcoded secret
@@ -411,6 +331,10 @@ export default function Nutrition() {
   // Add Food Item to Meal for selectedDate
   const handleAddFood = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!dayLoaded) {
+      alert('Dữ liệu ngày này chưa tải xong. Vui lòng đợi giây lát hoặc bấm Thử lại.');
+      return;
+    }
     const trimmedFoodName = foodName.trim().replace(/\s+/g, ' ');
     if (!activeMealCategory || !trimmedFoodName || computedTotalCalories <= 0) return;
 
@@ -429,7 +353,7 @@ export default function Nutrition() {
     const formattedQuantity = multVal === 1 ? cleanServing : `${multVal} x (${cleanServing})`;
 
     const newItem: MealItem = {
-      id: Date.now().toString(),
+      id: newMealItemId(),
       name: trimmedFoodName,
       calories: computedTotalCalories,
       quantity: formattedQuantity,
@@ -447,9 +371,7 @@ export default function Nutrition() {
     };
 
     setMeals(updatedMeals);
-    localStorage.setItem(`smart_meals_${selectedDate}`, JSON.stringify(updatedMeals));
-    pushNutritionToBackend(waterGlasses, mlPerGlass, updatedMeals);
-    notifyStorageChange(selectedDate);
+    pushNutritionToBackend(selectedDate, waterGlasses, mlPerGlass, updatedMeals);
 
     // Save as Custom Food if checked
     if (saveAsCustomFood) {
@@ -469,7 +391,7 @@ export default function Nutrition() {
             ...(baseMacros || {}),
             image: foodImage || ''
           })
-        }).then(() => fetchFoodsFromDb()).catch(() => {});
+        }).then(() => mutateFoods()).catch(() => {});
       }
     }
 
@@ -487,14 +409,13 @@ export default function Nutrition() {
 
   // Remove Food Item for selectedDate
   const handleRemoveFood = (category: string, itemId: string) => {
+    if (!dayLoaded) return;
     const updatedMeals = {
       ...meals,
       [category]: (meals[category] || []).filter(item => item.id !== itemId)
     };
     setMeals(updatedMeals);
-    localStorage.setItem(`smart_meals_${selectedDate}`, JSON.stringify(updatedMeals));
-    pushNutritionToBackend(waterGlasses, mlPerGlass, updatedMeals);
-    notifyStorageChange(selectedDate);
+    pushNutritionToBackend(selectedDate, waterGlasses, mlPerGlass, updatedMeals);
   };
 
   // View Detail Modal state for Nutrition summary
@@ -522,13 +443,27 @@ export default function Nutrition() {
           <div className="bg-rose-500/10 border border-rose-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-rose-300">
             <p className="font-extrabold text-white">Không tải được hồ sơ, mục tiêu Calo đang dùng giá trị mặc định.</p>
             <button
-              onClick={() => { setLoading(true); setProfileRetryTick(t => t + 1); }}
+              onClick={() => { mutateProfile(); }}
               className="px-4 py-2 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black rounded-xl text-xs transition shrink-0 cursor-pointer"
             >
               🔄 Thử lại
             </button>
           </div>
         )}
+
+        {dayLoadError && (
+          <div className="bg-rose-500/10 border border-rose-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-rose-300">
+            <p className="font-extrabold text-white">Không tải được nhật ký ngày {selectedDate}. Chỉnh sửa đã bị khóa để tránh ghi đè dữ liệu.</p>
+            <button
+              onClick={() => { setDayLoadErrorDate(null); setDayRetryTick(t => t + 1); }}
+              className="px-4 py-2 bg-[#00E5FF] hover:bg-cyan-300 text-slate-950 font-black rounded-xl text-xs transition shrink-0 cursor-pointer"
+            >
+              🔄 Thử lại
+            </button>
+          </div>
+        )}
+
+        <SaveStatusBanner status={saveStatus} onRetry={retrySave} />
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
           <div>
@@ -1007,7 +942,7 @@ export default function Nutrition() {
                                   method: 'DELETE',
                                   headers: { 'Authorization': `Bearer ${token}` },
                                   credentials: 'include'
-                                }).then(() => fetchFoodsFromDb());
+                                }).then(() => mutateFoods());
                               }
                             }}
                             className="text-slate-500 hover:text-rose-400 p-1 text-sm font-bold"
