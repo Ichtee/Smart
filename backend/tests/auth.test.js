@@ -26,11 +26,19 @@ const valid = (over = {}) => ({
   name: 'Nguyễn Văn A',
   username: 'vana',
   email: 'vana@example.com',
-  password: 'password123',
   ...over,
 });
 
 const register = (body) => request(app).post('/api/users/register').send(body);
+// step 2 of sign-up: whoever opens the emailed link chooses the password
+const complete = (token, password) => request(app).post(`/api/users/verify/${token}`).send({ password });
+const loginAs = (username, password) => request(app).post('/api/users/login').send({ username, password });
+// register and return the token from the (mocked) verification email
+const signup = async (over = {}) => {
+  const res = await register(valid(over));
+  const token = sentEmails.length ? tokenFromLink(lastEmail().body.template_params.verify_url) : null;
+  return { res, token };
+};
 
 beforeAll(db.connect);
 beforeEach(async () => {
@@ -40,7 +48,7 @@ beforeEach(async () => {
 afterAll(db.close);
 
 describe('POST /api/users/register', () => {
-  test('creates an unverified account, hashes the password and emails a verification link', async () => {
+  test('creates a pending account WITHOUT a password and emails a verification link', async () => {
     const res = await register(valid({ name: '  Nguyễn   Văn  A ', email: ' VanA@Example.COM ' }));
     expect(res.status).toBe(201);
     expect(res.body.email).toBe('vana@example.com');
@@ -49,8 +57,7 @@ describe('POST /api/users/register', () => {
     expect(user.name).toBe('Nguyễn Văn A'); // inner whitespace collapsed
     expect(user.email).toBe('vana@example.com');
     expect(user.isEmailVerified).toBe(false);
-    expect(user.password).not.toBe('password123');
-    expect(await bcrypt.compare('password123', user.password)).toBe(true);
+    expect(user.password).toBeUndefined(); // the owner of the email sets it later
     expect(user.role).toBe('user');
 
     // token expires ~10 minutes from now (TTL index deletes unverified accounts after that)
@@ -64,13 +71,19 @@ describe('POST /api/users/register', () => {
     expect(sentEmails[0].body.template_params.verify_url).toBe(`http://localhost:3000/verify?token=${user.verificationToken}`);
   });
 
+  test('a password sent with the sign-up form is ignored and never stored', async () => {
+    await register(valid({ password: 'attackerpass1' }));
+    const user = await User.findOne({ username: 'vana' }).lean();
+    expect(user.password).toBeUndefined();
+    expect(JSON.stringify(user)).not.toContain('attackerpass1');
+  });
+
   test('never lets a client choose its own role', async () => {
     await register({ ...valid(), role: 'admin' });
     expect((await User.findOne({ username: 'vana' })).role).toBe('user');
   });
 
   test.each([
-    ['missing password', { password: undefined }],
     ['missing email', { email: undefined }],
     ['name too short', { name: 'A' }],
     ['name too long', { name: 'A'.repeat(51) }],
@@ -80,14 +93,9 @@ describe('POST /api/users/register', () => {
     ['username with symbols', { username: 'van@a' }],
     ['email without @', { email: 'vana.example.com' }],
     ['email with a space', { email: 'va na@example.com' }],
-    ['password too short', { password: 'short' }],
-    ['password too long', { password: 'p'.repeat(101) }],
-    ['password with leading space', { password: ' password123' }],
-    ['password with trailing space', { password: 'password123 ' }],
     ['name as an object', { name: { first: 'A' } }],
     ['email as an array', { email: ['vana@example.com'] }],
     ['username as a number', { username: 12345 }],
-    ['password as an object', { password: { $ne: '' } }],
   ])('rejects %s', async (_label, over) => {
     const res = await register(valid(over));
     expect(res.status).toBe(400);
@@ -123,7 +131,7 @@ describe('POST /api/users/register', () => {
       const after = await User.find({}).lean();
       expect(after).toHaveLength(1);
       expect(String(after[0]._id)).toBe(String(before._id));
-      expect(after[0].password).toBe(before.password); // victim's password hash untouched
+      expect(after[0].email).toBe(before.email); // still the original sign-up
       expect(after[0].verificationToken).toBe(before.verificationToken); // their emailed link still works
       expect(global.fetch).not.toHaveBeenCalled(); // and no second email went out
     });
@@ -139,13 +147,10 @@ describe('POST /api/users/register', () => {
     });
 
     test('the original verification link still works after a rejected takeover attempt', async () => {
-      await register(valid());
-      const token = tokenFromLink(lastEmail().body.template_params.verify_url);
-      await register(valid({ password: 'attackerpass1' }));
-      expect((await request(app).get(`/api/users/verify/${token}`)).status).toBe(200);
-
-      const login = await request(app).post('/api/users/login').send({ username: 'vana', password: 'password123' });
-      expect(login.status).toBe(200); // the owner's own password, not the attacker's
+      const { token } = await signup();
+      await register(valid({ email: 'attacker@example.com' }));
+      expect((await complete(token, 'password123')).status).toBe(200);
+      expect((await loginAs('vana', 'password123')).status).toBe(200); // the owner's own password
     });
 
     test('a username match and an email match on two different pending accounts: still 409, nothing deleted', async () => {
@@ -176,13 +181,13 @@ describe('POST /api/users/register', () => {
 
     test('a stale one (token expired, TTL sweep has not run yet) is cleaned up and the sign-up succeeds', async () => {
       const stale = await createUser({ username: 'vana', email: 'vana@example.com', ...pendingAt(-MINUTE) });
-      const res = await register(valid({ password: 'differentpass1' }));
+      const res = await register(valid());
       expect(res.status).toBe(201);
 
       const users = await User.find({}).lean();
       expect(users).toHaveLength(1);
       expect(String(users[0]._id)).not.toBe(String(stale.user._id));
-      expect(await bcrypt.compare('differentpass1', users[0].password)).toBe(true);
+      expect(users[0].verificationToken).not.toBe('original-token');
     });
 
     test('two stale accounts (one per field) are both cleaned up, with no duplicate-key crash', async () => {
@@ -202,14 +207,15 @@ describe('POST /api/users/register', () => {
 
     test('the owner can get a fresh link through login + resend instead', async () => {
       await register(valid());
-      const login = await request(app).post('/api/users/login').send({ username: 'vana', password: 'password123' });
+      const login = await loginAs('vana', 'any-password-at-all');
       expect(login.status).toBe(403);
       expect(login.body.notVerified).toBe(true);
 
       const resend = await request(app).post('/api/users/resend-verification').send({ email: login.body.email });
       expect(resend.status).toBe(200);
       const token = tokenFromLink(lastEmail().body.template_params.verify_url);
-      expect((await request(app).get(`/api/users/verify/${token}`)).status).toBe(200);
+      expect((await complete(token, 'password123')).status).toBe(200);
+      expect((await loginAs('vana', 'password123')).status).toBe(200);
     });
 
     test('concurrent sign-ups for the same new username: exactly one wins, the rest get 409, never a 500', async () => {
@@ -232,31 +238,192 @@ describe('POST /api/users/register', () => {
   });
 });
 
-describe('GET /api/users/verify/:token', () => {
-  const registerAndGetToken = async () => {
-    await register(valid());
-    return tokenFromLink(lastEmail().body.template_params.verify_url);
-  };
+describe('email link, step 1: GET /api/users/verify/:token only checks the link', () => {
+  test('returns who the sign-up is for and changes nothing', async () => {
+    const { token } = await signup();
+    const before = await User.findOne({ username: 'vana' }).lean();
 
-  test('verifies the account and clears the fields the TTL index watches', async () => {
-    const token = await registerAndGetToken();
     const res = await request(app).get(`/api/users/verify/${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ valid: true, name: 'Nguyễn Văn A', email: 'vana@example.com' });
+
+    const after = await User.findOne({ username: 'vana' }).lean();
+    expect(after).toEqual(before); // still pending, token intact, no password
+  });
+
+  test('can be opened repeatedly (email scanners / link prefetchers cannot consume the token)', async () => {
+    const { token } = await signup();
+    for (let i = 0; i < 3; i++) expect((await request(app).get(`/api/users/verify/${token}`)).status).toBe(200);
+    expect((await complete(token, 'password123')).status).toBe(200);
+  });
+
+  test.each([
+    ['an unknown token', async () => 'deadbeef'],
+    ['an expired token', async () => {
+      const { token } = await signup();
+      await User.updateOne({ username: 'vana' }, { verificationTokenExpires: new Date(Date.now() - 1000) });
+      return token;
+    }],
+    ['a token of an account that is already active', async () => {
+      const { token } = await signup();
+      await complete(token, 'password123');
+      return token;
+    }],
+  ])('rejects %s with 400', async (_label, getToken) => {
+    const token = await getToken();
+    const res = await request(app).get(`/api/users/verify/${token}`);
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBeDefined();
+  });
+});
+
+describe('email link, step 2: POST /api/users/verify/:token sets the password and activates', () => {
+  test('activates the account, stores a hash, clears the fields the TTL index watches', async () => {
+    const { token } = await signup();
+    const res = await complete(token, 'my-own-password1');
     expect(res.status).toBe(200);
 
     const user = await User.findOne({ username: 'vana' }).lean();
     expect(user.isEmailVerified).toBe(true);
+    expect(user.password).not.toBe('my-own-password1');
+    expect(await bcrypt.compare('my-own-password1', user.password)).toBe(true);
     expect(user.verificationToken).toBeUndefined();
     expect(user.verificationTokenExpires).toBeUndefined(); // otherwise Mongo would delete a verified user
+
+    expect((await loginAs('vana', 'my-own-password1')).status).toBe(200);
   });
 
-  test('a token works once', async () => {
-    const token = await registerAndGetToken();
-    await request(app).get(`/api/users/verify/${token}`);
-    expect((await request(app).get(`/api/users/verify/${token}`)).status).toBe(400);
+  test('the link works once: a second attempt cannot change the password', async () => {
+    const { token } = await signup();
+    await complete(token, 'first-password1');
+    const again = await complete(token, 'second-password1');
+    expect(again.status).toBe(400);
+    expect((await loginAs('vana', 'first-password1')).status).toBe(200);
+    expect((await loginAs('vana', 'second-password1')).status).toBe(401);
   });
 
-  test('unknown token -> 400', async () => {
-    expect((await request(app).get('/api/users/verify/deadbeef')).status).toBe(400);
+  test.each([
+    ['too short', 'short'],
+    ['7 characters', '1234567'],
+    ['over 100 characters', 'p'.repeat(101)],
+    ['leading space', ' password123'],
+    ['trailing space', 'password123 '],
+    ['empty', ''],
+  ])('rejects a password that is %s and leaves the link usable', async (_label, password) => {
+    const { token } = await signup();
+    const res = await complete(token, password);
+    expect(res.status).toBe(400);
+
+    const user = await User.findOne({ username: 'vana' }).lean();
+    expect(user.isEmailVerified).toBe(false);
+    expect(user.password).toBeUndefined();
+    expect(user.verificationToken).toBe(token);
+    expect((await complete(token, 'a-valid-password1')).status).toBe(200); // can still finish
+  });
+
+  test('boundary lengths are accepted (8 and 100 characters)', async () => {
+    const a = await signup({ username: 'short1', email: 'a@example.com' });
+    expect((await complete(a.token, '12345678')).status).toBe(200);
+    const b = await signup({ username: 'long1', email: 'b@example.com' });
+    expect((await complete(b.token, 'p'.repeat(100))).status).toBe(200);
+  });
+
+  test.each([
+    ['no body', undefined],
+    ['no password field', {}],
+    ['an object', { password: { $ne: '' } }],
+    ['an array', { password: ['password123'] }],
+    ['a number', { password: 12345678 }],
+  ])('rejects %s with 400 (never activates, never crashes)', async (_label, body) => {
+    const { token } = await signup();
+    const res = await request(app).post(`/api/users/verify/${token}`).send(body);
+    expect(res.status).toBe(400);
+    expect((await User.findOne({ username: 'vana' })).isEmailVerified).toBe(false);
+  });
+
+  test('an expired link cannot be completed, and no password is stored', async () => {
+    const { token } = await signup();
+    await User.updateOne({ username: 'vana' }, { verificationTokenExpires: new Date(Date.now() - 1000) });
+    expect((await complete(token, 'password123')).status).toBe(400);
+    const user = await User.findOne({ username: 'vana' }).lean();
+    expect(user.isEmailVerified).toBe(false);
+    expect(user.password).toBeUndefined();
+  });
+
+  test('a leftover token on an ACTIVE account (old data) cannot be used to reset its password', async () => {
+    const { user } = await createUser({
+      username: 'vana', email: 'vana@example.com', password: 'real-password1',
+      verificationToken: 'leftover-token', verificationTokenExpires: new Date(Date.now() + 60000),
+    });
+    expect((await request(app).get('/api/users/verify/leftover-token')).status).toBe(400);
+    expect((await complete('leftover-token', 'attackerpass1')).status).toBe(400);
+
+    expect(await bcrypt.compare('real-password1', (await User.findById(user._id)).password)).toBe(true);
+    expect((await loginAs('vana', 'real-password1')).status).toBe(200);
+  });
+
+  test('an unknown token -> 400', async () => {
+    expect((await complete('deadbeef', 'password123')).status).toBe(400);
+  });
+
+  test('until the owner completes sign-up nobody can log in, whatever password they try', async () => {
+    await signup();
+    for (const guess of ['password123', 'attackerpass1', '']) {
+      const res = await loginAs('vana', guess || 'x');
+      expect(res.status).toBe(403);
+      expect(res.body.notVerified).toBe(true);
+      expect(res.headers['set-cookie']).toBeUndefined();
+    }
+  });
+});
+
+describe('pre-registration hijack (attacker signs up with the victim\'s email)', () => {
+  test('the account ends up with the VICTIM\'s password; the attacker has no way in', async () => {
+    // attacker submits the victim's email with a password of their choice (ignored) and their own username
+    const { token } = await signup({ username: 'attacker', email: 'victim@example.com', password: 'attackerpass1' });
+
+    // the attacker cannot log in before the victim acts...
+    expect((await loginAs('attacker', 'attackerpass1')).status).toBe(403);
+    // ...and cannot finish the sign-up: the link only exists in the victim's mailbox
+    expect((await complete('guess-the-token', 'attackerpass1')).status).toBe(400);
+
+    // the victim opens the link they received and chooses their own password
+    expect((await complete(token, 'victim-password1')).status).toBe(200);
+
+    expect((await loginAs('attacker', 'attackerpass1')).status).toBe(401); // attacker's guess is worthless
+    expect((await loginAs('attacker', 'victim-password1')).status).toBe(200);
+  });
+
+  test('no password exists anywhere in the database while the sign-up is pending', async () => {
+    await signup({ password: 'attackerpass1' });
+    const raw = await User.collection.findOne({ username: 'vana' });
+    expect(raw.password).toBeUndefined();
+  });
+});
+
+describe('accounts without a password', () => {
+  test('the model allows a pending account without one, but not a verified one', async () => {
+    await expect(User.create({ name: 'P', username: 'pending1', email: 'p1@example.com' })).resolves.toBeDefined();
+    await expect(User.create({ name: 'V', username: 'verified1', email: 'v1@example.com', isEmailVerified: true }))
+      .rejects.toThrow(/password/i);
+  });
+
+  test('an active account that somehow has no password gets a 401 on login, not a 500', async () => {
+    const { user } = await createUser({ username: 'vana', email: 'vana@example.com' });
+    await User.collection.updateOne({ _id: user._id }, { $unset: { password: '' } });
+    const res = await loginAs('vana', 'password123');
+    expect(res.status).toBe(401);
+    expect(res.headers['set-cookie']).toBeUndefined();
+  });
+
+  test('an admin cannot activate an account that has no password yet', async () => {
+    const admin = await createUser({ role: 'admin' });
+    await register(valid());
+    const pending = await User.findOne({ username: 'vana' });
+
+    const res = await request(app).put(`/api/users/${pending._id}`).set(admin.auth).send({ isEmailVerified: true });
+    expect(res.status).toBe(400);
+    expect((await User.findById(pending._id)).isEmailVerified).toBe(false);
   });
 });
 

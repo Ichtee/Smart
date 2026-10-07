@@ -16,9 +16,11 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Please add an email'],
     unique: true
   },
+  // Set when the owner of the email completes sign-up (see completeRegistration), so a pending
+  // account has no password. Every verified account must have one.
   password: {
     type: String,
-    required: [true, 'Please add a password']
+    required: [function () { return this.isEmailVerified; }, 'Please add a password']
   },
   isEmailVerified: {
     type: Boolean,

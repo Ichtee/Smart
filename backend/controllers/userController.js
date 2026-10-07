@@ -13,6 +13,14 @@ const SECRET_FIELDS = '-password -verificationToken -verificationTokenExpires -r
 // (e.g. { "$ne": null }). Reject those instead of letting them reach a query or a string method.
 const allStrings = (...values) => values.every(v => typeof v === 'string');
 
+// 8..100 characters, no leading/trailing whitespace. Returns an error message or null.
+const passwordRuleError = (password) => {
+  if (typeof password !== 'string' || !password) return 'Vui lòng nhập mật khẩu.';
+  if (password !== password.trim()) return 'Mật khẩu không được chứa khoảng trắng ở đầu hoặc cuối.';
+  if (password.length < 8 || password.length > 100) return 'Mật khẩu phải từ 8 đến 100 ký tự.';
+  return null;
+};
+
 const sendEmail = async ({ to, to_name, verify_url, subject, template_id }) => {
   const serviceId = process.env.EMAILJS_SERVICE_ID;
   const defaultTemplateId = process.env.EMAILJS_TEMPLATE_ID;
@@ -71,9 +79,11 @@ const generateToken = (id) => {
 
 const registerUser = async (req, res) => {
   try {
-    let { name, username, email, password } = req.body;
+    // NOTE: a "password" field in the body is ignored on purpose. The password is chosen by whoever
+    // opens the emailed link, which is what stops someone pre-registering another person's email.
+    let { name, username, email } = req.body;
 
-    if (!allStrings(name, username, email, password) || !name || !username || !email || !password) {
+    if (!allStrings(name, username, email) || !name || !username || !email) {
       return res.status(400).json({ message: 'Vui lòng điền đầy đủ các thông tin bắt buộc.' });
     }
 
@@ -98,14 +108,6 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Email không được chứa dấu cách và phải đúng định dạng (VD: user@example.com).' });
     }
 
-    // 4. Validate Password (không chứa khoảng trắng ở 2 đầu, 8..100 ký tự)
-    if (password !== password.trim()) {
-      return res.status(400).json({ message: 'Mật khẩu không được chứa khoảng trắng ở đầu hoặc cuối.' });
-    }
-    if (password.length < 8 || password.length > 100) {
-      return res.status(400).json({ message: 'Mật khẩu phải từ 8 đến 100 ký tự.' });
-    }
-
     // The username and the email can belong to two different existing accounts, so look at all matches.
     const matches = await User.find({ $or: [{ email: trimmedEmail }, { username: trimmedUsername }] });
 
@@ -114,9 +116,8 @@ const registerUser = async (req, res) => {
     }
 
     // An account that is still waiting for its verification email must NOT be replaced by a new
-    // sign-up: anyone could otherwise overwrite someone's pending registration, or pre-register their
-    // email with a password the real owner does not know and wait for them to click the link.
-    // Only stale ones (token expired, the TTL index just has not removed them yet) are cleaned up.
+    // sign-up (that would let anyone wipe someone's pending registration). Only stale ones (token
+    // expired, the TTL index just has not removed them yet) are cleaned up.
     const now = Date.now();
     const stillPending = matches.some(u => !u.verificationTokenExpires || u.verificationTokenExpires.getTime() > now);
     if (stillPending) {
@@ -129,8 +130,6 @@ const registerUser = async (req, res) => {
       await User.deleteMany({ _id: { $in: matches.map(u => u._id) } });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
     let user;
@@ -139,7 +138,6 @@ const registerUser = async (req, res) => {
         name: trimmedName,
         username: trimmedUsername,
         email: trimmedEmail,
-        password: hashedPassword,
         verificationToken,
         verificationTokenExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
       });
@@ -167,7 +165,7 @@ const registerUser = async (req, res) => {
         to: user.email,
         to_name: user.name,
         verify_url: verifyUrl,
-        subject: 'Xác thực tài khoản Smart App',
+        subject: 'Xác thực email & đặt mật khẩu Smart App',
       });
     } catch (emailErr) {
       console.error('Error sending verification email:', emailErr);
@@ -179,7 +177,7 @@ const registerUser = async (req, res) => {
     }
 
     res.status(201).json({
-      message: 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản trong 10 phút.',
+      message: 'Đã gửi email xác thực! Vui lòng mở link trong email (hiệu lực 10 phút) để đặt mật khẩu và kích hoạt tài khoản.',
       email: user.email,
     });
   } catch (error) {
@@ -211,6 +209,11 @@ const loginUser = async (req, res) => {
         notVerified: true,
         email: user.email,
       });
+    }
+
+    // verified but never given a password (e.g. verified by hand by an admin): nothing to compare with
+    if (!user.password) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     if (await bcrypt.compare(password, user.password)) {
@@ -250,29 +253,57 @@ const loginUser = async (req, res) => {
 };
 
 
-const verifyEmail = async (req, res) => {
+// Finds the pending account for an emailed sign-up token, or explains why there is none.
+// Used by both steps of the flow (check the link, then complete it).
+const findPendingByToken = async (token) => {
+  if (typeof token !== 'string' || !token) return { error: 'Token is required' };
+  const user = await User.findOne({ verificationToken: token });
+  if (!user || user.isEmailVerified) {
+    return { error: 'Liên kết xác thực không hợp lệ hoặc đã được sử dụng. Vui lòng đăng ký lại.' };
+  }
+  if (user.verificationTokenExpires && user.verificationTokenExpires.getTime() <= Date.now()) {
+    return { error: 'Liên kết xác thực đã hết hạn. Vui lòng đăng ký lại.' };
+  }
+  return { user };
+};
+
+// @desc    Check an email verification link (does NOT activate anything: link scanners / prefetchers
+//          that open the URL must not be able to consume the token)
+// @route   GET /api/users/verify/:token
+// @access  Public
+const checkVerificationToken = async (req, res) => {
   try {
-    const { token } = req.params;
+    const { user, error } = await findPendingByToken(req.params.token);
+    if (error) return res.status(400).json({ message: error });
+    res.status(200).json({ valid: true, name: user.name, email: user.email });
+  } catch (error) {
+    console.error('checkVerificationToken error:', error);
+    res.status(500).json({ message: 'Server error during email verification' });
+  }
+};
 
-    if (!token) {
-      return res.status(400).json({ message: 'Token is required' });
-    }
+// @desc    Finish sign-up: the owner of the email picks a password, which also verifies the account
+// @route   POST /api/users/verify/:token
+// @access  Public
+const completeRegistration = async (req, res) => {
+  try {
+    const passwordError = passwordRuleError(req.body && req.body.password);
+    if (passwordError) return res.status(400).json({ message: passwordError });
 
-    const user = await User.findOne({ verificationToken: token });
+    const { user, error } = await findPendingByToken(req.params.token);
+    if (error) return res.status(400).json({ message: error });
 
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired verification token. Please register again.' });
-    }
-
-    // Mark verified and clear both token fields to prevent TTL auto-deletion
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(req.body.password, salt);
+    // Mark verified and clear both token fields to prevent TTL auto-deletion; the token is single-use
     user.isEmailVerified = true;
     user.verificationToken = undefined;
     user.verificationTokenExpires = undefined;
     await user.save();
 
-    res.status(200).json({ message: 'Email verified successfully! You can now log in.' });
+    res.status(200).json({ message: 'Đã đặt mật khẩu và kích hoạt tài khoản! Bạn có thể đăng nhập ngay bây giờ.' });
   } catch (error) {
-    console.error('verifyEmail error:', error);
+    console.error('completeRegistration error:', error);
     res.status(500).json({ message: 'Server error during email verification' });
   }
 };
@@ -511,6 +542,9 @@ const updateUserRoleAndStatus = async (req, res) => {
       }
 
       if (req.body.isEmailVerified !== undefined) {
+        if (req.body.isEmailVerified && !user.password) {
+          return res.status(400).json({ message: 'Tài khoản này chưa đặt mật khẩu: người dùng cần hoàn tất đăng ký qua link trong email.' });
+        }
         user.isEmailVerified = req.body.isEmailVerified;
         if (user.isEmailVerified) {
           // Clear token fields so the TTL index never auto-deletes a verified account
@@ -646,7 +680,8 @@ module.exports = {
   registerUser,
   loginUser,
   logoutUser,
-  verifyEmail,
+  checkVerificationToken,
+  completeRegistration,
   resendVerification,
   getProfile,
   updateProfile,
