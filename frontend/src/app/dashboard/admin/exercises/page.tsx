@@ -226,7 +226,7 @@ export default function AdminExercises() {
 
   if (authError) {
     return (
-      <div className="flex flex-col items-center justify-center h-full">
+      <div className="flex flex-col items-center justify-center min-h-[50vh]">
         <div className="text-6xl mb-4">⛔</div>
         <h1 className="text-2xl font-bold text-destructive mb-2">{authError}</h1>
         <button onClick={() => router.push('/')} className="mt-6 px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">Về trang chủ</button>
@@ -248,10 +248,10 @@ export default function AdminExercises() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 2xl:grid-cols-12 gap-8 items-start">
         
         {/* Form Panel (Left) */}
-        <div className="lg:col-span-5 bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-5 lg:sticky lg:top-6">
+        <div className="2xl:col-span-5 bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-5 2xl:sticky 2xl:top-6">
           <div className="flex justify-between items-center border-b border-slate-800/80 pb-4">
             <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
               <span>{editingId ? '✏️' : '➕'}</span>
@@ -394,7 +394,7 @@ export default function AdminExercises() {
         </div>
 
         {/* Exercises Table List Panel (Right) */}
-        <div className="lg:col-span-7 bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-5">
+        <div className="2xl:col-span-7 bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <span>📚</span> Danh Sách Dữ Liệu ({filteredExercises.length})

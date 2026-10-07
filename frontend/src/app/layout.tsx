@@ -48,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body suppressHydrationWarning className="min-h-full flex flex-col bg-background text-foreground overflow-x-hidden">
+      <body suppressHydrationWarning className="min-h-full flex flex-col bg-background text-foreground overflow-x-clip">
         <Providers>
           {children}
         </Providers>

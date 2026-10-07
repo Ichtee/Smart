@@ -13,7 +13,7 @@ export default function AdminDashboard() {
 
   if (authError) {
     return (
-      <div className="flex flex-col items-center justify-center h-full">
+      <div className="flex flex-col items-center justify-center min-h-[50vh]">
         <div className="text-6xl mb-4">⛔</div>
         <h1 className="text-2xl font-bold text-destructive mb-2">{authError}</h1>
         <button onClick={() => router.push('/')} className="mt-6 px-6 py-2 bg-surface-elevated hover:bg-slate-800 text-white rounded-xl transition-colors">Về trang chủ</button>

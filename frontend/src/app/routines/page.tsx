@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
+import EmptyState from '@/components/ui/EmptyState';
 import { apiFetch, describeError } from '@/utils/api';
 import { useRoutines, useExercises, useProfile, refreshProfile, isUnauthorizedError } from '@/hooks/useApi';
 import {
@@ -88,7 +89,7 @@ export default function RoutinesPage() {
     }
   };
 
-  // "Use this routine" = make it the active one (the Activity page opens the active routine)
+  // "Use this routine" = make it the active one (the workouts page opens the active routine)
   const handleUse = async (r: any) => {
     setNotice(null);
     try {
@@ -99,7 +100,7 @@ export default function RoutinesPage() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await refreshProfile();
-      setNotice({ text: `Đang dùng lịch "${r.name}". Mở trang Activity để bắt đầu tập.`, type: 'success' });
+      setNotice({ text: `Đang dùng lịch "${r.name}". Mở trang Tập luyện để bắt đầu tập.`, type: 'success' });
     } catch {
       setNotice({ text: 'Không đổi được lịch tập đang dùng. Vui lòng thử lại.', type: 'error' });
     }
@@ -158,9 +159,7 @@ export default function RoutinesPage() {
           {!draft && (
             <>
               {mine.length === 0 && !error && (
-                <div className="bg-card border border-border rounded-3xl p-8 text-center text-sm text-muted-foreground">
-                  Bạn chưa có lịch tập riêng. Bấm &ldquo;Tạo lịch mới&rdquo; để bắt đầu.
-                </div>
+                <EmptyState icon={<ClipboardList className="size-6" aria-hidden />} title="Bạn chưa có lịch tập riêng" hint="Bấm “Tạo lịch mới” để tự xếp các bài tập theo từng ngày trong tuần." />
               )}
               <ul className="space-y-3">
                 {mine.map((r: any) => (
@@ -180,7 +179,7 @@ export default function RoutinesPage() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-muted-foreground">Lịch có sẵn của hệ thống nằm ở trang <Link href="/workouts" className="text-primary font-bold">Activity</Link>.</p>
+              <p className="text-xs text-muted-foreground">Lịch có sẵn của hệ thống nằm ở trang <Link href="/workouts" className="text-primary font-bold">Tập luyện</Link>.</p>
             </>
           )}
 

@@ -30,6 +30,7 @@ export default function BodyChart({ metrics }: { metrics: BodyMetric[] }) {
         <span>{first.date}</span>
         <span>{last.date}</span>
       </figcaption>
+      {points.length === 1 && <p className="mt-2 text-center text-xs text-muted-foreground">Ghi thêm số đo vào những ngày khác để thấy đường xu hướng.</p>}
     </figure>
   );
 }

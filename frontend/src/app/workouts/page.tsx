@@ -834,9 +834,9 @@ export default function Workouts() {
   }).filter((t: any) => t.isExceeded);
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">
+    <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-clip">
       <Sidebar />
-      <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-6 overflow-y-auto pb-28 md:pb-10">
+      <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-6 pb-28 md:pb-10">
         <div className="max-w-[1600px] w-full mx-auto space-y-6">
 
         {/* Top Control Bar: Brand / Live Time / Routine Selector */}
