@@ -172,6 +172,36 @@ describe('profile cache helpers', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  test('refreshProfile updates the cache even when NO component is mounted (onboarding -> dashboard)', async () => {
+    // AuthGuard cached the profile before onboarding...
+    await act(async () => { await seedProfileCache({ name: 'New user', height: null, weight: null }); });
+    // ...the user finishes onboarding while no profile hook is mounted...
+    fetchMock.mockResolvedValue(json({ name: 'New user', height: 181, weight: 88 }));
+    await act(async () => { await refreshProfile(); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // ...and the next page must see the saved values immediately, not the stale ones
+    const { result } = renderHook(() => useProfile());
+    expect(result.current.profile).toEqual({ name: 'New user', height: 181, weight: 88 });
+    await new Promise(r => setTimeout(r, 30));
+    expect(fetchMock).toHaveBeenCalledTimes(1); // no extra request needed
+  });
+
+  test('if the refresh request fails, the stale profile is dropped so the next page fetches the real one', async () => {
+    await act(async () => { await seedProfileCache({ name: 'Stale', height: null }); });
+    fetchMock.mockRejectedValue(new TypeError('offline')); // every attempt fails (apiFetch retries network errors)
+    await act(async () => {
+      const refreshing = refreshProfile(); // must not throw: the save itself already succeeded
+      await vi.advanceTimersByTimeAsync(5000); // skip apiFetch's retry backoff
+      await refreshing;
+    });
+
+    fetchMock.mockResolvedValue(json({ name: 'Fresh', height: 170 }));
+    const { result } = renderHook(() => useProfile());
+    expect(result.current.profile).toBeUndefined(); // the stale copy is gone
+    await waitFor(() => expect(result.current.profile).toEqual({ name: 'Fresh', height: 170 }));
+  });
+
   test("clearApiCache drops EVERYTHING, so the next account never sees the previous one's data", async () => {
     fetchMock.mockImplementation(async (url: string) =>
       String(url).includes('profile') ? json({ name: 'Alice' }) : json([{ _id: 'alices-food' }]));

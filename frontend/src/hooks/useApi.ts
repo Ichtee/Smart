@@ -58,8 +58,24 @@ export const clearApiCache = () => {
 /** Put an already-fetched profile into the cache (AuthGuard fetches it anyway). */
 export const seedProfileCache = (user: unknown) => globalMutate('/api/users/profile', user, { revalidate: false });
 
-/** Call after any write to /api/users/profile so every page sees the new values. */
-export const refreshProfile = () => globalMutate('/api/users/profile');
+const PROFILE_KEY = '/api/users/profile';
+
+/**
+ * Call after any write to /api/users/profile so every page sees the new values.
+ *
+ * Do not use a bare mutate(key) here: it only revalidates hooks that are mounted right now. Onboarding
+ * saves the profile while no profile hook is mounted, and AuthGuard had already cached the pre-onboarding
+ * profile, so the next page (dashboard, nutrition...) would show that stale copy: default 170 cm / 65 kg,
+ * or a redirect back to onboarding. Passing the fetch itself updates the cache whether or not anyone is
+ * subscribed. If that fetch fails the stale copy is dropped so the next page loads the real one.
+ */
+export const refreshProfile = async () => {
+  try {
+    await globalMutate(PROFILE_KEY, fetcher(PROFILE_KEY), { revalidate: false });
+  } catch {
+    await globalMutate(PROFILE_KEY, undefined, { revalidate: false });
+  }
+};
 
 export function useRoutines() {
   const { data, error, isLoading, mutate } = useSWR('/api/routines', fetcher, STATIC);
