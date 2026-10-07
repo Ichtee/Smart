@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Logo } from '@/components/smart/logo';
-import { API_URL } from '@/utils/api';
+import { apiFetch } from '@/utils/api';
+import { refreshProfile } from '@/hooks/useApi';
 import { calcBmr, calcTdee, calcTargetCalories } from '@/utils/nutritionCalc';
 import { ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
 
@@ -83,14 +84,9 @@ export default function Onboarding() {
   const handleComplete = async () => {
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/users/profile`, {
+      const res = await apiFetch('/api/users/profile', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           age: Number(formData.age),
           gender: formData.gender,
@@ -102,6 +98,7 @@ export default function Onboarding() {
       });
 
       if (res.ok) {
+        await refreshProfile(); // other pages must not keep the pre-onboarding (empty) profile
         router.push('/dashboard');
       } else {
         alert('Có lỗi xảy ra, vui lòng thử lại.');

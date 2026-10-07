@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { Logo } from './smart/logo';
 import { LayoutGrid, Activity, Utensils, User, LogOut } from 'lucide-react';
 import { API_URL } from '@/utils/api';
+import { clearApiCache } from '@/hooks/useApi';
 import { useRouter } from 'next/navigation';
 
 export default function Sidebar() {
@@ -25,6 +26,7 @@ export default function Sidebar() {
       });
     } catch (e) {}
     localStorage.clear();
+    clearApiCache();
     router.push('/');
   };
 

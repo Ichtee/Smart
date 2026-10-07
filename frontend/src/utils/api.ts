@@ -3,6 +3,13 @@
 // In development (local), falls back to localhost:5000
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
+// Remembers (in memory, per tab) when the session was last confirmed by the server,
+// so page navigation does not re-verify the token on every route change.
+let authVerifiedAt = 0;
+export const markAuthVerified = () => { authVerifiedAt = Date.now(); };
+export const resetAuthVerified = () => { authVerifiedAt = 0; };
+export const isAuthRecentlyVerified = (maxAgeMs: number) => Date.now() - authVerifiedAt < maxAgeMs;
+
 const RETRYABLE_STATUS = new Set([429, 502, 503, 504]);
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

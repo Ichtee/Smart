@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import GoogleTranslate from './GoogleTranslate';
 import { Logo } from './smart/logo';
 import { API_URL } from '@/utils/api';
+import { clearApiCache } from '@/hooks/useApi';
 import { Dumbbell, Utensils, TrendingUp, User, LogOut, ChevronDown } from 'lucide-react';
 
 export default function Header() {
@@ -39,6 +40,7 @@ export default function Header() {
       });
     } catch (e) {}
     localStorage.clear();
+    clearApiCache();
     router.push('/');
   };
 

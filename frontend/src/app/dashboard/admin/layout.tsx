@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { API_URL } from '@/utils/api';
+import { clearApiCache } from '@/hooks/useApi';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -29,6 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       });
     } catch (e) {}
     localStorage.clear();
+    clearApiCache();
     router.push('/');
   };
 

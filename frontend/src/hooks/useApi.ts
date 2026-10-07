@@ -1,6 +1,6 @@
 'use client';
-import useSWR, { SWRConfiguration } from 'swr';
-import { apiFetch } from '@/utils/api';
+import useSWR, { SWRConfiguration, mutate as globalMutate } from 'swr';
+import { apiFetch, resetAuthVerified } from '@/utils/api';
 import { toDateStr } from '@/utils/dateUtils';
 
 export class ApiError extends Error {
@@ -41,6 +41,21 @@ export function useProfile() {
   const { data, error, isLoading, mutate } = useSWR('/api/users/profile', fetcher, STATIC);
   return { profile: data, error, isLoading, mutate };
 }
+
+/**
+ * Drop every cached response without refetching. Must run on login/logout/session expiry so the next
+ * user never sees the previous user's profile, streak, logs or custom foods.
+ */
+export const clearApiCache = () => {
+  resetAuthVerified();
+  return globalMutate(() => true, undefined, { revalidate: false });
+};
+
+/** Put an already-fetched profile into the cache (AuthGuard fetches it anyway). */
+export const seedProfileCache = (user: unknown) => globalMutate('/api/users/profile', user, { revalidate: false });
+
+/** Call after any write to /api/users/profile so every page sees the new values. */
+export const refreshProfile = () => globalMutate('/api/users/profile');
 
 export function useRoutines() {
   const { data, error, isLoading, mutate } = useSWR('/api/routines', fetcher, STATIC);

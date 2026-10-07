@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { API_URL } from '@/utils/api';
+import { API_URL, markAuthVerified, isAuthRecentlyVerified } from '@/utils/api';
+import { clearApiCache, seedProfileCache } from '@/hooks/useApi';
 
 const PUBLIC_PATHS = [
   '/',
@@ -12,6 +13,7 @@ const PUBLIC_PATHS = [
   '/verify'
 ];
 
+const REVERIFY_MS = 5 * 60 * 1000; // skip re-verifying the token on every navigation
 const MAX_RETRIES = 2;
 const FETCH_TIMEOUT_MS = 15000; // 15s timeout per attempt — handles Render cold start
 
@@ -58,6 +60,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Verified recently: no need to hit /profile again on every route change (admin routes always re-check the role)
+    if (!isAdminRoute && isAuthRecentlyVerified(REVERIFY_MS)) {
+      setAuthState('verified');
+      return;
+    }
+
     // For admin routes: BLOCK rendering, show spinner until role is verified
     // For regular routes: optimistically render children immediately
     if (isAdminRoute) {
@@ -97,6 +105,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
           if (res.ok) {
             const user = await res.json();
+            markAuthVerified();
+            seedProfileCache(user);
 
             // Store user data for other components
             try {
@@ -130,6 +140,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             if (typeof window !== 'undefined') {
               localStorage.removeItem('token');
               localStorage.removeItem('user');
+              clearApiCache();
             }
             setAuthState('failed');
             setStatusMsg('Phiên đăng nhập hết hạn.');

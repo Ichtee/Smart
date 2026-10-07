@@ -2,12 +2,12 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
-import { API_URL, apiFetch, isUnauthorized } from '@/utils/api';
+import { apiFetch } from '@/utils/api';
+import { useProfile, refreshProfile, isUnauthorizedError } from '@/hooks/useApi';
 import { User, Activity, Target, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function Profile() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
@@ -22,45 +22,33 @@ export default function Profile() {
     goal: ''
   });
 
+  // Profile comes from the shared SWR cache (no extra request when another page already loaded it)
+  const { profile, error: profileFetchError, isLoading: profileLoading } = useProfile();
+  const loading = profileLoading && !profile;
+
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          router.push('/login');
-          return;
-        }
+    if (!profile) return;
+    setFormData({
+      name: profile.name || '',
+      username: profile.username || '',
+      email: profile.email || '',
+      age: profile.age || '',
+      gender: profile.gender || '',
+      height: profile.height || '',
+      weight: profile.weight || '',
+      goal: profile.goal || ''
+    });
+  }, [profile]);
 
-        const res = await apiFetch('/api/users/profile');
-
-        if (res.ok) {
-          const data = await res.json();
-          setFormData({
-            name: data.name || '',
-            username: data.username || '',
-            email: data.email || '',
-            age: data.age || '',
-            gender: data.gender || '',
-            height: data.height || '',
-            weight: data.weight || '',
-            goal: data.goal || ''
-          });
-        } else if (isUnauthorized(res)) {
-          localStorage.removeItem('token');
-          router.push('/login');
-        } else {
-          setMessage({ text: 'Máy chủ đang bận, không tải được hồ sơ. Vui lòng tải lại trang sau giây lát.', type: 'error' });
-        }
-      } catch (err) {
-        console.error('Failed to fetch profile', err);
-        setMessage({ text: 'Không thể kết nối tới máy chủ. Vui lòng tải lại trang.', type: 'error' });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [router]);
+  useEffect(() => {
+    if (!profileFetchError) return;
+    if (isUnauthorizedError(profileFetchError)) {
+      localStorage.removeItem('token');
+      router.push('/login');
+    } else {
+      setMessage({ text: 'Không tải được hồ sơ. Vui lòng tải lại trang sau giây lát.', type: 'error' });
+    }
+  }, [profileFetchError, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -107,14 +95,9 @@ export default function Profile() {
     setSaving(true);
 
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/users/profile`, {
+      const res = await apiFetch('/api/users/profile', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: trimmedName,
           age: formData.age ? Number(formData.age) : undefined,
@@ -137,6 +120,7 @@ export default function Profile() {
           localStorage.setItem('token', data.token);
         }
 
+        await refreshProfile();
         setMessage({ text: 'Cập nhật hồ sơ thành công!', type: 'success' });
       } else {
         const errData = await res.json().catch(() => ({}));

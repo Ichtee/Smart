@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/smart/logo';
 import { API_URL } from '@/utils/api';
+import { clearApiCache } from '@/hooks/useApi';
 import { ArrowRight, AlertCircle, Mail, CheckCircle2 } from 'lucide-react';
 
 export default function Login() {
@@ -59,6 +60,7 @@ export default function Login() {
         throw new Error(data.message || 'Login failed');
       }
 
+      clearApiCache(); // never show a previous account's cached data
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify({
         id: data._id,
