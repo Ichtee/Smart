@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useAdminUsers, useExercises } from '@/hooks/useApi';
 import { useAdmin } from '@/hooks/useAdmin';
+import { Users, Dumbbell, ShieldAlert } from 'lucide-react';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function AdminDashboard() {
   if (authError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
-        <div className="text-6xl mb-4">⛔</div>
+        <ShieldAlert className="mb-4 size-16 text-destructive" aria-hidden />
         <h1 className="text-2xl font-bold text-destructive mb-2">{authError}</h1>
         <button onClick={() => router.push('/')} className="mt-6 px-6 py-2 bg-surface-elevated hover:bg-slate-800 text-white rounded-xl transition-colors">Về trang chủ</button>
       </div>
@@ -43,7 +44,7 @@ export default function AdminDashboard() {
                 <h3 className="text-5xl font-black text-white">{stats.users}</h3>
               </div>
               <div className="w-16 h-16 rounded-2xl bg-primary/20 text-primary flex items-center justify-center text-3xl border border-primary/30">
-                👥
+                <Users className="size-8" aria-hidden />
               </div>
             </div>
             <div className="mt-6 pt-4 border-t border-slate-800">
@@ -62,7 +63,7 @@ export default function AdminDashboard() {
                 <h3 className="text-5xl font-black text-white">{stats.exercises}</h3>
               </div>
               <div className="w-16 h-16 rounded-2xl bg-success/20 text-success flex items-center justify-center text-3xl border border-success/30">
-                🏋️
+                <Dumbbell className="size-8" aria-hidden />
               </div>
             </div>
             <div className="mt-6 pt-4 border-t border-slate-800">

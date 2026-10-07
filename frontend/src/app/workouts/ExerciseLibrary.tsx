@@ -1,5 +1,6 @@
 'use client';
 import { normalizeMuscleId, MUSCLE_NAMES_VI } from './utils';
+import { Library } from 'lucide-react';
 
 interface ExerciseLibraryProps {
   currentSelectedIds: string[];
@@ -27,7 +28,7 @@ export default function ExerciseLibrary({
       <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 space-y-4 shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <span>📚</span> {selectedMuscle ? `Thư viện bài tập: ${MUSCLE_NAMES_VI[normalizeMuscleId(selectedMuscle)] || selectedMuscle}` : 'Thư viện bài tập (Tất cả)'}
+            <Library className="size-5" aria-hidden /> {selectedMuscle ? `Thư viện bài tập: ${MUSCLE_NAMES_VI[normalizeMuscleId(selectedMuscle)] || selectedMuscle}` : 'Thư viện bài tập (Tất cả)'}
           </h3>
 
           {/* Real-time Exercise Search Input */}

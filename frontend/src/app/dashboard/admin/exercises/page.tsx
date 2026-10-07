@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/utils/api';
 import { useExercises } from '@/hooks/useApi';
 import { useAdmin } from '@/hooks/useAdmin';
+import { Settings, Library, Dumbbell, ShieldAlert } from 'lucide-react';
 
 const MUSCLE_NAMES_VI: Record<string, string> = {
   chest: 'Ngực (Chest)',
@@ -227,7 +228,7 @@ export default function AdminExercises() {
   if (authError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
-        <div className="text-6xl mb-4">⛔</div>
+        <ShieldAlert className="mb-4 size-16 text-destructive" aria-hidden />
         <h1 className="text-2xl font-bold text-destructive mb-2">{authError}</h1>
         <button onClick={() => router.push('/')} className="mt-6 px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">Về trang chủ</button>
       </div>
@@ -239,7 +240,7 @@ export default function AdminExercises() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-            <span>⚙️</span> Quản Lý Thư Viện Bài Tập
+            <Settings className="size-7" aria-hidden /> Quản Lý Thư Viện Bài Tập
           </h1>
           <p className="text-slate-400 mt-1 text-sm font-medium">Chỉnh sửa toàn bộ các trường dữ liệu bài tập (Tên, Cơ chính/phụ, Dụng cụ, Sets/Reps, Video YouTube & Kỹ thuật).</p>
         </div>
@@ -397,7 +398,7 @@ export default function AdminExercises() {
         <div className="2xl:col-span-7 bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span>📚</span> Danh Sách Dữ Liệu ({filteredExercises.length})
+              <Library className="size-5" aria-hidden /> Danh Sách Dữ Liệu ({filteredExercises.length})
             </h2>
             
             {/* Search and Filter */}
@@ -523,7 +524,7 @@ export default function AdminExercises() {
                   Chi Tiết Bài Tập trong Catalog Admin
                 </span>
                 <h3 className="text-2xl font-black text-white mt-2 flex items-center gap-2">
-                  <span>💪</span> {viewingExercise.name}
+                  <Dumbbell className="size-5" aria-hidden /> {viewingExercise.name}
                 </h3>
 
                 <div className="flex flex-wrap gap-2 text-xs mt-3">

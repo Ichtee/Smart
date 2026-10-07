@@ -1,6 +1,7 @@
 'use client';
 import type { Dispatch, SetStateAction } from 'react';
 import type { MealItem } from './types';
+import { Utensils } from 'lucide-react';
 
 interface MealSectionsProps {
   caloriesConsumed: number;
@@ -30,7 +31,7 @@ export default function MealSections({
       <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl space-y-4 sm:space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 sm:pb-4 gap-2">
           <h3 className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
-            <span>🍱</span> Ghi chép bữa ăn trong ngày
+            <Utensils className="size-5 text-primary" aria-hidden /> Ghi chép bữa ăn trong ngày
           </h3>
           <div className="flex items-center gap-3">
             <button

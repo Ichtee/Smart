@@ -1,5 +1,6 @@
 'use client';
 import type { Dispatch, SetStateAction } from 'react';
+import { Salad } from 'lucide-react';
 
 interface NutritionDateBarProps {
   changeDateByDays: (days: number) => void;
@@ -19,7 +20,7 @@ export default function NutritionDateBar({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3">
-            <span className="text-primary">🥗</span> Nhật ký ăn uống & Dinh dưỡng
+            <Salad className="size-7 text-primary" aria-hidden /> Nhật ký ăn uống & Dinh dưỡng
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm font-semibold mt-1">Theo dõi và ghi chép chi tiết lượng Calo và Nước nạp vào cơ thể.</p>
         </div>

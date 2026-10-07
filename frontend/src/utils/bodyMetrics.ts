@@ -95,3 +95,6 @@ export function chartPoints(metrics: BodyMetric[], width: number, height: number
 
 export const pointsToPath = (points: ChartPoint[]): string =>
   points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+/** YYYY-MM-DD → DD/MM/YYYY, the way dates are shown everywhere else in the app. */
+export const formatDateVi = (date: string) => date.split('-').reverse().join('/');

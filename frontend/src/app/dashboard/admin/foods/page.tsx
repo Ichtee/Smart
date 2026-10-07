@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { apiFetch } from '@/utils/api';
 import { useFoods } from '@/hooks/useApi';
 import { useConfirm, useToast } from '@/components/ui/feedback';
+import { Salad } from 'lucide-react';
 
 interface FoodItem {
   _id: string;
@@ -143,7 +144,7 @@ export default function AdminFoodsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
-            <span>🥗</span> Quản Lý Thư Viện Món Ăn (Food Database)
+            <Salad className="size-7" aria-hidden /> Quản Lý Thư Viện Món Ăn (Food Database)
           </h1>
           <p className="text-xs text-slate-400 font-semibold mt-1">
             Thêm, sửa, xóa các món ăn chuẩn để người dùng tra cứu và ghi nhận vào nhật ký.

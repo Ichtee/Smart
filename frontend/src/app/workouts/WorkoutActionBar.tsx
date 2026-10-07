@@ -1,4 +1,5 @@
 'use client';
+import { CalendarDays } from 'lucide-react';
 
 interface WorkoutActionBarProps {
   currentTabWorkout: any;
@@ -19,7 +20,7 @@ export default function WorkoutActionBar({
     <>
       <div className="flex items-center justify-between border-b border-slate-800/80 pb-3 sm:pb-4 flex-wrap gap-3">
         <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-          <span>📅</span> <span className="hidden sm:inline">Danh sách bài tập - </span>
+          <CalendarDays className="size-5" aria-hidden /> <span className="hidden sm:inline">Danh sách bài tập - </span>
           <span className="text-primary">
             {currentTabWorkout?.day} ({currentTabWorkout?.name})
           </span>

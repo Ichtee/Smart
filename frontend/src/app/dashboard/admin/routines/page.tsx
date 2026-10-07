@@ -5,6 +5,7 @@ import { apiFetch } from '@/utils/api';
 import { useRoutines, useExercises } from '@/hooks/useApi';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useConfirm, useToast } from '@/components/ui/feedback';
+import { ShieldAlert } from 'lucide-react';
 
 function SearchableExerciseSelect({
   value,
@@ -501,7 +502,7 @@ export default function RoutineManagement() {
   if (authError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
-        <div className="text-6xl mb-4">⛔</div>
+        <ShieldAlert className="mb-4 size-16 text-destructive" aria-hidden />
         <h1 className="text-2xl font-bold text-destructive mb-2">{authError}</h1>
         <button onClick={() => router.push('/')} className="mt-6 px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">Về trang chủ</button>
       </div>

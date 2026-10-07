@@ -1,7 +1,7 @@
 'use client';
 import EmptyState from '@/components/ui/EmptyState';
 import { Scale } from 'lucide-react';
-import { chartPoints, pointsToPath, type BodyMetric } from '@/utils/bodyMetrics';
+import { chartPoints, formatDateVi, pointsToPath, type BodyMetric } from '@/utils/bodyMetrics';
 
 const W = 600;
 const H = 220;
@@ -27,8 +27,8 @@ export default function BodyChart({ metrics }: { metrics: BodyMetric[] }) {
         ))}
       </svg>
       <figcaption className="flex justify-between text-xs font-semibold text-muted-foreground mt-2">
-        <span>{first.date}</span>
-        <span>{last.date}</span>
+        <span>{formatDateVi(first.date)}</span>
+        <span>{formatDateVi(last.date)}</span>
       </figcaption>
       {points.length === 1 && <p className="mt-2 text-center text-xs text-muted-foreground">Ghi thêm số đo vào những ngày khác để thấy đường xu hướng.</p>}
     </figure>

@@ -6,7 +6,7 @@ import Sidebar from '@/components/Sidebar';
 import { apiFetch, describeError } from '@/utils/api';
 import { fetcher, refreshProfile, useProfile, isUnauthorizedError } from '@/hooks/useApi';
 import { toDateStr, todayStr } from '@/utils/dateUtils';
-import { metricBody, summarize, validateMetricForm, type BodyMetric } from '@/utils/bodyMetrics';
+import { formatDateVi, metricBody, summarize, validateMetricForm, type BodyMetric } from '@/utils/bodyMetrics';
 import BodyChart from './BodyChart';
 import CalorieAdvicePanel from './CalorieAdvicePanel';
 import { Scale, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -200,7 +200,7 @@ export default function BodyPage() {
               <ul className="divide-y divide-border">
                 {history.map(m => (
                   <li key={m.date} className="flex items-center justify-between py-3 text-sm" data-testid="history-row">
-                    <span className="font-semibold">{m.date}</span>
+                    <span className="font-semibold">{formatDateVi(m.date)}</span>
                     <span className="flex items-center gap-4">
                       <span className="font-black">{m.weight} kg</span>
                       {m.bodyFat != null && <span className="text-muted-foreground">{m.bodyFat}% mỡ</span>}

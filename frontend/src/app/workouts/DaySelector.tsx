@@ -1,4 +1,5 @@
 'use client';
+import { CalendarDays } from 'lucide-react';
 
 interface DaySelectorProps {
   activeRoutineId: string;
@@ -22,7 +23,7 @@ export default function DaySelector({
       <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-xl space-y-3 sm:space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-primary text-base sm:text-lg">🧬</span>
+            <CalendarDays className="size-5 text-primary" aria-hidden />
             <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">Lịch Tập Theo Ngày</h2>
           </div>
 

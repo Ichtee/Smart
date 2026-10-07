@@ -73,9 +73,9 @@ describe('Body page: showing the history', () => {
     await setup();
     const rows = screen.getAllByTestId('history-row');
     expect(rows.map(r => r.textContent)).toEqual([
-      expect.stringContaining('2026-05-15'),
-      expect.stringContaining('2026-05-08'),
-      expect.stringContaining('2026-05-01'),
+      expect.stringContaining('15/05/2026'),
+      expect.stringContaining('08/05/2026'),
+      expect.stringContaining('01/05/2026'),
     ]);
     expect(rows[1]).toHaveTextContent('19.5% mỡ');
     expect(rows[1]).toHaveTextContent('eo 85 cm');

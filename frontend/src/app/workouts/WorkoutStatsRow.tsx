@@ -1,4 +1,5 @@
 'use client';
+import { ClipboardList, Dumbbell, Flame } from 'lucide-react';
 
 interface WorkoutStatsRowProps {
   activeRoutine: any;
@@ -20,7 +21,7 @@ export default function WorkoutStatsRow({
         {/* Stat 1: Progress */}
         <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 p-2.5 sm:p-5 rounded-xl sm:rounded-3xl flex flex-col sm:flex-row items-center gap-2 sm:gap-4 shadow-xl text-center sm:text-left">
           <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-sm sm:text-xl font-bold shrink-0">
-            📋
+            <ClipboardList className="size-5 sm:size-6" aria-hidden />
           </div>
           <div className="flex-1 min-w-0 w-full">
             <span className="text-xs sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">TIẾN ĐỘ</span>
@@ -36,7 +37,7 @@ export default function WorkoutStatsRow({
         {/* Stat 2: Mode */}
         <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 p-2.5 sm:p-5 rounded-xl sm:rounded-3xl flex flex-col sm:flex-row items-center gap-2 sm:gap-4 shadow-xl text-center sm:text-left">
           <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-2xl bg-success/10 border border-success/20 flex items-center justify-center text-success text-sm sm:text-xl font-bold shrink-0">
-            🏋️
+            <Dumbbell className="size-5 sm:size-6" aria-hidden />
           </div>
           <div className="min-w-0 w-full">
             <span className="text-xs sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">CHẾ ĐỘ</span>
@@ -47,7 +48,7 @@ export default function WorkoutStatsRow({
         {/* Stat 3: Streak */}
         <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 p-2.5 sm:p-5 rounded-xl sm:rounded-3xl flex flex-col sm:flex-row items-center gap-2 sm:gap-4 shadow-xl text-center sm:text-left">
           <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-2xl bg-warning/10 border border-warning/20 flex items-center justify-center text-warning text-sm sm:text-xl font-bold shrink-0">
-            🔥
+            <Flame className="size-5 sm:size-6" aria-hidden />
           </div>
           <div className="min-w-0 w-full">
             <span className="text-xs sm:text-xs font-bold text-slate-400 uppercase tracking-wider block truncate">STREAK</span>

@@ -1,5 +1,6 @@
 'use client';
 import LiveClock from './LiveClock';
+import { Zap } from 'lucide-react';
 
 interface WorkoutTopBarProps {
   activeRoutineId: string;
@@ -19,7 +20,7 @@ export default function WorkoutTopBar({
         <div className="flex items-center gap-4 sm:gap-5">
           <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-primary to-success p-0.5 shadow-lg shadow-primary/20 flex items-center justify-center shrink-0">
             <div className="w-full h-full bg-background rounded-[14px] flex items-center justify-center">
-              <span className="text-xl sm:text-2xl font-black text-primary">⚡</span>
+              <Zap className="size-6 text-primary" aria-hidden />
             </div>
           </div>
           <div>
