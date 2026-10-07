@@ -106,28 +106,53 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Mật khẩu phải từ 8 đến 100 ký tự.' });
     }
 
-    const userExists = await User.findOne({ $or: [{ email: trimmedEmail }, { username: trimmedUsername }] });
-    if (userExists) {
-      if (!userExists.isEmailVerified) {
-        // Delete unverified account from previous failed attempt so user can re-register
-        await User.deleteOne({ _id: userExists._id });
-      } else {
-        return res.status(400).json({ message: 'Tên đăng nhập hoặc Email đã tồn tại trên hệ thống.' });
-      }
+    // The username and the email can belong to two different existing accounts, so look at all matches.
+    const matches = await User.find({ $or: [{ email: trimmedEmail }, { username: trimmedUsername }] });
+
+    if (matches.some(u => u.isEmailVerified)) {
+      return res.status(400).json({ message: 'Tên đăng nhập hoặc Email đã tồn tại trên hệ thống.' });
+    }
+
+    // An account that is still waiting for its verification email must NOT be replaced by a new
+    // sign-up: anyone could otherwise overwrite someone's pending registration, or pre-register their
+    // email with a password the real owner does not know and wait for them to click the link.
+    // Only stale ones (token expired, the TTL index just has not removed them yet) are cleaned up.
+    const now = Date.now();
+    const stillPending = matches.some(u => !u.verificationTokenExpires || u.verificationTokenExpires.getTime() > now);
+    if (stillPending) {
+      return res.status(409).json({
+        message: 'Tên đăng nhập hoặc Email này đang chờ xác thực. Hãy đăng nhập để gửi lại email xác thực, hoặc đợi tối đa 10 phút rồi đăng ký lại.',
+        pendingVerification: true,
+      });
+    }
+    if (matches.length > 0) {
+      await User.deleteMany({ _id: { $in: matches.map(u => u._id) } });
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
-    const user = await User.create({
-      name: trimmedName,
-      username: trimmedUsername,
-      email: trimmedEmail,
-      password: hashedPassword,
-      verificationToken,
-      verificationTokenExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
-    });
+    let user;
+    try {
+      user = await User.create({
+        name: trimmedName,
+        username: trimmedUsername,
+        email: trimmedEmail,
+        password: hashedPassword,
+        verificationToken,
+        verificationTokenExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      });
+    } catch (createErr) {
+      // Two sign-ups for the same username/email raced past the checks above: the unique index decides
+      if (createErr && createErr.code === 11000) {
+        return res.status(409).json({
+          message: 'Tên đăng nhập hoặc Email này vừa được đăng ký. Vui lòng thử lại hoặc chọn thông tin khác.',
+          pendingVerification: true,
+        });
+      }
+      throw createErr;
+    }
 
     if (!user) {
       return res.status(400).json({ message: 'Invalid user data' });

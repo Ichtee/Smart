@@ -103,15 +103,124 @@ describe('POST /api/users/register', () => {
     expect(await User.countDocuments()).toBe(1);
   });
 
-  test('re-registering over an UNVERIFIED account replaces it (current behaviour)', async () => {
-    await register(valid());
-    const first = await User.findOne({ username: 'vana' });
-    const res = await register(valid({ password: 'differentpass1' }));
-    expect(res.status).toBe(201);
-    expect(await User.countDocuments()).toBe(1);
-    const second = await User.findOne({ username: 'vana' });
-    expect(String(second._id)).not.toBe(String(first._id));
-    expect(await bcrypt.compare('differentpass1', second.password)).toBe(true);
+  describe('accounts that are still waiting for email verification', () => {
+    const pendingAt = (offsetMs) => ({
+      isEmailVerified: false,
+      verificationToken: 'original-token',
+      verificationTokenExpires: new Date(Date.now() + offsetMs),
+    });
+    const MINUTE = 60 * 1000;
+
+    test('cannot be overwritten by a second sign-up with the same username (409, nothing changes)', async () => {
+      await register(valid());
+      const before = await User.findOne({ username: 'vana' }).lean();
+      mockEmailOk();
+
+      const res = await register(valid({ email: 'attacker@example.com', password: 'attackerpass1' }));
+      expect(res.status).toBe(409);
+      expect(res.body.pendingVerification).toBe(true);
+
+      const after = await User.find({}).lean();
+      expect(after).toHaveLength(1);
+      expect(String(after[0]._id)).toBe(String(before._id));
+      expect(after[0].password).toBe(before.password); // victim's password hash untouched
+      expect(after[0].verificationToken).toBe(before.verificationToken); // their emailed link still works
+      expect(global.fetch).not.toHaveBeenCalled(); // and no second email went out
+    });
+
+    test('cannot be pre-registered by someone else using the same EMAIL (pre-hijack attempt)', async () => {
+      await register(valid());
+      const victim = await User.findOne({ username: 'vana' }).lean();
+
+      const res = await register(valid({ username: 'attacker', password: 'attackerpass1' }));
+      expect(res.status).toBe(409);
+      expect(await User.countDocuments({ username: 'attacker' })).toBe(0);
+      expect((await User.findById(victim._id)).verificationToken).toBe(victim.verificationToken);
+    });
+
+    test('the original verification link still works after a rejected takeover attempt', async () => {
+      await register(valid());
+      const token = tokenFromLink(lastEmail().body.template_params.verify_url);
+      await register(valid({ password: 'attackerpass1' }));
+      expect((await request(app).get(`/api/users/verify/${token}`)).status).toBe(200);
+
+      const login = await request(app).post('/api/users/login').send({ username: 'vana', password: 'password123' });
+      expect(login.status).toBe(200); // the owner's own password, not the attacker's
+    });
+
+    test('a username match and an email match on two different pending accounts: still 409, nothing deleted', async () => {
+      await createUser({ username: 'vana', email: 'one@example.com', ...pendingAt(5 * MINUTE) });
+      await createUser({ username: 'other', email: 'vana@example.com', ...pendingAt(5 * MINUTE) });
+      const res = await register(valid());
+      expect(res.status).toBe(409);
+      expect(await User.countDocuments()).toBe(2);
+    });
+
+    test('a verified account on either field wins over a stale pending one: 400, nothing deleted', async () => {
+      await createUser({ username: 'vana', email: 'one@example.com' }); // verified
+      await createUser({ username: 'other', email: 'vana@example.com', ...pendingAt(-MINUTE) }); // stale
+      const res = await register(valid());
+      expect(res.status).toBe(400);
+      expect(res.body.pendingVerification).toBeUndefined();
+      expect(await User.countDocuments()).toBe(2);
+    });
+
+    test('the verified account is found even when it is not the first match (either order)', async () => {
+      // stale pending account on the username is inserted FIRST, the verified one on the email second
+      await createUser({ username: 'vana', email: 'one@example.com', ...pendingAt(-MINUTE) });
+      await createUser({ username: 'other', email: 'vana@example.com' }); // verified
+      const res = await register(valid());
+      expect(res.status).toBe(400);
+      expect(await User.countDocuments()).toBe(2); // the stale one was not deleted either
+    });
+
+    test('a stale one (token expired, TTL sweep has not run yet) is cleaned up and the sign-up succeeds', async () => {
+      const stale = await createUser({ username: 'vana', email: 'vana@example.com', ...pendingAt(-MINUTE) });
+      const res = await register(valid({ password: 'differentpass1' }));
+      expect(res.status).toBe(201);
+
+      const users = await User.find({}).lean();
+      expect(users).toHaveLength(1);
+      expect(String(users[0]._id)).not.toBe(String(stale.user._id));
+      expect(await bcrypt.compare('differentpass1', users[0].password)).toBe(true);
+    });
+
+    test('two stale accounts (one per field) are both cleaned up, with no duplicate-key crash', async () => {
+      await createUser({ username: 'vana', email: 'one@example.com', ...pendingAt(-MINUTE) });
+      await createUser({ username: 'other', email: 'vana@example.com', ...pendingAt(-MINUTE) });
+      const res = await register(valid());
+      expect(res.status).toBe(201);
+      expect(await User.countDocuments()).toBe(1);
+    });
+
+    test('an unverified account with no expiry at all (e.g. set by an admin) is never auto-replaced', async () => {
+      await createUser({ username: 'vana', email: 'vana@example.com', isEmailVerified: false });
+      const res = await register(valid());
+      expect(res.status).toBe(409);
+      expect(await User.countDocuments()).toBe(1);
+    });
+
+    test('the owner can get a fresh link through login + resend instead', async () => {
+      await register(valid());
+      const login = await request(app).post('/api/users/login').send({ username: 'vana', password: 'password123' });
+      expect(login.status).toBe(403);
+      expect(login.body.notVerified).toBe(true);
+
+      const resend = await request(app).post('/api/users/resend-verification').send({ email: login.body.email });
+      expect(resend.status).toBe(200);
+      const token = tokenFromLink(lastEmail().body.template_params.verify_url);
+      expect((await request(app).get(`/api/users/verify/${token}`)).status).toBe(200);
+    });
+
+    test('concurrent sign-ups for the same new username: exactly one wins, the rest get 409, never a 500', async () => {
+      const results = await Promise.all(
+        ['a', 'b', 'c', 'd'].map(tag => register(valid({ email: `${tag}@example.com`, password: `password-${tag}-123` })))
+      );
+      const codes = results.map(r => r.status).sort();
+      expect(codes.filter(c => c === 201)).toHaveLength(1);
+      expect(codes.filter(c => c === 409)).toHaveLength(3);
+      expect(await User.countDocuments({ username: 'vana' })).toBe(1);
+    });
   });
 
   test('if the email cannot be sent the account is removed so the user can retry', async () => {
