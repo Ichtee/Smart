@@ -51,6 +51,7 @@ app.use('/api/workouts', require('./routes/workoutRoutes'));
 app.use('/api/nutrition', require('./routes/nutritionRoutes'));
 app.use('/api/foods', require('./routes/foodRoutes'));
 app.use('/api/body-metrics', require('./routes/bodyMetricRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes'));
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({ success: true, message: 'Server is healthy' });

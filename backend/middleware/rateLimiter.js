@@ -66,4 +66,15 @@ const emailFlowLimiter = rateLimit({
   message: { message: 'Too many requests. Please try again after 15 minutes.' },
 });
 
-module.exports = { generalLimiter, loginLimiter, registerLimiter, emailFlowLimiter, userOrIpKey };
+// AI endpoints: 50 requests per day per user. Every call spends Gemini quota.
+const aiLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 50,
+  skip: skipInTests,
+  keyGenerator: userOrIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Bạn đã dùng hết lượt AI hôm nay, vui lòng quay lại ngày mai.' },
+});
+
+module.exports = { generalLimiter, loginLimiter, registerLimiter, emailFlowLimiter, aiLimiter, userOrIpKey };
