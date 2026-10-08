@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import RoutinesPage from './page';
 import { apiFetch } from '@/utils/api';
 import { refreshProfile } from '@/hooks/useApi';
+import { postAi } from '@/utils/ai';
 
 const nav = vi.hoisted(() => {
   const push = vi.fn();
@@ -27,6 +28,8 @@ vi.mock('@/hooks/useApi', () => ({
   isUnauthorizedError: (e: unknown) => (e as { status?: number } | null)?.status === 401,
 }));
 vi.mock('@/utils/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/utils/api')>()), apiFetch: vi.fn() }));
+
+vi.mock('@/utils/ai', () => ({ postAi: vi.fn() }));
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -344,5 +347,29 @@ describe('Routines: editing', () => {
     expect(apiFetch).toHaveBeenCalledTimes(1);
     finish(json({}));
     await screen.findByRole('status');
+  });
+});
+
+describe('Routines: AI draft', () => {
+  test('a generated routine opens in the editor and nothing is saved until "Lưu"', async () => {
+    vi.mocked(postAi).mockResolvedValue({ routine: { ...MINE, name: 'AI Plan', id: undefined } });
+    const { user, save } = setup([BUILTIN]);
+
+    await user.click(screen.getByRole('button', { name: 'Tạo bằng AI' }));
+    await user.click(screen.getByRole('button', { name: 'Tạo lịch' }));
+
+    expect(await screen.findByLabelText('Tên lịch tập')).toHaveValue('AI Plan');
+    expect(screen.getByRole('status')).toHaveTextContent('Đã tạo bản nháp bằng AI');
+    expect(apiFetch).not.toHaveBeenCalled();
+
+    await save();
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(apiFetch).mock.calls[0][0]).toBe('/api/routines/mine');
+    expect(vi.mocked(apiFetch).mock.calls[0][1]!.method).toBe('POST');
+  });
+
+  test('"Tạo bằng AI" is disabled at the 10-routine limit', () => {
+    setup(Array.from({ length: 10 }, (_, i) => ({ ...MINE, id: `u${i}` })));
+    expect(screen.getByRole('button', { name: 'Tạo bằng AI' })).toBeDisabled();
   });
 });

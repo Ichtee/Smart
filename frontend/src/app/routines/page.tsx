@@ -10,7 +10,8 @@ import {
   draftFromRoutine, draftToBody, emptyDraft, exerciseFromLibrary, routineSummary, validateDraft,
   MAX_EXERCISES_PER_DAY, type DayMode, type DraftDay, type LibraryExercise, type RoutineDraft,
 } from './routineDraft';
-import { ClipboardList, Loader2, Plus, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
+import AiRoutineForm from './AiRoutineForm';
+import { ClipboardList, Loader2, Plus, Sparkles, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useConfirm } from '@/components/ui/feedback';
 
 const MODE_LABELS: Record<DayMode, string> = { off: 'Không tập', train: 'Ngày tập', rest: 'Ngày nghỉ' };
@@ -33,6 +34,7 @@ export default function RoutinesPage() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [search, setSearch] = useState<Record<string, string>>({});
+  const [showAi, setShowAi] = useState(false);
 
   useEffect(() => {
     if (isUnauthorizedError(error)) {
@@ -131,14 +133,24 @@ export default function RoutinesPage() {
               <p className="text-muted-foreground text-xs sm:text-sm font-semibold mt-1">Tự xây dựng lịch tập riêng từ thư viện bài tập.</p>
             </div>
             {!draft && (
-              <button
-                type="button"
-                onClick={startNew}
-                disabled={mine.length >= MAX_ROUTINES}
-                className="px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold text-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-              >
-                <Plus className="size-4" /> Tạo lịch mới
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAi(v => !v)}
+                  disabled={mine.length >= MAX_ROUTINES}
+                  className="px-5 py-2.5 rounded-full border border-primary text-primary font-semibold text-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <Sparkles className="size-4" /> Tạo bằng AI
+                </button>
+                <button
+                  type="button"
+                  onClick={startNew}
+                  disabled={mine.length >= MAX_ROUTINES}
+                  className="px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold text-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <Plus className="size-4" /> Tạo lịch mới
+                </button>
+              </div>
             )}
           </div>
 
@@ -147,6 +159,19 @@ export default function RoutinesPage() {
               <span>Không tải được danh sách lịch tập.</span>
               <button type="button" onClick={() => mutate()} className="underline cursor-pointer">Thử lại</button>
             </div>
+          )}
+
+          {!draft && showAi && (
+            <AiRoutineForm
+              onCancel={() => setShowAi(false)}
+              onGenerated={routine => {
+                setDraft(draftFromRoutine(routine));
+                setEditingId(null);
+                setSearch({});
+                setShowAi(false);
+                setNotice({ text: 'Đã tạo bản nháp bằng AI. Kiểm tra và bấm Lưu.', type: 'success' });
+              }}
+            />
           )}
 
           {notice && (
