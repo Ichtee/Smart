@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from './smart/logo';
 import ThemeToggle from './ThemeToggle';
-import { LayoutGrid, Dumbbell, Utensils, Scale, User, LogOut, Trophy, CalendarDays, BarChart3, Menu, X } from 'lucide-react';
+import { LayoutGrid, Sparkles, Dumbbell, Utensils, Scale, User, LogOut, Trophy, CalendarDays, BarChart3, Menu, X } from 'lucide-react';
 import { API_URL } from '@/utils/api';
 import { clearApiCache, useProfile } from '@/hooks/useApi';
 
 const GROUPS = [
-  { title: null, items: [{ label: 'Tổng quan', href: '/dashboard', icon: LayoutGrid }] },
+  { title: null, items: [{ label: 'Tổng quan', href: '/dashboard', icon: LayoutGrid }, { label: 'Trợ lý AI', href: '/coach', icon: Sparkles }] },
   {
     title: 'Tập luyện',
     items: [

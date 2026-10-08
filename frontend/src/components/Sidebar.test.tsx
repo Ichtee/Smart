@@ -52,7 +52,7 @@ describe('Sidebar', () => {
 
     await userEvent.click(bar.getByRole('button', { name: /Thêm/ }));
     const menu = within(screen.getByRole('dialog', { name: 'Menu' }));
-    expect(menu.getAllByRole('link').map(l => l.getAttribute('href'))).toEqual(['/routines', '/records', '/volume', '/profile']);
+    expect(menu.getAllByRole('link').map(l => l.getAttribute('href'))).toEqual(['/coach', '/routines', '/records', '/volume', '/profile']);
     expect(menu.getByRole('button', { name: /Đăng xuất/ })).toBeInTheDocument();
 
     await userEvent.keyboard('{Escape}');
