@@ -36,7 +36,7 @@ const chat = async (req, res) => {
     const reply = await generate({
       system: CHAT_SYSTEM + await buildUserContext(req.user),
       contents: messages.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
-      maxOutputTokens: 800,
+      maxOutputTokens: 2048, // a ceiling, not a target: larger models write longer Vietnamese replies and got cut off at 800
     });
     return res.status(200).json({ reply });
   } catch (err) {
