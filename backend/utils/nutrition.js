@@ -84,4 +84,4 @@ const sanitizeWater = (waterGlasses, mlPerGlass) => {
   return { waterGlasses: glasses, mlPerGlass: ml };
 };
 
-module.exports = { sanitizeMeals, sanitizeWater, MEAL_KEYS };
+module.exports = { sanitizeItem, sanitizeMeals, sanitizeWater, MEAL_KEYS };

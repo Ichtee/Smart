@@ -36,6 +36,9 @@ app.use(cors({
   credentials: true,
 }));
 
+// Food photos (resized client-side) exceed the 100kb global limit; body-parser skips an already-parsed body
+app.use('/api/ai/meal', express.json({ limit: '2mb' }));
+
 // Limit request body to 100kb (routine schedules with many exercises exceed 10kb)
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());

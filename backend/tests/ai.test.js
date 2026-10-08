@@ -170,3 +170,76 @@ describe('buildUserContext', () => {
     expect(text).not.toMatch(/null|undefined/);
   });
 });
+
+describe('POST /api/ai/meal', () => {
+  beforeAll(db.connect);
+  beforeEach(async () => {
+    await db.clear();
+    process.env.GEMINI_API_KEY = 'k';
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterEach(() => { jest.restoreAllMocks(); });
+  afterAll(db.close);
+
+  const meal = (auth, body) => request(app).post('/api/ai/meal').set(auth).send(body);
+  const items = (list) => okResponse(geminiReply(JSON.stringify({ items: list })));
+
+  test('400 when neither text nor image', async () => {
+    const { auth } = await createUser();
+    expect((await meal(auth, {})).status).toBe(400);
+  });
+
+  test.each([
+    ['text over 500 chars', { text: 'x'.repeat(501) }],
+    ['an image that is not a base64 jpeg/png/webp data URL', { image: 'http://evil.example/a.jpg' }],
+    ['an image over 1,500,000 chars', { image: `data:image/jpeg;base64,${'A'.repeat(1500001)}` }],
+  ])('400 for %s and Gemini is not called', async (_name, body) => {
+    const { auth } = await createUser();
+    const spy = jest.spyOn(global, 'fetch');
+    expect((await meal(auth, body)).status).toBe(400);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  test('sends image as inlineData without the data: prefix', async () => {
+    const { auth } = await createUser();
+    const spy = mockGemini(items([{ name: 'Phở', quantity: '1 tô', calories: 450 }]));
+    const res = await meal(auth, { image: 'data:image/jpeg;base64,QUJD' });
+    expect(res.status).toBe(200);
+    expect(lastGeminiBody(spy).contents[0].parts).toContainEqual({ inlineData: { mimeType: 'image/jpeg', data: 'QUJD' } });
+  });
+
+  test('accepts a ~1 MB image body', async () => {
+    const { auth } = await createUser();
+    mockGemini(items([{ name: 'Phở', quantity: '1 tô', calories: 450 }]));
+    const res = await meal(auth, { image: `data:image/jpeg;base64,${'A'.repeat(1000000)}` });
+    expect(res.status).toBe(200);
+  });
+
+  test('drops invalid items and rounds numbers', async () => {
+    const { auth } = await createUser();
+    mockGemini(items([
+      { name: 'Trứng', quantity: '2 quả', calories: 155.4, protein: 12.56, carbs: 1.1, fat: 10.6 },
+      { name: '', calories: 100 },
+      { name: 'X', calories: -5 },
+      { name: 'Y', calories: 50000 },
+    ]));
+    const res = await meal(auth, { text: '2 trứng' });
+    expect(res.status).toBe(200);
+    expect(res.body.items).toEqual([{ name: 'Trứng', quantity: '2 quả', calories: 155, protein: 12.6, carbs: 1.1, fat: 10.6 }]);
+  });
+
+  test('422 when nothing recognised', async () => {
+    const { auth } = await createUser();
+    mockGemini(items([]));
+    const res = await meal(auth, { text: 'asdf' });
+    expect(res.status).toBe(422);
+    expect(res.body.message).toBe('Không nhận ra món ăn nào, hãy thử mô tả rõ hơn.');
+  });
+
+  test('caps at 20 items', async () => {
+    const { auth } = await createUser();
+    mockGemini(items(Array.from({ length: 25 }, (_, i) => ({ name: `Món ${i}`, quantity: '1', calories: 10 }))));
+    const res = await meal(auth, { text: 'nhiều món' });
+    expect(res.body.items).toHaveLength(20);
+  });
+});
