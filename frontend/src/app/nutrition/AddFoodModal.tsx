@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { apiFetch } from '@/utils/api';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import CustomFoodsTab from './CustomFoodsTab';
+import AiMealTab from './AiMealTab';
 import { foodMacros, type MealItem, type DbFood } from './types';
 import { useToast } from '@/components/ui/feedback';
 
@@ -35,7 +36,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
   const [showDbDropdown, setShowDbDropdown] = useState(false);
   const [saveAsCustomFood, setSaveAsCustomFood] = useState(false);
-  const [activeModalTab, setActiveModalTab] = useState<'search' | 'my_foods'>('search');
+  const [activeModalTab, setActiveModalTab] = useState<'search' | 'my_foods' | 'ai'>('search');
 
   // the first few foods of the meal's category (or any meal), shown as one-tap suggestions
   const quickFoods = useMemo(
@@ -182,7 +183,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
             </div>
 
             {/* Modal Tabs */}
-            <div className="grid grid-cols-2 gap-2 mb-4 p-1 bg-inset border border-slate-800 rounded-xl">
+            <div className="grid grid-cols-3 gap-2 mb-4 p-1 bg-inset border border-slate-800 rounded-xl">
               <button
                 type="button"
                 onClick={() => setActiveModalTab('search')}
@@ -208,9 +209,22 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                   {dbFoods.filter(f => f.isCustom).length}
                 </span>
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveModalTab('ai')}
+                className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                  activeModalTab === 'ai'
+                    ? 'bg-primary text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                ✨ AI
+              </button>
             </div>
 
-            {activeModalTab === 'my_foods' ? (
+            {activeModalTab === 'ai' ? (
+              <AiMealTab dayLoaded={dayLoaded} onAdd={items => { items.forEach(i => onAddItem(category, i)); onClose(); }} />
+            ) : activeModalTab === 'my_foods' ? (
               /* Tab 2: My Custom Foods List & Inline Creation Form */
               <CustomFoodsTab
                 dbFoods={dbFoods}
