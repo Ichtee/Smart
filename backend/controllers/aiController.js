@@ -1,6 +1,8 @@
 const { generate, AiError } = require('../utils/gemini');
 const { buildUserContext } = require('../utils/aiContext');
 const { sanitizeItem } = require('../utils/nutrition');
+const { cleanUserRoutine, DAYS } = require('../utils/userRoutine');
+const Exercise = require('../models/Exercise');
 
 const handleError = (res, err, label) => {
   if (err instanceof AiError) return res.status(err.status).json({ message: err.message });
@@ -120,4 +122,94 @@ const parseMeal = async (req, res) => {
   }
 };
 
-module.exports = { chat, parseMeal, handleError };
+const EQUIPMENT = {
+  gym: 'phòng gym đầy đủ',
+  dumbbells: 'chỉ có tạ đơn ở nhà',
+  bodyweight: 'không dụng cụ',
+};
+const MAX_ROUTINE_NOTES = 300;
+
+const ROUTINE_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    name: { type: 'STRING' },
+    description: { type: 'STRING' },
+    schedule: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          day: { type: 'STRING', enum: DAYS },
+          name: { type: 'STRING' },
+          isRestDay: { type: 'BOOLEAN' },
+          exercises: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                exerciseId: { type: 'STRING' }, sets: { type: 'INTEGER' },
+                repsRange: { type: 'STRING' }, restTimeSeconds: { type: 'INTEGER' },
+              },
+              required: ['exerciseId', 'sets', 'repsRange', 'restTimeSeconds'],
+            },
+          },
+        },
+        required: ['day', 'name', 'isRestDay', 'exercises'],
+      },
+    },
+  },
+  required: ['name', 'description', 'schedule'],
+};
+
+// @desc    Draft a routine from the exercise library (nothing is saved; the client saves it via /api/routines/mine)
+// @route   POST /api/ai/routine
+// @access  Private
+const generateRoutine = async (req, res) => {
+  try {
+    const { daysPerWeek, equipment, notes } = req.body;
+    if (!Number.isInteger(daysPerWeek) || daysPerWeek < 1 || daysPerWeek > 6
+      || !Object.prototype.hasOwnProperty.call(EQUIPMENT, equipment)
+      || (notes !== undefined && (typeof notes !== 'string' || notes.length > MAX_ROUTINE_NOTES))) {
+      return res.status(400).json({ message: `Cần daysPerWeek từ 1 đến 6, equipment (${Object.keys(EQUIPMENT).join('/')}), ghi chú tối đa ${MAX_ROUTINE_NOTES} ký tự.` });
+    }
+
+    const exercises = await Exercise.find().select('name muscle equipment').lean();
+    const byId = new Map(exercises.map(e => [String(e._id), e]));
+    const library = exercises.map(e => `${e._id}|${e.name}|${e.muscle}|${e.equipment || ''}`).join('\n');
+    const goal = req.user.goal || 'chưa đặt';
+
+    const system = `Bạn là huấn luyện viên tạo lịch tập tuần. Tạo đúng ${daysPerWeek} ngày tập (các ngày còn lại bỏ trống hoặc là ngày nghỉ). Chỉ dùng exerciseId có trong danh sách bài tập (định dạng id|tên|nhóm cơ|dụng cụ). Chọn số hiệp, số lần (VD "8-12") và thời gian nghỉ phù hợp mục tiêu. Tên lịch và tên buổi tập bằng tiếng Việt.
+
+Mục tiêu người dùng: ${goal}
+Dụng cụ: ${EQUIPMENT[equipment]}
+Ghi chú: ${(notes || '').trim() || 'không'}
+
+Danh sách bài tập:
+${library}`;
+
+    const result = await generate({
+      system,
+      contents: [{ role: 'user', parts: [{ text: 'Hãy tạo lịch tập.' }] }],
+      schema: ROUTINE_SCHEMA,
+      maxOutputTokens: 4096,
+    });
+
+    const schedule = (Array.isArray(result.schedule) ? result.schedule : []).map(d => ({
+      ...d,
+      exercises: (Array.isArray(d && d.exercises) ? d.exercises : []).flatMap(e => {
+        const known = e && byId.get(String(e.exerciseId));
+        return known ? [{ ...e, exerciseName: known.name, muscle: known.muscle }] : [];
+      }),
+    }));
+    const { routine, error } = cleanUserRoutine({ name: result.name, description: result.description, schedule });
+    if (error) {
+      console.error('generateRoutine: AI routine rejected:', error);
+      throw new AiError(502, 'AI không phản hồi hợp lệ, vui lòng thử lại.');
+    }
+    return res.status(200).json({ routine });
+  } catch (err) {
+    return handleError(res, err, 'generateRoutine');
+  }
+};
+
+module.exports = { chat, parseMeal, generateRoutine, handleError };

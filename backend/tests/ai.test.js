@@ -4,6 +4,8 @@ const db = require('./helpers/db');
 const { createUser } = require('./helpers/auth');
 const NutritionLog = require('../models/NutritionLog');
 const WorkoutLog = require('../models/WorkoutLog');
+const Exercise = require('../models/Exercise');
+const Routine = require('../models/Routine');
 const { generate, AiError } = require('../utils/gemini');
 const { buildUserContext } = require('../utils/aiContext');
 
@@ -241,5 +243,81 @@ describe('POST /api/ai/meal', () => {
     mockGemini(items(Array.from({ length: 25 }, (_, i) => ({ name: `Món ${i}`, quantity: '1', calories: 10 }))));
     const res = await meal(auth, { text: 'nhiều món' });
     expect(res.body.items).toHaveLength(20);
+  });
+});
+
+describe('POST /api/ai/routine', () => {
+  let lib;
+  beforeAll(db.connect);
+  beforeEach(async () => {
+    await db.clear();
+    process.env.GEMINI_API_KEY = 'k';
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    lib = await Exercise.insertMany([
+      { name: 'Bench Press', muscle: 'chest', equipment: 'Barbell' },
+      { name: 'Squat', muscle: 'quads', equipment: 'Barbell' },
+      { name: 'Pull Up', muscle: 'back', equipment: '' },
+      { name: 'Curl', muscle: 'biceps', equipment: 'Dumbbell' },
+    ]);
+  });
+  afterEach(() => { jest.restoreAllMocks(); });
+  afterAll(db.close);
+
+  const routine = (auth, body) => request(app).post('/api/ai/routine').set(auth).send(body);
+  const valid = { daysPerWeek: 3, equipment: 'gym', notes: '' };
+  const day = (name, day, exercises) => ({ day, name, isRestDay: false, exercises });
+  const plan = (schedule) => okResponse(geminiReply(JSON.stringify({ name: 'AI Plan', description: 'd', schedule })));
+
+  test.each([
+    ['daysPerWeek 0', { ...valid, daysPerWeek: 0 }],
+    ['daysPerWeek 7', { ...valid, daysPerWeek: 7 }],
+    ['daysPerWeek 2.5', { ...valid, daysPerWeek: 2.5 }],
+    ['unknown equipment', { ...valid, equipment: 'jetpack' }],
+    ['notes over 300 chars', { ...valid, notes: 'x'.repeat(301) }],
+  ])('400 for %s and Gemini is not called', async (_name, body) => {
+    const { auth } = await createUser();
+    const spy = jest.spyOn(global, 'fetch');
+    expect((await routine(auth, body)).status).toBe(400);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  test('sends the exercise library and profile goal to Gemini', async () => {
+    const { auth } = await createUser({ goal: 'Tăng cơ' });
+    const spy = mockGemini(plan([day('Push', 'Thứ 2', [{ exerciseId: String(lib[0]._id), sets: 3, repsRange: '8-12', restTimeSeconds: 90 }])]));
+    await routine(auth, valid);
+    const sent = JSON.stringify(lastGeminiBody(spy));
+    for (const ex of lib) {
+      expect(sent).toContain(String(ex._id));
+      expect(sent).toContain(ex.name);
+    }
+    expect(sent).toContain('Tăng cơ');
+  });
+
+  test('fills name/muscle from the library and drops unknown exerciseIds', async () => {
+    const { auth } = await createUser();
+    mockGemini(plan([day('Push', 'Thứ 2', [
+      { exerciseId: String(lib[0]._id), exerciseName: 'Wrong Name', sets: 4, repsRange: '6-8', restTimeSeconds: 120 },
+      { exerciseId: '64b64b64b64b64b64b64b64b', sets: 3, repsRange: '10', restTimeSeconds: 60 },
+    ])]));
+    const res = await routine(auth, valid);
+    expect(res.status).toBe(200);
+    const exercises = res.body.routine.schedule[0].exercises;
+    expect(exercises).toHaveLength(1);
+    expect(exercises[0]).toMatchObject({ exerciseId: String(lib[0]._id), exerciseName: 'Bench Press', muscle: 'chest', sets: 4, repsRange: '6-8' });
+  });
+
+  test('502 when the cleaned routine is invalid', async () => {
+    const { auth } = await createUser();
+    mockGemini(plan([day('Push', 'Thứ 2', [{ exerciseId: '64b64b64b64b64b64b64b64b', sets: 3, repsRange: '10', restTimeSeconds: 60 }])]));
+    const res = await routine(auth, valid);
+    expect(res.status).toBe(502);
+    expect(res.body.message).toBe('AI không phản hồi hợp lệ, vui lòng thử lại.');
+  });
+
+  test('does not create a Routine document', async () => {
+    const { auth } = await createUser();
+    mockGemini(plan([day('Push', 'Thứ 2', [{ exerciseId: String(lib[0]._id), sets: 3, repsRange: '10', restTimeSeconds: 60 }])]));
+    expect((await routine(auth, valid)).status).toBe(200);
+    expect(await Routine.countDocuments()).toBe(0);
   });
 });
