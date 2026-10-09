@@ -210,7 +210,9 @@ describe('Workouts: loading the plan', () => {
     server.exercises = EXERCISES.filter(e => e._id !== 'e-legpress');
     renderPage();
     await screen.findByText(/^1\.\s*Squat/);
-    expect(screen.queryByText(/Leg Press/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^\d+\.\s*Leg Press/)).not.toBeInTheDocument();
+    // named once, instead of silently missing from the list and stuck at 0/N in the muscle targets
+    expect(screen.getByText(/không còn trong thư viện nên bị bỏ qua: Leg Press/)).toBeInTheDocument();
   });
 
   test('a rest day shows the rest message and an empty list', async () => {
@@ -600,6 +602,23 @@ describe('Workouts: restoring a saved day from the server', () => {
     await setup();
     expect(screen.getByText(/^2\.\s*Leg Press/)).toBeInTheDocument();
     expect(screen.queryByText(/ĐÃ CHỐT LỊCH/)).not.toBeInTheDocument();
+  });
+
+  test('a log of another routine on this date is announced, and saving over it asks first', async () => {
+    server.logs['2026-10-07'] = savedLegs({ routineId: 'fullbody', routineName: 'Full Body' });
+    const ask = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const { save } = await setup();
+    expect(screen.getByRole('status')).toHaveTextContent('Ngày này đã có buổi tập của lịch "Full Body" (1/1 bài đã xong)');
+
+    const posts = server.posts.length;
+    await save();
+    expect(ask).toHaveBeenCalledWith(expect.stringContaining('sẽ thay thế buổi tập đó'));
+    expect(server.posts.length).toBe(posts); // declined: nothing overwritten
+
+    ask.mockReturnValue(true);
+    await save();
+    await waitFor(() => expect(server.posts.length).toBe(posts + 1));
+    ask.mockRestore();
   });
 
   test('an unlocked (isSaved:false) log is not restored either: the template is shown again', async () => {

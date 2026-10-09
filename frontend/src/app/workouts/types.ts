@@ -48,6 +48,7 @@ export interface ActiveExercise extends WorkoutExercise {
 /** The saved log of a day, as `GET /api/workouts?date=` returns it. */
 export interface SavedWorkoutLog {
   routineId?: string;
+  routineName?: string;
   isSaved?: boolean;
   selectedIds?: string[];
   completedIds?: string[];

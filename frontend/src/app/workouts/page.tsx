@@ -7,6 +7,7 @@ import { apiFetch, isUnauthorized } from '@/utils/api';
 import { useRoutines, useExercises, useProfile, useStreak, isUnauthorizedError } from '@/hooks/useApi';
 import { useServerSave } from '@/hooks/useServerSave';
 import SaveStatusBanner from '@/components/SaveStatusBanner';
+import { useConfirm } from '@/components/ui/feedback';
 import WorkoutTopBar from './WorkoutTopBar';
 import WorkoutStatsRow from './WorkoutStatsRow';
 import DaySelector from './DaySelector';
@@ -35,6 +36,7 @@ const DAY_TO_WEEK_OFFSET: Record<string, number> = {
 
 export default function Workouts() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [modelType, setModelType] = useState<'anterior' | 'posterior'>('anterior');
   // The user's explicit routine choice; until they pick one we derive it (see data layer below)
@@ -42,6 +44,8 @@ export default function Workouts() {
   // Date whose log failed to load: editing that day is blocked so we never overwrite unread data
   const [dayLoadErrorDate, setDayLoadErrorDate] = useState<string | null>(null);
   const [dayRetryTick, setDayRetryTick] = useState(0);
+  // One log per date: a log saved under ANOTHER routine for the shown date is replaced if this day is saved
+  const [otherRoutineLog, setOtherRoutineLog] = useState<{ date: string; routineName: string; done: number; total: number } | null>(null);
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0);
 
   const [showMobileBodyModel, setShowMobileBodyModel] = useState<boolean>(false);
@@ -370,8 +374,11 @@ export default function Workouts() {
       if (isCancelled) return;
       setDayLoadErrorDate(null);
 
+      const logRoutineMatches = !apiLog || !apiLog.routineId || apiLog.routineId === activeRoutineId || activeRoutineId === 'none';
+      setOtherRoutineLog(apiLog && !logRoutineMatches && apiLog.isSaved && (apiLog.selectedIds || []).length > 0
+        ? { date: activeTabDateStr, routineName: apiLog.routineName || 'khác', done: (apiLog.completedIds || []).length, total: (apiLog.selectedIds || []).length }
+        : null);
       if (apiLog) {
-        const logRoutineMatches = !apiLog.routineId || apiLog.routineId === activeRoutineId || activeRoutineId === 'none';
         if (logRoutineMatches && apiLog.isSaved && (apiLog.selectedIds || []).length > 0) {
           selectedIds = apiLog.selectedIds || [];
           completedIds = apiLog.completedIds || [];
@@ -528,7 +535,13 @@ export default function Workouts() {
     setTimeout(() => setNoticeMessage(''), 4000);
   };
 
-  const handleSaveWorkout = () => {
+  const otherLogHere = otherRoutineLog && otherRoutineLog.date === activeTabDateStr ? otherRoutineLog : null;
+
+  const handleSaveWorkout = async () => {
+    if (otherLogHere && !(await confirm({
+      message: `Ngày này đã có buổi tập của lịch "${otherLogHere.routineName}" (${otherLogHere.done}/${otherLogHere.total} bài đã xong). Lưu lịch này sẽ thay thế buổi tập đó. Tiếp tục?`,
+      tone: 'danger',
+    }))) return;
     if (dayBlocked) {
       setNoticeMessage('Chưa tải được nhật ký ngày này. Bấm "Thử lại" trước khi chỉnh sửa để tránh ghi đè dữ liệu.');
       setTimeout(() => setNoticeMessage(''), 4000);
@@ -541,6 +554,7 @@ export default function Workouts() {
     }
 
     setDaySavedStatus(prev => ({ ...prev, [currentDayKey]: true }));
+    setOtherRoutineLog(null);
 
     // Save as the last trained routine & day tab to MongoDB User Profile
     pushUserProfileUpdate({
@@ -740,7 +754,8 @@ export default function Workouts() {
       currentTabWorkout.exercises.forEach(tmplEx => {
         if (!tmplEx.exerciseName) return;
         const matched = findLibraryExercise(allExercises, tmplEx);
-        const muscleRaw = matched ? matched.muscle : (tmplEx.muscle || 'chest');
+        if (!matched) return; // not in the library: it is never selected, so it must not be a target either (listed in missingTemplateNames)
+        const muscleRaw = matched.muscle;
         const muscleKey = normalizeMuscleId(muscleRaw);
         if (!countsMap[muscleKey]) {
           countsMap[muscleKey] = { count: 0, rawId: muscleRaw };
@@ -768,6 +783,10 @@ export default function Workouts() {
       count: countsMap[mKey].count
     }));
   }, [currentTabWorkout, allExercises, activeSelectedExercises]);
+
+  const missingTemplateNames = useMemo(() => (currentTabWorkout?.exercises || [])
+    .filter(t => t.exerciseName && allExercises.length > 0 && !findLibraryExercise(allExercises, t))
+    .map(t => t.exerciseName), [currentTabWorkout, allExercises]);
 
   const filteredLibraryExercises = useMemo(() => {
     return allExercises.filter(ex => {
@@ -937,6 +956,16 @@ export default function Workouts() {
                   <span className="text-lg shrink-0">💡</span>
                   <span className="font-bold">{noticeMessage}</span>
                 </div>
+              )}
+
+              {otherLogHere && !isWorkoutSaved && (
+                <div role="status" className="bg-warning/10 border border-warning/40 rounded-2xl p-3.5 text-xs text-warning font-semibold">
+                  Ngày này đã có buổi tập của lịch &quot;{otherLogHere.routineName}&quot; ({otherLogHere.done}/{otherLogHere.total} bài đã xong). Mỗi ngày chỉ lưu một buổi: bấm LƯU ở đây sẽ thay thế buổi đó. Muốn xem lại, chọn lại lịch &quot;{otherLogHere.routineName}&quot; ở trên.
+                </div>
+              )}
+
+              {missingTemplateNames.length > 0 && (
+                <p className="text-xs text-slate-400">Bài trong lịch không còn trong thư viện nên bị bỏ qua: {missingTemplateNames.join(', ')}.</p>
               )}
 
               {/* Dynamic Over-Target Warning Banner */}
