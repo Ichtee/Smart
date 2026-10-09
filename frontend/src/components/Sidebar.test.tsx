@@ -19,7 +19,8 @@ describe('Sidebar', () => {
   test.each([
     ['Tổng quan', '/dashboard'],
     ['Tập luyện', '/workouts'],
-    ['Lịch tập', '/routines'],
+    ['Trợ lý AI', '/coach'],
+    ['Lịch tập cá nhân', '/routines'],
     ['Kỷ lục', '/records'],
     ['Khối lượng', '/volume'],
     ['Dinh dưỡng', '/nutrition'],
@@ -65,7 +66,7 @@ describe('Sidebar', () => {
     const records = desktop.getByRole('link', { name: 'Kỷ lục' });
     expect(records).toHaveAttribute('aria-current', 'page');
     expect(records.className).toContain('text-primary');
-    expect(desktop.getByRole('link', { name: 'Lịch tập' })).not.toHaveAttribute('aria-current');
+    expect(desktop.getByRole('link', { name: 'Lịch tập cá nhân' })).not.toHaveAttribute('aria-current');
   });
 
   test('"Thêm" is highlighted when the current page is one of its pages', () => {
