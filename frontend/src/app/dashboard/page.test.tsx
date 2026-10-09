@@ -106,9 +106,7 @@ describe('Dashboard: loading and header', () => {
   test('normal users get no Admin Panel button; the profile icon goes to /profile', async () => {
     const { user } = await setup();
     expect(screen.queryByRole('button', { name: /Admin Panel/ })).not.toBeInTheDocument();
-    const buttons = screen.getAllByRole('button');
-    // the round profile button is the last one in the header (after the bell)
-    await user.click(buttons.find(b => b.className.includes('size-11'))!);
+    await user.click(screen.getByRole('button', { name: 'Hồ sơ' }));
     expect(nav.push).toHaveBeenCalledWith('/profile');
   });
 

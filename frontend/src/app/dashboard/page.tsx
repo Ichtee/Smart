@@ -2,8 +2,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
-import GoogleTranslate from '@/components/GoogleTranslate';
+import AppShell from '@/components/AppShell';
 import { apiFetch } from '@/utils/api';
 import { fetcher, useProfile, useStreak, isUnauthorizedError } from '@/hooks/useApi';
 import { monthAndWeekRange, monthRange, monthKey } from '@/utils/dateUtils';
@@ -11,7 +10,7 @@ import { waterGoalMl } from '@/utils/waterGoal';
 import { calcTargetCalories, macroTargets, sumMacros } from '@/utils/nutritionCalc';
 import MetabolismCard from './MetabolismCard';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Dumbbell, ChevronDown, ChevronUp, Trash2, CheckCircle2, Play, ClipboardList, Utensils, Target } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShieldCheck, Flame, Droplets, Calendar, Dumbbell, ChevronDown, ChevronUp, Trash2, CheckCircle2, Play, ClipboardList, Utensils, Target } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import ProgressRing from '@/components/ui/ProgressRing';
 import { PageSkeleton } from '@/components/ui/Skeleton';
@@ -213,9 +212,11 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">
-      <Sidebar />
-      <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-8 overflow-y-auto pb-28 md:pb-10">
+    <AppShell title="Tổng quan" subtitle={`Xin chào, ${userName}!`} actions={userRole === 'admin' && (
+              <button onClick={() => router.push('/dashboard/admin')} className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary font-bold text-xs hover:bg-primary/20 transition cursor-pointer">
+                <ShieldCheck className="size-5" /> Admin Panel
+              </button>
+            )}>
         {!!profileError && !isUnauthorizedError(profileError) && (
           <div className="bg-destructive/10 border border-destructive/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-destructive">
             <p className="font-extrabold text-white">Không tải được hồ sơ. Một số chỉ số đang hiển thị giá trị mặc định.</p>
@@ -223,30 +224,15 @@ export default function Dashboard() {
           </div>
         )}
 
-        <header className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-border">
-          <div className="flex items-center gap-4">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">Tổng quan</h1>
-            <span className="text-muted-foreground text-base md:text-lg font-semibold">Xin chào, {userName}!</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <GoogleTranslate />
-            {userRole === 'admin' && (
-              <button onClick={() => router.push('/dashboard/admin')} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 text-primary font-bold text-sm hover:bg-primary/20 transition cursor-pointer">
-                <ShieldCheck className="size-5" /> Admin Panel
-              </button>
-            )}
-                        <button onClick={() => router.push('/profile')} aria-label="Hồ sơ" className="size-11 rounded-full bg-primary/15 border border-primary/30 text-primary flex items-center justify-center font-extrabold text-base cursor-pointer hover:scale-105 transition">
-              <User className="size-5" />
-            </button>
-          </div>
-        </header>
+        {/* three columns on a wide screen, each one scrolls on its own if it has to; stacked below that */}
 
         {/* Today: what to do now, and how the day is going */}
-        <section aria-label="Hôm nay" className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-          <Card tone="highlight" className="xl:col-span-2 flex flex-col justify-between gap-6">
+        <div className="flex flex-col gap-4 2xl:min-h-0 2xl:flex-1">
+        <section aria-label="Hôm nay" className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+          <Card tone="highlight" className="flex flex-col justify-between gap-3 xl:col-span-5 2xl:col-span-4">
             <div>
               <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">{todayLabel}</p>
-              <h2 className="mt-1 font-display text-4xl md:text-5xl font-bold">Buổi tập hôm nay</h2>
+              <h2 className="mt-1 font-display text-3xl font-bold">Buổi tập hôm nay</h2>
               <p className="mt-2 flex items-center gap-2 text-lg font-semibold text-foreground">
                 <Dumbbell className="size-5 text-primary shrink-0" />
                 <span className="truncate">{profile.lastActiveRoutineName || 'Lịch tập tự do'}</span>
@@ -255,52 +241,52 @@ export default function Dashboard() {
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-muted-foreground">Chuỗi ngày tập</p>
-                <p className="flex items-center gap-2 font-display text-6xl font-bold leading-none text-pr">
-                  <Flame className="size-10 shrink-0" aria-hidden="true" />
+                <p className="flex items-center gap-2 font-display text-5xl font-bold leading-none text-pr">
+                  <Flame className="size-8 shrink-0" aria-hidden="true" />
                   <span>{streakCount}</span>
                   <span className="text-xl font-semibold text-muted-foreground"> ngày</span>
                 </p>
               </div>
               {trainedToday ? (
-                <span className="inline-flex min-h-14 items-center gap-2 rounded-xl border border-success/40 bg-success/10 px-5 text-base font-bold text-success">
+                <span className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-success/40 bg-success/10 px-5 text-base font-bold text-success">
                   <CheckCircle2 className="size-5" /> Đã tập hôm nay
                 </span>
               ) : (
-                <Link href="/workouts" className="inline-flex min-h-14 items-center gap-2 rounded-xl bg-primary px-6 text-base font-bold text-primary-foreground shadow-lg shadow-primary/25 transition hover:opacity-90 active:scale-[0.98]">
+                <Link href="/workouts" className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-6 text-base font-bold text-primary-foreground shadow-lg shadow-primary/25 transition hover:opacity-90 active:scale-[0.98]">
                   <Play className="size-5 fill-current" /> Bắt đầu
                 </Link>
               )}
             </div>
           </Card>
 
-          <Card className="xl:col-span-3">
-            <h2 className="mb-4 font-display text-2xl font-bold">Hôm nay bạn đã đạt</h2>
+          <Card className="xl:col-span-7 2xl:col-span-8">
+            <h2 className="mb-3 font-display text-xl font-bold">Hôm nay bạn đã đạt</h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div className="flex flex-col items-center gap-2 text-center">
                 <p className="text-sm font-semibold text-muted-foreground">Calo</p>
-                <ProgressRing value={consumedCalories} max={targetCalories} label="Calo hôm nay" colorClass="text-primary" size={104}>
-                  <span className="font-display text-2xl font-bold leading-none">{consumedCalories}</span>
+                <ProgressRing value={consumedCalories} max={targetCalories} label="Calo hôm nay" colorClass="text-primary" size={88}>
+                  <span className="font-display text-xl font-bold leading-none">{consumedCalories}</span>
                   <span className="text-xs text-muted-foreground">/ {targetCalories} kcal</span>
                 </ProgressRing>
               </div>
               <div className="flex flex-col items-center gap-2 text-center">
                 <p className="text-sm font-semibold text-muted-foreground">Protein</p>
-                <ProgressRing value={consumedProteinGrams} max={targetProteinGrams} label="Protein hôm nay" colorClass="text-protein" size={104}>
-                  <span className="font-display text-2xl font-bold leading-none">{Math.round(consumedProteinGrams)}</span>
+                <ProgressRing value={consumedProteinGrams} max={targetProteinGrams} label="Protein hôm nay" colorClass="text-protein" size={88}>
+                  <span className="font-display text-xl font-bold leading-none">{Math.round(consumedProteinGrams)}</span>
                   <span className="text-xs text-muted-foreground">/ {targetProteinGrams} g</span>
                 </ProgressRing>
               </div>
               <div className="flex flex-col items-center gap-2 text-center">
                 <p className="text-sm font-semibold text-muted-foreground">Uống nước</p>
-                <ProgressRing value={todayWaterGlasses * 250} max={waterGoal} label="Nước uống hôm nay" colorClass="text-fat" size={104}>
-                  <span className="font-display text-2xl font-bold leading-none">{todayWaterGlasses * 250}</span>
+                <ProgressRing value={todayWaterGlasses * 250} max={waterGoal} label="Nước uống hôm nay" colorClass="text-fat" size={88}>
+                  <span className="font-display text-xl font-bold leading-none">{todayWaterGlasses * 250}</span>
                   <span className="text-xs text-muted-foreground">/ {waterGoal} ml</span>
                 </ProgressRing>
               </div>
               <div className="flex flex-col items-center gap-2 text-center">
                 <p className="text-sm font-semibold text-muted-foreground">Buổi tập tuần này</p>
-                <ProgressRing value={completedThisWeek} max={7} label="Buổi tập tuần này" colorClass="text-success" size={104}>
-                  <span className="font-display text-2xl font-bold leading-none">{completedThisWeek}</span>
+                <ProgressRing value={completedThisWeek} max={7} label="Buổi tập tuần này" colorClass="text-success" size={88}>
+                  <span className="font-display text-xl font-bold leading-none">{completedThisWeek}</span>
                   <span className="text-xs text-muted-foreground">/ 7 buổi</span>
                 </ProgressRing>
               </div>
@@ -308,17 +294,12 @@ export default function Dashboard() {
           </Card>
         </section>
 
-        {/* Main Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-          {/* Left Column (Columns 1-7) */}
-          <div className="lg:col-span-7 space-y-8">
-
-            {/* CARD 1: UNIFIED INTERACTIVE WORKOUT & NUTRITION CALENDAR */}
-            <div className="bg-card border border-border p-6 md:p-8 rounded-3xl shadow-2xl space-y-6">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:min-h-0 2xl:flex-1 2xl:grid-cols-3">
+          {/* CARD 1: UNIFIED INTERACTIVE WORKOUT & NUTRITION CALENDAR */}
+            <div className="bg-card border border-border p-4 md:p-5 rounded-3xl space-y-3 2xl:min-h-0 2xl:overflow-y-auto">
               <div className="flex items-center justify-between flex-wrap gap-3">
-                <h2 className="text-lg md:text-2xl font-black text-foreground flex items-center gap-3">
-                  <Calendar className="size-6 text-primary" /> Lịch tập & ăn uống
+                <h2 className="text-base md:text-lg font-black text-foreground flex items-center gap-2">
+                  <Calendar className="size-5 text-primary" /> Lịch tập & ăn uống
                 </h2>
                 <div className="flex items-center gap-3 text-sm md:text-base font-bold text-muted-foreground">
                   <button onClick={prevMonth} className="p-1.5 hover:text-foreground cursor-pointer rounded-lg hover:bg-secondary transition"><ChevronLeft className="size-5" /></button>
@@ -336,7 +317,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-7 gap-1.5">
                 {calendarDays.map((item, idx) => {
                   if (item.day === null) {
-                    return <div key={`empty-${idx}`} className="min-h-[56px] rounded-2xl bg-secondary/10 border border-border/20 opacity-30" />;
+                    return <div key={`empty-${idx}`} className="min-h-10 rounded-xl bg-secondary/10 border border-border/20 opacity-30" />;
                   }
 
                   const isSelected = selectedDiaryDate === item.dateStr;
@@ -348,7 +329,7 @@ export default function Dashboard() {
                     <button
                       key={item.dateStr}
                       onClick={() => { setSelectedDiaryDate(item.dateStr); setIsExerciseListCollapsed(false); }}
-                      className={`p-2 rounded-2xl flex flex-col items-center justify-between transition-all border cursor-pointer min-h-[58px] ${
+                      className={`p-1.5 rounded-xl flex flex-col items-center justify-between transition-all border cursor-pointer min-h-11 ${
                         isSelected ? 'ring-2 ring-primary shadow-[0_0_15px_rgba(var(--primary-rgb,0,229,255),0.4)] scale-105 z-10' : ''
                       } ${
                         item.isToday
@@ -377,7 +358,7 @@ export default function Dashboard() {
               </div>
 
               {/* Legend */}
-              <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-border text-xs md:text-sm text-muted-foreground font-semibold">
+              <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-border text-xs md:text-sm text-muted-foreground font-semibold">
                 <div className="flex items-center gap-2">
                   <span className="size-3 rounded-full bg-primary" />
                   <span>Đã tập</span>
@@ -393,9 +374,11 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* SELECTED DAY DETAIL LOG BLOCK */}
+          <div className="2xl:min-h-0 2xl:overflow-y-auto">
+            <MetabolismCard profile={profile} />
+          </div>
             {selectedDiaryDate ? (
-              <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-2xl space-y-5 animate-in fade-in duration-300">
+              <div className="bg-card border border-border rounded-3xl p-4 md:p-5 space-y-4 animate-in fade-in duration-300 xl:col-span-2 2xl:col-span-1 2xl:min-h-0 2xl:overflow-y-auto">
                 <div className="flex items-center justify-between flex-wrap gap-2 border-b border-border pb-4">
                   <h3 className="text-base md:text-xl font-black text-foreground flex items-center gap-2">
                     <ClipboardList className="size-5 text-primary" aria-hidden="true" /> Chi tiết nhật ký ngày <span className="text-primary">{selectedDiaryDate}</span>
@@ -521,21 +504,14 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-            ) : null}
-
+            ) : (
+              <div className="hidden items-center justify-center rounded-3xl border border-dashed border-border p-6 text-center text-sm font-semibold text-muted-foreground 2xl:flex">
+                Chọn một ngày trên lịch để xem chi tiết tập luyện và ăn uống.
+              </div>
+            )}
           </div>
-
-          {/* Right Column (Columns 8-12) */}
-          <div className="lg:col-span-5 space-y-8">
-
-            {/* CARD 5: BMR / TDEE & GOAL PLAN */}
-            <MetabolismCard profile={profile} />
-
-          </div>
-
         </div>
 
-      </main>
 
       {/* Image preview modal */}
       {previewImage && (
@@ -547,6 +523,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

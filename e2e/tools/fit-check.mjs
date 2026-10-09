@@ -1,7 +1,7 @@
 // Measures how far each page overflows the visible area, on an account that has real data.
 //
 //   node e2e/tools/fit-check.mjs [--route=/nutrition] [--viewport=1920x950] [--theme=light]
-//        [--big-routine] [--many-foods] [--many-metrics]
+//        [--big-routine] [--many-foods] [--many-metrics] [--shots=dir] [--click=selector]  (on Git Bash set MSYS_NO_PATHCONV=1 when passing --route=/x)
 //
 // Needs (not started here): the e2e backend on :5099 and `next dev` on :3100 pointed at it:
 //   node harness/backend.js ../backend 5099 http://localhost:3100            (from e2e/)
@@ -110,6 +110,10 @@ const measure = () => {
     // old pages grow with their content (the document scrolls); AppShell pages scroll inside <main>
     overflow: Math.max(0, root.scrollHeight - innerHeight, main ? main.scrollHeight - main.clientHeight : 0),
     horizontal: Math.max(0, root.scrollWidth - root.clientWidth, main ? main.scrollWidth - main.clientWidth : 0),
+    // panels that scroll on their own: fine for long lists, but a core block listed here is cut off
+    inner: [...document.querySelectorAll('body *')]
+      .filter((e) => e !== main && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY) && e.scrollHeight - e.clientHeight > 1)
+      .map((e) => `${e.tagName.toLowerCase()}.${String(e.className).split(' ').filter((c) => c && !c.includes(':')).slice(0, 2).join('.')}+${e.scrollHeight - e.clientHeight}`),
   };
 };
 
@@ -130,10 +134,12 @@ for (const [w, h] of VIEWPORTS) {
   for (const route of ROUTES) {
     await page.goto(BASE + route, { waitUntil: 'networkidle' }).catch(() => {});
     await page.waitForTimeout(700);
+    if (arg('click')) { await page.locator(arg('click')).first().click(); await page.waitForTimeout(400); }
     const m = await page.evaluate(measure);
+    if (arg('shots')) await page.screenshot({ path: `${arg('shots')}/${w}x${h}${route.replaceAll('/', '-')}.png` });
     const vp = `${w}x${h}`;
     if (m.horizontal > 0 || (vp === STRICT && m.overflow > 0)) failed = true;
-    console.log(`${vp} ${route} overflow=${m.overflow} horizontal=${m.horizontal}`);
+    console.log(`${vp} ${route} overflow=${m.overflow} horizontal=${m.horizontal} inner=${m.inner.join(",") || "-"}`);
   }
 }
 await browser.close();
