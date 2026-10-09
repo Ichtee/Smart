@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import RoutinesPage from './page';
 import { apiFetch } from '@/utils/api';
 import { refreshProfile } from '@/hooks/useApi';
+import type { Exercise, Routine } from '@/types/domain';
 import { postAi } from '@/utils/ai';
 
 const nav = vi.hoisted(() => {
@@ -11,11 +12,11 @@ const nav = vi.hoisted(() => {
   return { push, router: { push } };
 });
 const hooks = vi.hoisted(() => ({
-  routines: undefined as any[] | undefined,
-  routinesError: undefined as any,
+  routines: undefined as Routine[] | undefined,
+  routinesError: undefined as unknown,
   mutate: vi.fn(async () => undefined),
-  exercises: [] as any[],
-  profile: { lastActiveRoutineId: 'ppl' } as any,
+  exercises: [] as Exercise[],
+  profile: { lastActiveRoutineId: 'ppl' } as Record<string, unknown>,
 }));
 
 vi.mock('next/navigation', () => ({ useRouter: () => nav.router, usePathname: () => '/routines' }));
@@ -48,7 +49,7 @@ const MINE = {
   ],
 };
 
-const setup = (routines: any[] = [BUILTIN, MINE]) => {
+const setup = (routines: Routine[] = [BUILTIN, MINE]) => {
   hooks.routines = routines;
   const user = userEvent.setup({ delay: null });
   render(<RoutinesPage />);
@@ -75,6 +76,8 @@ beforeEach(() => {
   localStorage.clear();
   vi.stubGlobal('confirm', vi.fn(() => true));
 });
+
+type Ctx = ReturnType<typeof setup>;
 
 const bodyOf = (call = 0) => JSON.parse(vi.mocked(apiFetch).mock.calls[call][1]!.body as string);
 
@@ -245,9 +248,9 @@ describe('Routines: creating', () => {
   });
 
   test.each([
-    ['no name', async (u: any) => { await u.setMode('Thứ 2', 'Ngày tập'); }, 'Tên lịch tập'],
-    ['no training day', async (u: any) => { await u.user.type(screen.getByLabelText('Tên lịch tập'), 'X1'); }, 'ít nhất một ngày tập'],
-    ['a training day without exercises', async (u: any) => {
+    ['no name', async (u: Ctx) => { await u.setMode('Thứ 2', 'Ngày tập'); }, 'Tên lịch tập'],
+    ['no training day', async (u: Ctx) => { await u.user.type(screen.getByLabelText('Tên lịch tập'), 'X1'); }, 'ít nhất một ngày tập'],
+    ['a training day without exercises', async (u: Ctx) => {
       await u.user.type(screen.getByLabelText('Tên lịch tập'), 'X1');
       await u.setMode('Thứ 2', 'Ngày tập');
       await u.user.type(screen.getByLabelText('Tên buổi tập'), 'A');

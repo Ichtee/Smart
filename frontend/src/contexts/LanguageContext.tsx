@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useSyncExternalStore, ReactNode } from 'react';
 
 type Language = 'vi' | 'en';
 
@@ -13,46 +13,50 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 import { translations } from '@/utils/translations';
 
-export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [lang, setLangState] = useState<Language>('vi');
-  const [isMounted, setIsMounted] = useState(false);
+// The chosen language lives in localStorage; the server (and the first client render) always use Vietnamese.
+const listeners = new Set<() => void>();
+const subscribeToLang = (onChange: () => void) => {
+  listeners.add(onChange);
+  window.addEventListener('storage', onChange);
+  return () => {
+    listeners.delete(onChange);
+    window.removeEventListener('storage', onChange);
+  };
+};
+const readLang = (): Language => {
+  try {
+    return localStorage.getItem('lang') === 'en' ? 'en' : 'vi';
+  } catch {
+    return 'vi'; // storage unavailable
+  }
+};
 
-  useEffect(() => {
-    setIsMounted(true);
-    const savedLang = localStorage.getItem('lang') as Language;
-    if (savedLang && (savedLang === 'vi' || savedLang === 'en')) {
-      setLangState(savedLang);
-    }
-  }, []);
+// The string at a dot-separated path inside the (nested) translations object, or null
+const lookup = (root: unknown, keys: string[]): string | null => {
+  let node: unknown = root;
+  for (const k of keys) {
+    if (node && typeof node === 'object' && k in node) node = (node as Record<string, unknown>)[k];
+    else return null;
+  }
+  return typeof node === 'string' ? node : null;
+};
+
+export const LanguageProvider = ({ children }: { children: ReactNode }) => {
+  const lang = useSyncExternalStore(subscribeToLang, readLang, (): Language => 'vi');
 
   const setLang = (newLang: Language) => {
-    setLangState(newLang);
-    localStorage.setItem('lang', newLang);
+    try {
+      localStorage.setItem('lang', newLang);
+    } catch {
+      // not saved, but the page still switches until it is reloaded
+    }
+    listeners.forEach(notify => notify());
   };
 
-  // Helper function to get translation by dot notation (e.g. 'header.workouts')
+  // Translation by dot notation (e.g. 'header.workouts'); falls back to Vietnamese, then to the key itself
   const t = (key: string): string => {
     const keys = key.split('.');
-    let result: any = translations[lang] || translations['vi'];
-    
-    for (const k of keys) {
-      if (result && typeof result === 'object' && k in result) {
-        result = result[k];
-      } else {
-        // Fallback to Vietnamese translation if missing in target lang
-        let fallbackResult: any = translations['vi'];
-        for (const fk of keys) {
-          if (fallbackResult && typeof fallbackResult === 'object' && fk in fallbackResult) {
-            fallbackResult = fallbackResult[fk];
-          } else {
-            return key;
-          }
-        }
-        return typeof fallbackResult === 'string' ? fallbackResult : key;
-      }
-    }
-    
-    return typeof result === 'string' ? result : key;
+    return lookup(translations[lang] || translations['vi'], keys) ?? lookup(translations['vi'], keys) ?? key;
   };
 
   return (

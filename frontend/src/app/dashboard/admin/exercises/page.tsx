@@ -5,6 +5,7 @@ import { apiFetch } from '@/utils/api';
 import { useExercises } from '@/hooks/useApi';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Settings, Library, Dumbbell, ShieldAlert } from 'lucide-react';
+import type { Exercise } from '@/types/domain';
 
 const MUSCLE_NAMES_VI: Record<string, string> = {
   chest: 'Ngực (Chest)',
@@ -39,7 +40,7 @@ export default function AdminExercises() {
   const router = useRouter();
   const { isAdmin, checking, authError } = useAdmin();
   const { exercises: exerciseData, isLoading: exercisesLoading, mutate: mutateExercises } = useExercises(isAdmin);
-  const exercises: any[] = Array.isArray(exerciseData) ? exerciseData : [];
+  const exercises: Exercise[] = Array.isArray(exerciseData) ? exerciseData : [];
   const loading = checking || (isAdmin && exercisesLoading);
   
   // Search and Filter state
@@ -47,7 +48,7 @@ export default function AdminExercises() {
   const [filterMuscle, setFilterMuscle] = useState('');
 
   // Detail Modal state
-  const [viewingExercise, setViewingExercise] = useState<any | null>(null);
+  const [viewingExercise, setViewingExercise] = useState<Exercise | null>(null);
 
   // Success / Failure / Confirmation Popup Modal state
   const [popup, setPopup] = useState<{
@@ -153,7 +154,7 @@ export default function AdminExercises() {
           message: data.message || 'Không thể lưu bài tập. Vui lòng kiểm tra lại dữ liệu nhập vào!'
         });
       }
-    } catch (err: any) {
+    } catch {
       setPopup({
         show: true,
         type: 'error',
@@ -163,7 +164,7 @@ export default function AdminExercises() {
     }
   };
 
-  const handleEdit = (ex: any) => {
+  const handleEdit = (ex: Exercise) => {
     setEditingId(ex._id);
     setFormData({
       name: ex.name || '',
@@ -177,7 +178,7 @@ export default function AdminExercises() {
     });
   };
 
-  const confirmDelete = (ex: any) => {
+  const confirmDelete = (ex: Exercise) => {
     setPopup({
       show: true,
       type: 'confirm',
@@ -209,7 +210,7 @@ export default function AdminExercises() {
           message: data.message || 'Không thể xóa bài tập này.'
         });
       }
-    } catch (err) {
+    } catch {
       setPopup({
         show: true,
         type: 'error',

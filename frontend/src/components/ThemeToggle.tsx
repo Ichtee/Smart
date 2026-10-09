@@ -1,14 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 
 /** Switches between the dark (default) and light theme; the choice is saved in localStorage. */
 export default function ThemeToggle({ className = '' }: { className?: string }) {
-  const [light, setLight] = useState(false);
-
-  useEffect(() => {
-    setLight(document.documentElement.classList.contains('light'));
-  }, []);
+  // read the theme that was already applied to <html>; this only mounts on the client (under AuthGuard)
+  const [light, setLight] = useState(() => document.documentElement.classList.contains('light'));
 
   const toggle = () => {
     const next = !light;

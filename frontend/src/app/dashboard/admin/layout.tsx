@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { readStoredUserName } from '@/utils/storedUser';
 import Link from 'next/link';
 import { BarChart3, CalendarDays, Dumbbell, Salad, Users, ArrowLeft } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -11,17 +12,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const { lang, setLang } = useLanguage();
-  const [userName, setUserName] = useState('Admin');
-
-  useEffect(() => {
-    try {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        if (user.name) setUserName(user.name);
-      }
-    } catch (e) {}
-  }, []);
+  // AuthGuard shows this layout only after the client has verified the admin, so localStorage is readable here
+  const [userName] = useState(() => readStoredUserName('Admin'));
 
   const handleLogout = async () => {
     try {
@@ -29,7 +21,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         method: 'POST',
         credentials: 'include'
       });
-    } catch (e) {}
+    } catch {}
     localStorage.clear();
     clearApiCache();
     router.push('/');

@@ -2,16 +2,17 @@
 import { useState, useEffect } from 'react';
 
 export default function LiveClock() {
-  const [time, setTime] = useState<Date | null>(null);
+  // This only mounts on the client (under AuthGuard), so the time can be read straight away;
+  // the effect just keeps it ticking.
+  const [time, setTime] = useState(() => new Date());
 
   useEffect(() => {
-    setTime(new Date());
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const formattedTime = time ? time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '20:16:36';
-  const formattedDate = time ? time.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Thu, Aug 13, 2026';
+  const formattedTime = time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const formattedDate = time.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
     <div suppressHydrationWarning className="flex items-center gap-2 sm:gap-3 bg-inset px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl border border-slate-800/80 shadow-inner">

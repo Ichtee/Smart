@@ -2,10 +2,11 @@
 import type { Dispatch, SetStateAction } from 'react';
 import Model from 'react-body-highlighter';
 import { PersonStanding } from 'lucide-react';
+import type { IExerciseData, IMuscleStats } from 'react-body-highlighter';
 
 interface BodyMapPanelProps {
-  handleClickBodyMuscle: (muscle: any) => void;
-  highlighterData: any[];
+  handleClickBodyMuscle: (muscle: IMuscleStats) => void;
+  highlighterData: IExerciseData[];
   modelColors: string[];
   modelType: "anterior" | "posterior";
   setModelType: Dispatch<SetStateAction<"anterior" | "posterior">>;

@@ -1,13 +1,14 @@
 'use client';
 import { CalendarDays } from 'lucide-react';
+import type { RoutineDay } from '@/types/domain';
 
 interface DaySelectorProps {
   activeRoutineId: string;
   handleSelectDayTab: (index: number) => void;
   realTodayString: string;
-  realTodayWorkout: any;
+  realTodayWorkout: RoutineDay | undefined;
   safeDayIndex: number;
-  sortedSchedule: any;
+  sortedSchedule: RoutineDay[];
 }
 
 export default function DaySelector({
@@ -37,7 +38,7 @@ export default function DaySelector({
         {/* Day Selector Tabs */}
         {sortedSchedule.length > 0 && activeRoutineId !== 'none' && (
           <div className="flex overflow-x-auto gap-2 sm:gap-3 pt-3 pb-2 custom-scrollbar snap-x">
-            {sortedSchedule.map((dayObj: any, index: number) => {
+            {sortedSchedule.map((dayObj, index) => {
               const isRealToday = dayObj.day === realTodayString;
               const isActive = safeDayIndex === index;
 

@@ -8,6 +8,23 @@ interface Language {
   flag: string;
 }
 
+// What Google's translate script adds to `window`
+declare global {
+  interface Window {
+    googleTranslateElementInit?: () => void;
+    google?: {
+      translate?: {
+        TranslateElement: new (options: { pageLanguage: string; autoDisplay: boolean }, elementId: string) => unknown;
+      };
+    };
+  }
+}
+
+// Google reads the chosen language from this cookie when its widget select is not on the page yet
+const setTranslateCookie = (code: string) => {
+  document.cookie = `googtrans=/vi/${code}; path=/`;
+};
+
 const LANGUAGES: Language[] = [
   { code: 'vi', name: 'Tiếng Việt', native: 'Tiếng Việt', flag: '🇻🇳' },
   { code: 'en', name: 'Tiếng Anh', native: 'English', flag: '🇺🇸' },
@@ -88,9 +105,9 @@ export default function GoogleTranslate() {
       script.async = true;
       document.body.appendChild(script);
 
-      (window as any).googleTranslateElementInit = () => {
-        if ((window as any).google && (window as any).google.translate) {
-          new (window as any).google.translate.TranslateElement(
+      window.googleTranslateElementInit = () => {
+        if (window.google?.translate) {
+          new window.google.translate.TranslateElement(
             {
               pageLanguage: 'vi',
               autoDisplay: false,
@@ -127,7 +144,7 @@ export default function GoogleTranslate() {
       selectEl.dispatchEvent(new Event('change'));
     } else {
       // Fallback via googtrans cookie
-      document.cookie = `googtrans=/vi/${lang.code}; path=/`;
+      setTranslateCookie(lang.code);
       window.location.reload();
     }
   };

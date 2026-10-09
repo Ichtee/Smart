@@ -3,10 +3,11 @@ import { useState } from 'react';
 import { describeError } from '@/utils/api';
 import { postAi } from '@/utils/ai';
 import { Loader2, Sparkles } from 'lucide-react';
+import type { RoutineSource } from './routineDraft';
 
 interface Props {
   /** Receives the generated routine (not saved yet) */
-  onGenerated: (routine: unknown) => void;
+  onGenerated: (routine: RoutineSource) => void;
   onCancel: () => void;
 }
 
@@ -29,7 +30,7 @@ export default function AiRoutineForm({ onGenerated, onCancel }: Props) {
     setPending(true);
     setError('');
     try {
-      const { routine } = await postAi<{ routine: unknown }>('/api/ai/routine', { daysPerWeek, equipment, notes: notes.trim() });
+      const { routine } = await postAi<{ routine: RoutineSource }>('/api/ai/routine', { daysPerWeek, equipment, notes: notes.trim() });
       onGenerated(routine);
     } catch (err) {
       setError(describeError(err));

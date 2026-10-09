@@ -1,12 +1,13 @@
 'use client';
 import { normalizeMuscleId, MUSCLE_NAMES_VI, getYouTubeEmbedUrl, getYouTubeSearchUrl } from './utils';
+import type { DetailExercise } from './types';
 
 interface ExerciseDetailModalProps {
   currentSelectedIds: string[];
   handleAddExerciseFromLibrary: (exId: string) => void;
   isWorkoutSaved: boolean;
-  selectedDetailExercise: any;
-  setSelectedDetailExercise: (value: any) => void;
+  selectedDetailExercise: DetailExercise | null;
+  setSelectedDetailExercise: (value: DetailExercise | null) => void;
 }
 
 export default function ExerciseDetailModal({ currentSelectedIds, handleAddExerciseFromLibrary, isWorkoutSaved, selectedDetailExercise, setSelectedDetailExercise }: ExerciseDetailModalProps) {

@@ -49,7 +49,6 @@ export default function TrackRow({
       )}
 
       <button type="button" aria-label={`Phát ${track.title}`} onClick={onPlay} className="flex flex-1 min-w-0 items-center gap-3 text-left cursor-pointer">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         {track.thumbnail ? <img src={track.thumbnail} alt="" className="size-11 rounded-lg object-cover" /> : <span className="size-11 rounded-lg bg-secondary" />}
         <span className="min-w-0">
           <span data-testid="track-title" className="block text-sm font-bold truncate">{track.title}</span>

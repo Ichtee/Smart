@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { readStoredUserName } from '@/utils/storedUser';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import GoogleTranslate from './GoogleTranslate';
@@ -12,18 +13,11 @@ import { Dumbbell, Utensils, TrendingUp, User, LogOut, ChevronDown } from 'lucid
 export default function Header() {
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [userName, setUserName] = useState('Người dùng');
+  // children of AuthGuard only mount on the client, so localStorage is readable here
+  const [userName] = useState(() => readStoredUserName('Người dùng'));
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        if (user.name) setUserName(user.name);
-      }
-    } catch (e) {}
-    
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
@@ -39,7 +33,7 @@ export default function Header() {
         method: 'POST',
         credentials: 'include'
       });
-    } catch (e) {}
+    } catch {}
     localStorage.clear();
     clearApiCache();
     router.push('/');

@@ -1,8 +1,9 @@
 'use client';
 import { CalendarDays } from 'lucide-react';
+import type { RoutineDay } from '@/types/domain';
 
 interface WorkoutActionBarProps {
-  currentTabWorkout: any;
+  currentTabWorkout: RoutineDay | null;
   handleResetToTemplate: () => void;
   handleSaveWorkout: () => void;
   handleUnlockWorkout: () => void;

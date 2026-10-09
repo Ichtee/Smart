@@ -1,5 +1,13 @@
 // The routine editor works on a "draft" (all fields as the text boxes hold them). These pure helpers convert
 // between a draft and the API shape and check it with the same rules (and limits) as the backend.
+import type { RoutineDay } from '@/types/domain';
+
+/** What the draft helpers read from a routine: saved ones have an id, an AI-generated one does not yet. */
+export interface RoutineSource {
+  name?: string;
+  description?: string;
+  schedule?: RoutineDay[];
+}
 
 export const WEEK_DAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'] as const;
 export const MAX_EXERCISES_PER_DAY = 30;
@@ -43,7 +51,7 @@ export const emptyDraft = (): RoutineDraft => ({
 });
 
 /** An API routine -> draft (days the routine does not list stay "off"). */
-export function draftFromRoutine(routine: any): RoutineDraft {
+export function draftFromRoutine(routine: RoutineSource | null | undefined): RoutineDraft {
   const draft = emptyDraft();
   draft.name = routine?.name ?? '';
   draft.description = routine?.description ?? '';
@@ -52,7 +60,7 @@ export function draftFromRoutine(routine: any): RoutineDraft {
     if (!slot) continue;
     slot.mode = d.isRestDay ? 'rest' : 'train';
     slot.name = d.name ?? '';
-    slot.exercises = (d.exercises ?? []).map((e: any) => ({
+    slot.exercises = (d.exercises ?? []).map(e => ({
       exerciseId: e.exerciseId ?? '',
       exerciseName: e.exerciseName ?? '',
       muscle: e.muscle ?? '',
@@ -122,8 +130,8 @@ export function draftToBody(draft: RoutineDraft) {
 }
 
 /** One-line summary for the list: "3 ngày tập · 14 bài". */
-export function routineSummary(routine: any): string {
-  const train = (routine?.schedule ?? []).filter((d: any) => !d.isRestDay);
-  const exercises = train.reduce((n: number, d: any) => n + (d.exercises?.length ?? 0), 0);
+export function routineSummary(routine: RoutineSource | null | undefined): string {
+  const train = (routine?.schedule ?? []).filter(d => !d.isRestDay);
+  const exercises = train.reduce((n, d) => n + (d.exercises?.length ?? 0), 0);
   return `${train.length} ngày tập · ${exercises} bài`;
 }

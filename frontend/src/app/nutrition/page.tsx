@@ -173,7 +173,12 @@ export default function Nutrition() {
   useEffect(() => {
     latest.current = { selectedDate, meals, waterGlasses, mlPerGlass };
   }, [selectedDate, meals, waterGlasses, mlPerGlass]);
-  useEffect(() => { setCopyNotice(''); }, [selectedDate]);
+  // a notice belongs to the day it was shown for
+  const [noticeDate, setNoticeDate] = useState(selectedDate);
+  if (noticeDate !== selectedDate) {
+    setNoticeDate(selectedDate);
+    setCopyNotice('');
+  }
 
   const handleCopyPreviousDay = async () => {
     if (!dayLoaded || copyBusy) return;

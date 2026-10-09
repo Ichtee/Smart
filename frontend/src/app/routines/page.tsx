@@ -13,6 +13,7 @@ import {
 import AiRoutineForm from './AiRoutineForm';
 import { ClipboardList, Loader2, Plus, Sparkles, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useConfirm } from '@/components/ui/feedback';
+import type { Routine } from '@/types/domain';
 
 const MODE_LABELS: Record<DayMode, string> = { off: 'Không tập', train: 'Ngày tập', rest: 'Ngày nghỉ' };
 const MAX_ROUTINES = 10;
@@ -26,7 +27,7 @@ export default function RoutinesPage() {
   const { exercises: library } = useExercises();
   const { profile } = useProfile();
 
-  const mine = useMemo(() => (routines ?? []).filter((r: any) => r.isMine), [routines]);
+  const mine = useMemo(() => (routines ?? []).filter(r => r.isMine), [routines]);
 
   // null = showing the list; otherwise the editor (editingId null = a new routine)
   const [draft, setDraft] = useState<RoutineDraft | null>(null);
@@ -44,7 +45,7 @@ export default function RoutinesPage() {
   }, [error, router]);
 
   const startNew = () => { setDraft(emptyDraft()); setEditingId(null); setNotice(null); setSearch({}); };
-  const startEdit = (r: any) => { setDraft(draftFromRoutine(r)); setEditingId(r.id); setNotice(null); setSearch({}); };
+  const startEdit = (r: Routine) => { setDraft(draftFromRoutine(r)); setEditingId(r.id); setNotice(null); setSearch({}); };
   const closeEditor = () => { setDraft(null); setEditingId(null); };
 
   const updateDay = (day: string, patch: (d: DraftDay) => DraftDay) =>
@@ -78,7 +79,7 @@ export default function RoutinesPage() {
     }
   };
 
-  const handleDelete = async (r: any) => {
+  const handleDelete = async (r: Routine) => {
     if (!(await confirm({ message: `Xóa lịch tập "${r.name}"?`, tone: 'danger' }))) return;
     setNotice(null);
     try {
@@ -92,7 +93,7 @@ export default function RoutinesPage() {
   };
 
   // "Use this routine" = make it the active one (the workouts page opens the active routine)
-  const handleUse = async (r: any) => {
+  const handleUse = async (r: Routine) => {
     setNotice(null);
     try {
       const res = await apiFetch('/api/users/profile', {
@@ -187,7 +188,7 @@ export default function RoutinesPage() {
                 <EmptyState icon={<ClipboardList className="size-6" aria-hidden />} title="Bạn chưa có lịch tập riêng" hint="Bấm “Tạo lịch mới” để tự xếp các bài tập theo từng ngày trong tuần." />
               )}
               <ul className="space-y-3">
-                {mine.map((r: any) => (
+                {mine.map(r => (
                   <li key={r.id} className="bg-card border border-border rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3" data-testid="my-routine">
                     <div>
                       <p className="font-black text-lg">

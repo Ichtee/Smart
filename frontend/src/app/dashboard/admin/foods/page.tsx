@@ -4,30 +4,19 @@ import { apiFetch } from '@/utils/api';
 import { useFoods } from '@/hooks/useApi';
 import { useConfirm, useToast } from '@/components/ui/feedback';
 import { Salad } from 'lucide-react';
-
-interface FoodItem {
-  _id: string;
-  name: string;
-  servingSize: string;
-  calories: number;
-  protein: number | null;
-  carbs: number | null;
-  fat: number | null;
-  category: string;
-  image?: string;
-}
+import type { DbFood } from '@/app/nutrition/types';
 
 export default function AdminFoodsPage() {
   const confirm = useConfirm();
   const toast = useToast();
   const { foods: foodData, isLoading: loading, mutate: mutateFoods } = useFoods();
-  const foods: FoodItem[] = Array.isArray(foodData) ? foodData : [];
+  const foods = useMemo<DbFood[]>(() => (Array.isArray(foodData) ? foodData : []), [foodData]);
   const [search, setSearch] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('Tất cả');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingFood, setEditingFood] = useState<FoodItem | null>(null);
+  const [editingFood, setEditingFood] = useState<DbFood | null>(null);
   const [formName, setFormName] = useState('');
   const [formServingSize, setFormServingSize] = useState('1 phần');
   const [formCalories, setFormCalories] = useState('');
@@ -53,7 +42,7 @@ export default function AdminFoodsPage() {
     setIsModalOpen(true);
   };
 
-  const openEditModal = (food: FoodItem) => {
+  const openEditModal = (food: DbFood) => {
     setEditingFood(food);
     setFormName(food.name);
     setFormServingSize(food.servingSize || '1 phần');
@@ -110,8 +99,8 @@ export default function AdminFoodsPage() {
         const data = await res.json();
         setErrorMsg(data.message || 'Thao tác thất bại');
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Lỗi kết nối máy chủ');
+    } catch (err) {
+      setErrorMsg(err instanceof Error && err.message ? err.message : 'Lỗi kết nối máy chủ');
     } finally {
       setSubmitting(false);
     }
@@ -128,7 +117,7 @@ export default function AdminFoodsPage() {
       } else {
         toast.error('Xóa món ăn thất bại');
       }
-    } catch (err) {
+    } catch {
       toast.error('Lỗi kết nối khi xóa món ăn');
     }
   };

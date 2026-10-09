@@ -13,11 +13,24 @@ import BodyMapPanel from './BodyMapPanel';
 import WorkoutActionBar from './WorkoutActionBar';
 import MuscleTargetsBar from './MuscleTargetsBar';
 import ExerciseChecklist from './ExerciseChecklist';
-import type { ExerciseDetailsMap } from './types';
 import ExerciseLibrary from './ExerciseLibrary';
 import ExerciseDetailModal from './ExerciseDetailModal';
-import { DEFAULT_ROUTINES, VALID_MODEL_MUSCLES, normalizeMuscleId, findLibraryExercise, toModelMuscle, toFixedReps, MUSCLE_NAMES_VI, DAY_ORDER } from './utils';
+import { DEFAULT_ROUTINES, isModelMuscle, normalizeMuscleId, findLibraryExercise, toModelMuscle, toFixedReps, MUSCLE_NAMES_VI, DAY_ORDER } from './utils';
+import type { IExerciseData, IMuscleStats } from 'react-body-highlighter';
+import type { Routine } from '@/types/domain';
+import type { DetailExercise, ExerciseDetail, ExerciseDetailsMap, SavedWorkoutLog, WorkoutExercise } from './types';
 
+
+// Weekday tab name -> days after Monday
+const DAY_TO_WEEK_OFFSET: Record<string, number> = {
+  'Thứ 2': 0,     // Monday
+  'Thứ 3': 1,     // Tuesday
+  'Thứ 4': 2,     // Wednesday
+  'Thứ 5': 3,     // Thursday
+  'Thứ 6': 4,     // Friday
+  'Thứ 7': 5,     // Saturday
+  'Chủ nhật': 6,  // Sunday
+};
 
 export default function Workouts() {
   const router = useRouter();
@@ -38,7 +51,7 @@ export default function Workouts() {
   const [daySavedStatus, setDaySavedStatus] = useState<Record<string, boolean>>({});
   const [exerciseDetails, setExerciseDetails] = useState<ExerciseDetailsMap>({});
 
-  const [selectedDetailExercise, setSelectedDetailExercise] = useState<any | null>(null);
+  const [selectedDetailExercise, setSelectedDetailExercise] = useState<DetailExercise | null>(null);
 
   const [noticeMessage, setNoticeMessage] = useState<string>('');
   const [librarySearchTerm, setLibrarySearchTerm] = useState<string>('');
@@ -49,10 +62,9 @@ export default function Workouts() {
   const [restTimerPaused, setRestTimerPaused] = useState<boolean>(false);
   const [restTimerSeconds, setRestTimerSeconds] = useState<number>(REST_DURATION);
   const [restTimerTotal, setRestTimerTotal] = useState<number>(REST_DURATION);
-  const [restTimerExerciseName, setRestTimerExerciseName] = useState<string>('');
+  const [, setRestTimerExerciseName] = useState<string>('');
   const [restTimerExerciseId, setRestTimerExerciseId] = useState<string | null>(null);
   const restTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const savedDayIndexRef = useRef<number | null>(null);
 
   // Rest Timer tick logic
   useEffect(() => {
@@ -116,10 +128,6 @@ export default function Workouts() {
     }
   }, [routinesError, exercisesError, profileError, router]);
 
-  useEffect(() => {
-    savedDayIndexRef.current = typeof profile?.lastActiveDayIndex === 'number' ? profile.lastActiveDayIndex : null;
-  }, [profile]);
-
   const isFetching = routinesLoading || exercisesLoading || profileLoading;
   const fetchError = !isFetching && (!!routinesError || !!exercisesError);
   const fetchInitialData = () => {
@@ -128,19 +136,19 @@ export default function Workouts() {
     mutateProfile();
   };
 
-  const routinesMap: Record<string, any> = useMemo(() => {
-    const map: Record<string, any> = { ...DEFAULT_ROUTINES };
+  const routinesMap: Record<string, Routine> = useMemo(() => {
+    const map: Record<string, Routine> = { ...DEFAULT_ROUTINES };
     if (Array.isArray(routinesData)) {
-      routinesData.forEach((r: any) => {
+      routinesData.forEach(r => {
         if (r && r.id) map[r.id] = r;
       });
     }
     return map;
   }, [routinesData]);
 
-  const allExercises: any[] = useMemo(() => {
+  const allExercises: WorkoutExercise[] = useMemo(() => {
     if (!Array.isArray(exercisesData)) return [];
-    return exercisesData.map((ex: any) => ({
+    return exercisesData.map(ex => ({
       id: ex._id,
       muscle: ex.muscle,
       secondaryMuscles: ex.secondaryMuscles || [],
@@ -163,7 +171,7 @@ export default function Workouts() {
   }, [profile, routinesMap, routinesData]);
   const activeRoutineId: string = selectedRoutineId && routinesMap[selectedRoutineId] ? selectedRoutineId : defaultRoutineId;
 
-  const pushUserProfileUpdate = async (data: Record<string, any>) => {
+  const pushUserProfileUpdate = async (data: Record<string, string | number>) => {
     try {
       const res = await apiFetch('/api/users/profile', {
         method: 'PUT',
@@ -199,7 +207,7 @@ export default function Workouts() {
   };
 
   const sortedSchedule = useMemo(() => {
-    return (activeRoutine?.schedule || []).slice().sort((a: any, b: any) => {
+    return (activeRoutine?.schedule || []).slice().sort((a, b) => {
       const orderA = DAY_ORDER[a.day] || 99;
       const orderB = DAY_ORDER[b.day] || 99;
       return orderA - orderB;
@@ -211,21 +219,22 @@ export default function Workouts() {
   }, []);
 
   const realTodayWorkout = useMemo(() => {
-    return sortedSchedule.find((s: any) => s.day === realTodayString);
+    return sortedSchedule.find(s => s.day === realTodayString);
   }, [sortedSchedule, realTodayString]);
 
-  useEffect(() => {
-    if (sortedSchedule.length > 0) {
-      const matchIndex = sortedSchedule.findIndex((s: any) => s.day === realTodayString);
-      if (matchIndex !== -1) {
-        setCurrentDayIndex(matchIndex);
-      } else {
-        // No tab for today (e.g. routine skips today): restore the last tab the user saved
-        const saved = savedDayIndexRef.current;
-        setCurrentDayIndex(saved !== null && saved >= 0 && saved < sortedSchedule.length ? saved : 0);
-      }
+  // Pick the tab to show whenever the routine (so its schedule) changes: today's tab, otherwise the last tab the user saved
+  const savedDayIndex = typeof profile?.lastActiveDayIndex === 'number' ? profile.lastActiveDayIndex : null;
+  const [tabsChosenFor, setTabsChosenFor] = useState<typeof sortedSchedule | null>(null);
+  if (sortedSchedule.length > 0 && tabsChosenFor !== sortedSchedule) {
+    setTabsChosenFor(sortedSchedule);
+    const matchIndex = sortedSchedule.findIndex(s => s.day === realTodayString);
+    if (matchIndex !== -1) {
+      setCurrentDayIndex(matchIndex);
+    } else {
+      // No tab for today (e.g. routine skips today): restore the last tab the user saved
+      setCurrentDayIndex(savedDayIndex !== null && savedDayIndex >= 0 && savedDayIndex < sortedSchedule.length ? savedDayIndex : 0);
     }
-  }, [activeRoutineId, sortedSchedule, realTodayString]);
+  }
 
   const safeDayIndex = sortedSchedule.length && currentDayIndex >= sortedSchedule.length ? 0 : currentDayIndex;
   const currentTabWorkout = sortedSchedule.length ? sortedSchedule[safeDayIndex] : null;
@@ -248,15 +257,6 @@ export default function Workouts() {
   }, [todayDateStr]);
 
   // Calculate exact YYYY-MM-DD date for current tab in current week using exact day name mapping
-  const DAY_TO_WEEK_OFFSET: Record<string, number> = {
-    'Thứ 2': 0,     // Monday
-    'Thứ 3': 1,     // Tuesday
-    'Thứ 4': 2,     // Wednesday
-    'Thứ 5': 3,     // Thursday
-    'Thứ 6': 4,     // Friday
-    'Thứ 7': 5,     // Saturday
-    'Chủ nhật': 6,  // Sunday
-  };
   const activeTabDateStr = useMemo(() => {
     if (!currentTabWorkout || !currentTabWorkout.day) return todayDateStr;
 
@@ -282,7 +282,7 @@ export default function Workouts() {
   const pushWorkoutToBackend = (payload: {
     selectedIds: string[];
     completedIds: string[];
-    detailsMap: Record<string, any>;
+    detailsMap: ExerciseDetailsMap;
     isSaved: boolean;
     setsMap?: Record<string, number[]>;
   }) => {
@@ -305,7 +305,7 @@ export default function Workouts() {
 
     // Persist per-set progress inside detailsMap so it survives reloads / devices
     const setsSource = payload.setsMap || completedSetsMap;
-    const mergedDetails: Record<string, any> = { ...payload.detailsMap };
+    const mergedDetails: Record<string, Partial<ExerciseDetail>> = { ...payload.detailsMap };
     (payload.selectedIds || []).forEach(id => {
       mergedDetails[id] = { ...(mergedDetails[id] || {}), completedSets: setsSource[id] || [] };
     });
@@ -342,7 +342,7 @@ export default function Workouts() {
 
       let selectedIds: string[] = [];
       let completedIds: string[] = [];
-      let detailsMap: Record<string, any> = {};
+      let detailsMap: ExerciseDetailsMap = {};
       let isSavedSession = false;
       let loadedFromApi = false;
       const loadedSets: Record<string, number[]> = {};
@@ -350,7 +350,7 @@ export default function Workouts() {
       // 1. Load the saved log for this date from the server.
       // A failed load must NOT fall through to the template: the user could then "save" over a
       // log we simply failed to read. Show an error (editing is blocked) and let them retry.
-      let apiLog: any = null;
+      let apiLog: SavedWorkoutLog | null = null;
       try {
         const res = await apiFetch(`/api/workouts?date=${activeTabDateStr}`);
         if (isCancelled) return;
@@ -361,7 +361,7 @@ export default function Workouts() {
         }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         apiLog = await res.json();
-      } catch (e) {
+      } catch {
         if (!isCancelled) setDayLoadErrorDate(activeTabDateStr);
         return;
       }
@@ -388,7 +388,7 @@ export default function Workouts() {
         selectedIds = [];
         detailsMap = {};
 
-        currentTabWorkout.exercises.forEach((tmplEx: any) => {
+        currentTabWorkout.exercises.forEach(tmplEx => {
           if (!tmplEx.exerciseName) return;
           const matched = findLibraryExercise(allExercises, tmplEx);
 
@@ -427,10 +427,10 @@ export default function Workouts() {
     return () => {
       isCancelled = true;
     };
-  }, [currentDayKey, allExercises, todayDateStr, activeTabDateStr, currentTabWorkout, isFetching, dayRetryTick, router]);
+  }, [currentDayKey, activeRoutineId, allExercises, todayDateStr, activeTabDateStr, currentTabWorkout, isFetching, dayRetryTick, router]);
 
-  const currentSelectedIds = daySelections[currentDayKey] || [];
-  const currentCompletedIds = dayCompleted[currentDayKey] || [];
+  const currentSelectedIds = useMemo(() => daySelections[currentDayKey] || [], [daySelections, currentDayKey]);
+  const currentCompletedIds = useMemo(() => dayCompleted[currentDayKey] || [], [dayCompleted, currentDayKey]);
   const isWorkoutSaved = !!daySavedStatus[currentDayKey];
 
   // Active exercises list for the current day tab
@@ -498,9 +498,9 @@ export default function Workouts() {
     if (!currentTabWorkout?.exercises || currentTabWorkout.exercises.length === 0) return;
 
     const selectedIds: string[] = [];
-    const detailsMap: Record<string, any> = {};
+    const detailsMap: ExerciseDetailsMap = {};
 
-    currentTabWorkout.exercises.forEach((tmplEx: any) => {
+    currentTabWorkout.exercises.forEach(tmplEx => {
       if (!tmplEx.exerciseName) return;
       const matched = findLibraryExercise(allExercises, tmplEx);
       const exId = matched ? (matched.id || matched._id?.toString()) : `template_${tmplEx.exerciseName.replace(/\s+/g, '_')}`;
@@ -548,7 +548,7 @@ export default function Workouts() {
     });
 
     // Only send exercise details for the current day's selected exercises
-    const currentDayDetailsMap: Record<string, any> = {};
+    const currentDayDetailsMap: ExerciseDetailsMap = {};
     currentSelectedIds.forEach(id => {
       if (exerciseDetails[id]) currentDayDetailsMap[id] = exerciseDetails[id];
     });
@@ -620,7 +620,7 @@ export default function Workouts() {
     }
 
     // Persist to the server (serialized; the server is the only copy)
-    const toggleDayDetailsMap: Record<string, any> = {};
+    const toggleDayDetailsMap: ExerciseDetailsMap = {};
     currentSelectedIds.forEach(exId => {
       if (exerciseDetails[exId]) toggleDayDetailsMap[exId] = exerciseDetails[exId];
     });
@@ -691,7 +691,7 @@ export default function Workouts() {
       toggleCompleteExercise(exId, false, newSets, updatedSetsMap);
     } else {
       // Main completion unchanged: still persist the per-set progress
-      const dayDetails: Record<string, any> = {};
+      const dayDetails: ExerciseDetailsMap = {};
       currentSelectedIds.forEach(id => {
         if (exerciseDetails[id]) dayDetails[id] = exerciseDetails[id];
       });
@@ -708,7 +708,7 @@ export default function Workouts() {
   // Weights typed into the set boxes live in exerciseDetails; save them once the box loses focus
   const persistSetWeights = () => {
     if (dayBlocked || !isWorkoutSaved) return;
-    const dayDetails: Record<string, any> = {};
+    const dayDetails: ExerciseDetailsMap = {};
     currentSelectedIds.forEach(id => {
       if (exerciseDetails[id]) dayDetails[id] = exerciseDetails[id];
     });
@@ -720,8 +720,8 @@ export default function Workouts() {
     });
   };
 
-  const handleClickBodyMuscle = (muscle: any) => {
-    const muscleId = muscle && muscle.muscle ? muscle.muscle : (typeof muscle === 'string' ? muscle : null);
+  const handleClickBodyMuscle = (muscle: IMuscleStats) => {
+    const muscleId = muscle?.muscle ?? null;
     if (muscleId) {
       const norm = normalizeMuscleId(muscleId);
       setSelectedMuscle(prev => prev === norm ? null : norm);
@@ -735,7 +735,7 @@ export default function Workouts() {
     const countsMap: Record<string, { count: number; rawId: string }> = {};
 
     if (currentTabWorkout.exercises && currentTabWorkout.exercises.length > 0) {
-      currentTabWorkout.exercises.forEach((tmplEx: any) => {
+      currentTabWorkout.exercises.forEach(tmplEx => {
         if (!tmplEx.exerciseName) return;
         const matched = findLibraryExercise(allExercises, tmplEx);
         const muscleRaw = matched ? matched.muscle : (tmplEx.muscle || 'chest');
@@ -746,7 +746,7 @@ export default function Workouts() {
         countsMap[muscleKey].count += 1;
       });
     } else if (currentTabWorkout.targets && Array.isArray(currentTabWorkout.targets)) {
-      currentTabWorkout.targets.forEach((tgt: any) => {
+      currentTabWorkout.targets.forEach(tgt => {
         const muscleKey = normalizeMuscleId(tgt.id);
         countsMap[muscleKey] = { count: tgt.count || 1, rawId: tgt.id };
       });
@@ -782,15 +782,15 @@ export default function Workouts() {
   }, [allExercises, selectedMuscle, librarySearchTerm]);
 
   const { highlighterData, modelColors } = useMemo(() => {
-    let data: any[] = [];
+    let data: IExerciseData[] = [];
     let colors = ['#B8F200', '#2EE59D'];
 
     if (effectiveTargets.length > 0) {
-      const rawMuscles: string[] = effectiveTargets.map((t: any) => toModelMuscle(normalizeMuscleId(t.id)));
-      const allMuscles = Array.from(new Set(rawMuscles)).filter((m: string) => VALID_MODEL_MUSCLES.has(m));
+      const rawMuscles: string[] = effectiveTargets.map(t => toModelMuscle(normalizeMuscleId(t.id)));
+      const allMuscles = Array.from(new Set(rawMuscles)).filter(isModelMuscle);
       const safeSelected = selectedMuscle ? toModelMuscle(normalizeMuscleId(selectedMuscle)) : null;
 
-      if (safeSelected && VALID_MODEL_MUSCLES.has(safeSelected)) {
+      if (safeSelected && isModelMuscle(safeSelected)) {
         data = [
           { name: 'All', muscles: allMuscles },
           { name: 'Selected', muscles: [safeSelected] }
@@ -804,7 +804,7 @@ export default function Workouts() {
       }
     } else if (selectedMuscle) {
       const safeSelected = toModelMuscle(normalizeMuscleId(selectedMuscle));
-      if (VALID_MODEL_MUSCLES.has(safeSelected)) {
+      if (isModelMuscle(safeSelected)) {
         data = [
           { name: 'Selected', muscles: [safeSelected] }
         ];
@@ -820,7 +820,7 @@ export default function Workouts() {
     : 0;
 
   // Calculate Exceeded Muscle Target Warnings
-  const exceededTargetMuscles = effectiveTargets.map((target: any) => {
+  const exceededTargetMuscles = effectiveTargets.map(target => {
     const normTargetId = normalizeMuscleId(target.id);
     const targetCount = target.count || 2;
     const currentCount = activeSelectedExercises.filter(ex => ex.normMuscle === normTargetId).length;
@@ -831,7 +831,7 @@ export default function Workouts() {
       currentCount,
       isExceeded: currentCount > targetCount
     };
-  }).filter((t: any) => t.isExceeded);
+  }).filter(t => t.isExceeded);
 
   return (
     <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-clip">
@@ -943,7 +943,7 @@ export default function Workouts() {
                     <p className="mt-1 leading-relaxed">
                       Bạn đã chọn vượt quá số bài so với mục tiêu đề xuất cho các nhóm cơ:{' '}
                       <strong className="text-white underline">
-                        {exceededTargetMuscles.map((tInfo: any) => `${MUSCLE_NAMES_VI[tInfo.id] || tInfo.id} (${tInfo.currentCount}/${tInfo.targetCount})`).join(', ')}
+                        {exceededTargetMuscles.map(tInfo => `${MUSCLE_NAMES_VI[tInfo.id] || tInfo.id} (${tInfo.currentCount}/${tInfo.targetCount})`).join(', ')}
                       </strong>.
                     </p>
                   </div>

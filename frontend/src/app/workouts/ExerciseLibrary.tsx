@@ -1,16 +1,17 @@
 'use client';
 import { normalizeMuscleId, MUSCLE_NAMES_VI } from './utils';
 import { Library } from 'lucide-react';
+import type { DetailExercise, WorkoutExercise } from './types';
 
 interface ExerciseLibraryProps {
   currentSelectedIds: string[];
-  filteredLibraryExercises: any[];
+  filteredLibraryExercises: WorkoutExercise[];
   handleAddExerciseFromLibrary: (exId: string) => void;
   isWorkoutSaved: boolean;
   librarySearchTerm: string;
   selectedMuscle: string | null;
   setLibrarySearchTerm: (value: string) => void;
-  setSelectedDetailExercise: (value: any) => void;
+  setSelectedDetailExercise: (value: DetailExercise | null) => void;
 }
 
 export default function ExerciseLibrary({

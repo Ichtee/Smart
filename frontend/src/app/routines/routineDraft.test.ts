@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { WEEK_DAYS, draftFromRoutine, draftToBody, emptyDraft, exerciseFromLibrary, routineSummary, validateDraft, type RoutineDraft } from './routineDraft';
+import { WEEK_DAYS, draftFromRoutine, draftToBody, emptyDraft, exerciseFromLibrary, routineSummary, validateDraft, type RoutineDraft, type RoutineSource } from './routineDraft';
 
 const exercise = (over = {}) => ({ exerciseId: 'e1', exerciseName: 'Bench Press', muscle: 'chest', sets: '4', repsRange: '8-12', restTimeSeconds: '90', ...over });
 const filled = (over: Partial<RoutineDraft> = {}): RoutineDraft => {
@@ -42,7 +42,7 @@ describe('draftFromRoutine', () => {
   });
 
   test('missing fields get defaults; an unknown day is ignored', () => {
-    const d = draftFromRoutine({ schedule: [{ day: 'Someday', name: 'x' }, { day: 'Thứ 2', exercises: [{ exerciseName: 'A', muscle: 'abs' }] }] });
+    const d = draftFromRoutine({ schedule: [{ day: 'Someday', name: 'x' }, { day: 'Thứ 2', exercises: [{ exerciseName: 'A', muscle: 'abs' }] }] } as unknown as RoutineSource);
     expect(d.name).toBe('');
     expect(d.days[0].exercises[0]).toMatchObject({ sets: '3', repsRange: '10', restTimeSeconds: '90', exerciseId: '' });
     expect(d.days.filter(x => x.mode !== 'off')).toHaveLength(1);
@@ -155,7 +155,7 @@ describe('routineSummary', () => {
   test('counts training days and exercises, ignoring rest days', () => {
     expect(routineSummary({ schedule: [
       { isRestDay: false, exercises: [1, 2, 3] }, { isRestDay: false, exercises: [1] }, { isRestDay: true, exercises: [] },
-    ] })).toBe('2 ngày tập · 4 bài');
+    ] } as unknown as RoutineSource)).toBe('2 ngày tập · 4 bài');
   });
   test('an empty or missing schedule', () => {
     expect(routineSummary({ schedule: [] })).toBe('0 ngày tập · 0 bài');

@@ -1,6 +1,9 @@
 // Pure constants and helpers for the workouts page (no React state).
+import type { Routine, RoutineExercise } from '@/types/domain';
+import type { WorkoutExercise } from './types';
+import type { Muscle } from 'react-body-highlighter';
 
-export const DEFAULT_ROUTINES = {
+export const DEFAULT_ROUTINES: Record<string, Routine> = {
   none: {
     id: 'none',
     name: 'Tự do (Không theo lịch)',
@@ -14,6 +17,9 @@ export const VALID_MODEL_MUSCLES = new Set([
   'adductor', 'abductors', 'hamstring', 'quadriceps', 'calves',
   'gluteal', 'head', 'neck', 'knees', 'left-soleus', 'right-soleus'
 ]);
+
+// narrows a muscle id to what the body-map library can draw
+export const isModelMuscle = (id: string): id is Muscle => VALID_MODEL_MUSCLES.has(id);
 
 export const normalizeMuscleId = (id: string): string => {
   if (!id) return '';
@@ -39,7 +45,7 @@ export const normalizeMuscleId = (id: string): string => {
 };
 
 // Match a routine template exercise to the library: by exerciseId first (survives renames), then by name
-export const findLibraryExercise = (library: any[], tmplEx: any) => {
+export const findLibraryExercise = (library: WorkoutExercise[], tmplEx: RoutineExercise): WorkoutExercise | undefined => {
   if (tmplEx.exerciseId) {
     const byId = library.find(item => item.id === tmplEx.exerciseId || item._id === tmplEx.exerciseId);
     if (byId) return byId;
@@ -91,7 +97,7 @@ export const getYouTubeSearchUrl = (exerciseName: string): string => {
   return `https://www.youtube.com/results?search_query=${query}`;
 };
 
-export const formatWorkoutDayTitle = (dayObj: any, lang: string): { day: string; name: string } => {
+export const formatWorkoutDayTitle = (dayObj: { day: string; name: string } | null | undefined, lang: string): { day: string; name: string } => {
   if (!dayObj) return { day: '', name: '' };
   if (lang !== 'en') return { day: dayObj.day, name: dayObj.name };
 

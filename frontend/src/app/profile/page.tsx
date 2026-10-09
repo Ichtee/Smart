@@ -11,7 +11,7 @@ import { calcBmi, bmiCategory as getBmiCategory } from '@/utils/bmi';
 import { goalHasPace } from '@/utils/nutritionCalc';
 import GoalPlanFields, { goalPlanError } from '@/components/GoalPlanFields';
 import Link from 'next/link';
-import { User, Activity, Target, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { User, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function Profile() {
   const router = useRouter();
@@ -35,8 +35,11 @@ export default function Profile() {
   const { profile, error: profileFetchError, isLoading: profileLoading } = useProfile();
   const loading = profileLoading && !profile;
 
-  useEffect(() => {
-    if (!profile) return;
+  // Fill the form whenever the loaded profile changes (SWR keeps the same object while the data is unchanged,
+  // so typing is never overwritten by a background refresh)
+  const [syncedProfile, setSyncedProfile] = useState<typeof profile>(undefined);
+  if (profile && profile !== syncedProfile) {
+    setSyncedProfile(profile);
     setFormData({
       name: profile.name || '',
       username: profile.username || '',
@@ -49,16 +52,19 @@ export default function Profile() {
       goalPace: profile.goalPace || 'Vừa',
       targetWeight: profile.targetWeight != null ? String(profile.targetWeight) : ''
     });
-  }, [profile]);
+  }
+
+  // one notice per failed load; a 401 is handled by the redirect below instead
+  const [reportedError, setReportedError] = useState<unknown>(null);
+  if (profileFetchError && profileFetchError !== reportedError && !isUnauthorizedError(profileFetchError)) {
+    setReportedError(profileFetchError);
+    setMessage({ text: 'Không tải được hồ sơ. Vui lòng tải lại trang sau giây lát.', type: 'error' });
+  }
 
   useEffect(() => {
-    if (!profileFetchError) return;
-    if (isUnauthorizedError(profileFetchError)) {
-      localStorage.removeItem('token');
-      router.push('/login');
-    } else {
-      setMessage({ text: 'Không tải được hồ sơ. Vui lòng tải lại trang sau giây lát.', type: 'error' });
-    }
+    if (!isUnauthorizedError(profileFetchError)) return;
+    localStorage.removeItem('token');
+    router.push('/login');
   }, [profileFetchError, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -148,7 +154,7 @@ export default function Profile() {
         const errData = await res.json().catch(() => ({}));
         setMessage({ text: errData.message || 'Cập nhật thất bại. Vui lòng kiểm tra dữ liệu nhập.', type: 'error' });
       }
-    } catch (err) {
+    } catch {
       setMessage({ text: 'Đã xảy ra lỗi kết nối.', type: 'error' });
     } finally {
       setSaving(false);

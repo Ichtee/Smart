@@ -155,7 +155,6 @@ export default function MusicPage() {
             </form>
             {preview && (
               <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 {preview.thumbnail && <img src={preview.thumbnail} alt="" className="size-14 rounded-lg object-cover" />}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold truncate">{preview.title}</p>

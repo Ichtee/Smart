@@ -1,11 +1,12 @@
 'use client';
 import LiveClock from './LiveClock';
 import { Zap } from 'lucide-react';
+import type { Routine } from '@/types/domain';
 
 interface WorkoutTopBarProps {
   activeRoutineId: string;
   handleRoutineChange: (newId: string) => void;
-  routinesMap: Record<string, any>;
+  routinesMap: Record<string, Routine>;
 }
 
 export default function WorkoutTopBar({

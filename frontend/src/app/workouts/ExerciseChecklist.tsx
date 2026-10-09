@@ -7,9 +7,10 @@ import type { ExerciseDetailsMap } from './types';
 import { setWeightText, withSetWeight } from './setWeights';
 import ProgressRing from '@/components/ui/ProgressRing';
 import { Check, ClipboardList, Flame, Info, Lightbulb, Lock, Minus, Pause, Pin, Play, Plus, SkipForward, Target, Timer, Trophy, X, Zap, BarChart3 } from 'lucide-react';
+import type { ActiveExercise, DetailExercise } from './types';
 
 interface ExerciseChecklistProps {
-  activeSelectedExercises: any[];
+  activeSelectedExercises: ActiveExercise[];
   adjustExerciseReps: (id: string, delta: number) => void;
   completedSetsMap: Record<string, number[]>;
   exerciseDetails: ExerciseDetailsMap;
@@ -23,7 +24,7 @@ interface ExerciseChecklistProps {
   restTimerSeconds: number;
   restTimerTotal: number;
   setExerciseDetails: (updater: (prev: ExerciseDetailsMap) => ExerciseDetailsMap) => void;
-  setSelectedDetailExercise: (value: any) => void;
+  setSelectedDetailExercise: (value: DetailExercise | null) => void;
   skipRestTimer: () => void;
   toggleCompleteExercise: (id: string, forcedState?: boolean | undefined, customSets?: number[] | undefined, setsMapOverride?: Record<string, number[]> | undefined) => void;
   toggleCompleteSet: (exId: string, setIndex: number, totalSets: number, exName: string) => void;

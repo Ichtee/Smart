@@ -11,11 +11,12 @@ import { waterGoalMl } from '@/utils/waterGoal';
 import { calcTargetCalories, macroTargets, sumMacros } from '@/utils/nutritionCalc';
 import MetabolismCard from './MetabolismCard';
 import Link from 'next/link';
-import { Bell, ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Dumbbell, ChevronDown, ChevronUp, Trash2, CheckCircle2, Play, ClipboardList, Utensils, Target } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, ShieldCheck, Flame, Droplets, Calendar, Dumbbell, ChevronDown, ChevronUp, Trash2, CheckCircle2, Play, ClipboardList, Utensils, Target } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import ProgressRing from '@/components/ui/ProgressRing';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { useConfirm, useToast } from '@/components/ui/feedback';
+import type { MealItem } from '@/app/nutrition/types';
 
 const MUSCLE_NAMES_VI: Record<string, string> = {
   chest: 'Ngực (Chest)', 'upper-back': 'Lưng trên', 'lower-back': 'Lưng dưới', lats: 'Cơ xô (Lats)',
@@ -42,7 +43,27 @@ interface ProfileData {
   lastActiveRoutineId?: string;
 }
 
-const EMPTY_MEALS: Record<string, any[]> = { 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] };
+// What the log endpoints return for one day
+interface LoggedExercise {
+  name: string;
+  muscle?: string;
+  sets?: number;
+  reps?: string | number;
+  completed?: boolean;
+}
+interface WorkoutLogEntry {
+  routineName?: string;
+  dayName?: string;
+  exercises?: LoggedExercise[];
+}
+interface NutritionDay {
+  meals?: Record<string, MealItem[]>;
+  waterGlasses?: number;
+  dayCalories?: number;
+  photoCount?: number;
+}
+
+const EMPTY_MEALS: Record<string, MealItem[]> = { 'Bữa Sáng': [], 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] };
 
 export default function Dashboard() {
   const confirm = useConfirm();
@@ -98,9 +119,8 @@ export default function Dashboard() {
   // The "streak" is the run of CONSECUTIVE days (what the Workouts page shows), not the number of days ever trained
   const streakCount: number = streak?.current ?? 0;
 
-  // Logs are date-ranged: the current month + week are always loaded (weekly chart, today),
+  // Logs are date-ranged: the current month + week are always loaded (today and the streak),
   // other months load on demand when the calendar navigates there. SWR caches each range.
-  const weekDates = useMemo(() => getWeekDaysMonToSun(new Date()), [getWeekDaysMonToSun]);
   const currentRange = monthAndWeekRange();
   const viewedRange = monthRange(calendarDate);
   const viewingCurrentMonth = monthKey(calendarDate) === monthKey(new Date());
@@ -108,30 +128,25 @@ export default function Dashboard() {
   const currentQs = `?from=${currentRange.from}&to=${currentRange.to}`;
   const viewedQs = `?from=${viewedRange.from}&to=${viewedRange.to}`;
 
-  const { data: wCurrent, mutate: mutateWCurrent } = useSWR(`/api/workouts/logs${currentQs}`, fetcher, logsOpts);
-  const { data: nCurrent } = useSWR(`/api/nutrition/logs${currentQs}`, fetcher, logsOpts);
-  const { data: wViewed, mutate: mutateWViewed } = useSWR(viewingCurrentMonth ? null : `/api/workouts/logs${viewedQs}`, fetcher, logsOpts);
-  const { data: nViewed } = useSWR(viewingCurrentMonth ? null : `/api/nutrition/logs${viewedQs}`, fetcher, logsOpts);
+  const { data: wCurrent, mutate: mutateWCurrent } = useSWR<Record<string, WorkoutLogEntry>>(`/api/workouts/logs${currentQs}`, fetcher, logsOpts);
+  const { data: nCurrent } = useSWR<Record<string, NutritionDay>>(`/api/nutrition/logs${currentQs}`, fetcher, logsOpts);
+  const { data: wViewed, mutate: mutateWViewed } = useSWR<Record<string, WorkoutLogEntry>>(viewingCurrentMonth ? null : `/api/workouts/logs${viewedQs}`, fetcher, logsOpts);
+  const { data: nViewed } = useSWR<Record<string, NutritionDay>>(viewingCurrentMonth ? null : `/api/nutrition/logs${viewedQs}`, fetcher, logsOpts);
 
-  const workoutLogs: Record<string, any> = useMemo(() => ({ ...(wViewed || {}), ...(wCurrent || {}) }), [wViewed, wCurrent]);
-  const nutritionLogs: Record<string, any> = useMemo(() => ({ ...(nViewed || {}), ...(nCurrent || {}) }), [nViewed, nCurrent]);
+  const workoutLogs: Record<string, WorkoutLogEntry> = useMemo(() => ({ ...(wViewed || {}), ...(wCurrent || {}) }), [wViewed, wCurrent]);
+  const nutritionLogs: Record<string, NutritionDay> = useMemo(() => ({ ...(nViewed || {}), ...(nCurrent || {}) }), [nViewed, nCurrent]);
 
-  const { data: todayNutrition } = useSWR(`/api/nutrition?date=${todayStr}`, fetcher, logsOpts);
-  const todayMeals: any[] = useMemo(() => Object.values(todayNutrition?.meals || {}).flat() as any[], [todayNutrition]);
+  const { data: todayNutrition } = useSWR<NutritionDay>(`/api/nutrition?date=${todayStr}`, fetcher, logsOpts);
+  const todayMeals: MealItem[] = useMemo(() => Object.values(todayNutrition?.meals || {}).flat(), [todayNutrition]);
   const todayWaterGlasses: number = todayNutrition?.waterGlasses || 0;
   const waterGoal = waterGoalMl(profile.weight, profile.age);
 
-  const weeklyCalories: number[] = useMemo(
-    () => weekDates.map(d => nutritionLogs[d]?.dayCalories || 0),
-    [weekDates, nutritionLogs]
-  );
-
-  const { data: diaryNutrition } = useSWR(
+  const { data: diaryNutrition } = useSWR<NutritionDay>(
     selectedDiaryDate ? `/api/nutrition?date=${selectedDiaryDate}` : null,
     fetcher,
     logsOpts
   );
-  const selectedDateMeals: Record<string, any[]> = diaryNutrition?.meals || EMPTY_MEALS;
+  const selectedDateMeals: Record<string, MealItem[]> = diaryNutrition?.meals || EMPTY_MEALS;
   const selectedDateWater: number = diaryNutrition?.waterGlasses || 0;
 
   const handleDeleteWorkoutLog = useCallback(async (targetDate: string) => {
@@ -150,13 +165,8 @@ export default function Dashboard() {
   const consumed = useMemo(() => sumMacros(todayMeals), [todayMeals]);
   const consumedCalories = consumed.calories;
 
-  const { protein: targetProteinGrams, carbs: targetCarbsGrams, fat: targetFatGrams } = macroTargets(targetCalories, profile);
+  const { protein: targetProteinGrams } = macroTargets(targetCalories, profile);
   const consumedProteinGrams = consumed.protein;
-  const consumedCarbsGrams = consumed.carbs;
-  const consumedFatGrams = consumed.fat;
-  const proteinPct = Math.min(100, Math.round((consumedProteinGrams / (targetProteinGrams || 1)) * 100));
-  const carbsPct = Math.min(100, Math.round((consumedCarbsGrams / (targetCarbsGrams || 1)) * 100));
-  const fatPct = Math.min(100, Math.round((consumedFatGrams / (targetFatGrams || 1)) * 100));
 
   const calendarDays = useMemo(() => {
     const year = calendarDate.getFullYear();
@@ -201,13 +211,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  const maxCalInWeek = Math.max(targetCalories, ...weeklyCalories, 100);
-  const svgPoints = weeklyCalories.map((val, idx) => {
-    const x = (idx / 6) * 460 + 20;
-    const y = 120 - (val / maxCalInWeek) * 90;
-    return `${x},${y}`;
-  }).join(' ');
 
   return (
     <div className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">
@@ -422,7 +425,7 @@ export default function Dashboard() {
                         : <p>🧘 Không có buổi tập nào được ghi nhận cho ngày này.</p>}
                     </div>
                   );
-                  const completedEx = (log.exercises || []).filter((ex: any) => ex.completed !== false);
+                  const completedEx = (log.exercises || []).filter(ex => ex.completed !== false);
                   return (
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -449,7 +452,7 @@ export default function Dashboard() {
                         {!isExerciseListCollapsed && (
                           completedEx.length > 0 ? (
                             <div className="space-y-2">
-                              {completedEx.map((ex: any, idx: number) => (
+                              {completedEx.map((ex, idx) => (
                                 <div key={idx} className="p-3.5 bg-secondary/50 border border-border rounded-2xl flex items-center justify-between gap-3 text-sm">
                                   <div className="space-y-0.5 min-w-0">
                                     <span className="font-extrabold text-foreground block truncate">{idx+1}. {ex.name}</span>
@@ -474,7 +477,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-black text-foreground flex items-center gap-2"><Utensils className="size-4 text-primary" aria-hidden="true" /> Nhật ký ăn uống ngày <span className="text-primary">{selectedDiaryDate}</span></h4>
                     <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-xl border border-primary/20">
-                      {Object.values(selectedDateMeals).flat().reduce((s: number, i: any) => s + (i.calories || 0), 0)} kcal
+                      {Object.values(selectedDateMeals).flat().reduce((s, i) => s + (i.calories || 0), 0)} kcal
                     </span>
                   </div>
                   {selectedDateWater > 0 && (
@@ -487,7 +490,7 @@ export default function Dashboard() {
                       {[{name:'Bữa Sáng',icon:'🍳'},{name:'Bữa Trưa',icon:'🍱'},{name:'Bữa Tối',icon:'🥩'},{name:'Ăn Vặt',icon:'🍎'}].map(cat => {
                         const list = selectedDateMeals[cat.name] || [];
                         if (list.length === 0) return null;
-                        const catCal = list.reduce((s: number, i: any) => s + (i.calories || 0), 0);
+                        const catCal = list.reduce((s, i) => s + (i.calories || 0), 0);
                         return (
                           <div key={cat.name} className="bg-secondary/50 p-4 rounded-2xl border border-border space-y-2">
                             <div className="flex items-center justify-between text-sm font-bold border-b border-border pb-2">
@@ -495,11 +498,11 @@ export default function Dashboard() {
                               <span className="text-primary">{catCal} kcal</span>
                             </div>
                             <div className="space-y-1.5">
-                              {list.map((item: any) => (
+                              {list.map(item => (
                                 <div key={item.id} className="flex items-center justify-between bg-background p-2 rounded-xl text-xs">
                                   <div className="flex items-center gap-2">
                                     {item.image && (
-                                      <img src={item.image} alt={item.name} onClick={() => setPreviewImage(item.image)} className="w-8 h-8 rounded-lg object-cover cursor-pointer border border-border hover:border-primary transition" />
+                                      <img src={item.image} alt={item.name} onClick={() => setPreviewImage(item.image ?? null)} className="w-8 h-8 rounded-lg object-cover cursor-pointer border border-border hover:border-primary transition" />
                                     )}
                                     <span className="text-foreground font-medium">{item.name}</span>
                                   </div>

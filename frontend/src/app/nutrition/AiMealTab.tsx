@@ -85,7 +85,6 @@ export default function AiMealTab({ dayLoaded, onAdd }: Props) {
         </label>
         {image && (
           <div className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={image} alt="Ảnh món ăn" className="size-12 rounded-lg object-cover" />
             <button type="button" aria-label="Bỏ ảnh" onClick={() => setImage('')} className="absolute -top-2 -right-2 rounded-full bg-slate-800 p-0.5 cursor-pointer">
               <X className="size-3" />

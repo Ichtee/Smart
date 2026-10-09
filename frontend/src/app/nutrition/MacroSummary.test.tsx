@@ -2,8 +2,9 @@ import { describe, expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import MacroSummary from './MacroSummary';
 import { macroTargets } from '@/utils/nutritionCalc';
+import type { MealItem } from './types';
 
-const meals = (items: any[]) => ({ 'Bữa Sáng': items, 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] });
+const meals = (items: MealItem[]) => ({ 'Bữa Sáng': items, 'Bữa Trưa': [], 'Bữa Tối': [], 'Ăn Vặt': [] });
 
 describe('MacroSummary', () => {
   test('shows real protein/carbs/fat of the logged foods against the 30/50/20 targets', () => {

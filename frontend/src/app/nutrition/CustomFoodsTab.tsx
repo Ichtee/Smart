@@ -72,7 +72,7 @@ export default function CustomFoodsTab({ dbFoods, mutateFoods, onPickFood, onBac
         const data = await res.json();
         toast.error(data.message || 'Lỗi khi lưu món ăn cá nhân');
       }
-    } catch (err) {
+    } catch {
       toast.error('Lỗi kết nối khi lưu món ăn cá nhân');
     } finally {
       setSavingCustomFood(false);
@@ -266,7 +266,7 @@ export default function CustomFoodsTab({ dbFoods, mutateFoods, onPickFood, onBac
             <p className="text-3xl">⭐</p>
             <p className="text-xs text-slate-300 font-bold">Bạn chưa có món ăn cá nhân nào.</p>
             <p className="text-xs text-slate-500">
-              Hãy nhấn nút <b className="text-primary">"➕ Tạo món mới"</b> ở trên để thêm món ăn yêu thích của bạn!
+              Hãy nhấn nút <b className="text-primary">&quot;➕ Tạo món mới&quot;</b> ở trên để thêm món ăn yêu thích của bạn!
             </p>
           </div>
         )}

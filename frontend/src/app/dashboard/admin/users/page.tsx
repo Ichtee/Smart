@@ -5,6 +5,7 @@ import { apiFetch } from '@/utils/api';
 import { useAdminUsers } from '@/hooks/useApi';
 import { useAdmin } from '@/hooks/useAdmin';
 import { ShieldAlert } from 'lucide-react';
+import type { AdminUser } from '@/types/domain';
 
 export default function UserManagement() {
   const router = useRouter();
@@ -16,7 +17,7 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modal State
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
   // Success / Failure / Confirmation Popup Modal state
   const [popup, setPopup] = useState<{
@@ -28,7 +29,7 @@ export default function UserManagement() {
     onConfirm?: () => void;
   } | null>(null);
 
-  const confirmDeleteUser = (user: any) => {
+  const confirmDeleteUser = (user: AdminUser) => {
     setPopup({
       show: true,
       type: 'confirm',
@@ -61,7 +62,7 @@ export default function UserManagement() {
           message: error.message || 'Không thể xóa tài khoản này.'
         });
       }
-    } catch (err) {
+    } catch {
       setPopup({
         show: true,
         type: 'error',
@@ -71,7 +72,7 @@ export default function UserManagement() {
     }
   };
 
-  const handleUpdateField = async (id: string, field: string, value: any) => {
+  const handleUpdateField = async (id: string, field: string, value: string | boolean) => {
     try {
       const res = await apiFetch(`/api/users/${id}`, {
         method: 'PUT',
@@ -98,7 +99,7 @@ export default function UserManagement() {
           message: error.message || 'Không thể cập nhật thông tin tài khoản.'
         });
       }
-    } catch (err) {
+    } catch {
       setPopup({
         show: true,
         type: 'error',
@@ -113,7 +114,7 @@ export default function UserManagement() {
     return user.name?.toLowerCase().includes(term) || user.email?.toLowerCase().includes(term) || user.username?.toLowerCase().includes(term);
   });
 
-  const openModal = (user: any) => {
+  const openModal = (user: AdminUser) => {
     setSelectedUser(user);
   };
 
@@ -259,7 +260,7 @@ export default function UserManagement() {
                   <div className="text-white font-medium truncate" title={selectedUser.email}>{selectedUser.email}</div>
                   
                   <div className="text-zinc-500">Ngày tạo:</div>
-                  <div className="text-white font-medium">{new Date(selectedUser.createdAt).toLocaleDateString('vi-VN')}</div>
+                  <div className="text-white font-medium">{selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString('vi-VN') : '--'}</div>
                 </div>
               </div>
 

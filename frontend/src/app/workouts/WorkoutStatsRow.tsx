@@ -1,8 +1,9 @@
 'use client';
 import { ClipboardList, Dumbbell, Flame } from 'lucide-react';
+import type { Routine } from '@/types/domain';
 
 interface WorkoutStatsRowProps {
-  activeRoutine: any;
+  activeRoutine: Routine | undefined;
   isWorkoutSaved: boolean;
   progressPercent: number;
   streakDays: number;

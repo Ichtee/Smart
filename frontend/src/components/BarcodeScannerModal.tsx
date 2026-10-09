@@ -27,6 +27,8 @@ export default function BarcodeScannerModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
+  // The scanner is started once per opening, so it calls the latest handlers through this ref.
+  const handlersRef = useRef<{ onSuccess: (text: string) => void; onFailure: () => void }>({ onSuccess: () => {}, onFailure: () => {} });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -51,21 +53,21 @@ export default function BarcodeScannerModal({
         await html5QrcodeScanner.start(
           { facingMode: 'environment' },
           config,
-          onScanSuccess,
-          onScanFailure
+          text => handlersRef.current.onSuccess(text),
+          () => handlersRef.current.onFailure()
         );
-      } catch (err: any) {
+      } catch (err) {
         console.warn('Environment camera failed, trying fallback camera:', err);
         try {
           if (html5QrcodeScanner) {
             await html5QrcodeScanner.start(
               { facingMode: 'user' },
               { fps: 10, qrbox: { width: 260, height: 160 } },
-              onScanSuccess,
-              onScanFailure
+              text => handlersRef.current.onSuccess(text),
+              () => handlersRef.current.onFailure()
             );
           }
-        } catch (fallbackErr: any) {
+        } catch {
           setErrorMsg('Không thể mở Camera. Vui lòng cấp quyền truy cập Camera hoặc nhập mã vạch bằng tay bên dưới.');
           setScanning(false);
         }
@@ -142,6 +144,10 @@ export default function BarcodeScannerModal({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    handlersRef.current = { onSuccess: onScanSuccess, onFailure: onScanFailure };
+  });
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -6,6 +6,10 @@ import { useRoutines, useExercises } from '@/hooks/useApi';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useConfirm, useToast } from '@/components/ui/feedback';
 import { ShieldAlert } from 'lucide-react';
+import type { Exercise, MuscleTarget, Routine, RoutineDay, RoutineExercise } from '@/types/domain';
+
+// A day as the editor holds it: both lists always exist, so they can be edited in place.
+type EditableDay = RoutineDay & { exercises: RoutineExercise[]; targets: MuscleTarget[] };
 
 function SearchableExerciseSelect({
   value,
@@ -15,7 +19,7 @@ function SearchableExerciseSelect({
 }: {
   value: string;
   onChange: (val: string) => void;
-  exercises: any[];
+  exercises: Exercise[];
   musclesMap: Record<string, string>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -93,7 +97,7 @@ function SearchableExerciseSelect({
               ))
             ) : (
               <div className="p-3 text-center text-xs text-slate-500">
-                Không tìm thấy bài tập nào chứa từ khóa "{search}"
+                Không tìm thấy bài tập nào chứa từ khóa &quot;{search}&quot;
               </div>
             )}
           </div>
@@ -109,7 +113,7 @@ function QuickAddExerciseBar({
   musclesMap
 }: {
   onSelect: (exName: string) => void;
-  exercises: any[];
+  exercises: Exercise[];
   musclesMap: Record<string, string>;
 }) {
   const [search, setSearch] = useState('');
@@ -228,7 +232,7 @@ function QuickAddExerciseBar({
             </div>
           ) : (
             <div className="p-4 text-center text-xs text-slate-400">
-              Không tìm thấy bài tập nào khớp từ khóa "{search}".
+              Không tìm thấy bài tập nào khớp từ khóa &quot;{search}&quot;.
             </div>
           )}
         </div>
@@ -244,8 +248,8 @@ export default function RoutineManagement() {
   const { isAdmin, checking, authError } = useAdmin();
   const { routines: routineData, isLoading: routinesLoading, mutate: mutateRoutines } = useRoutines(isAdmin);
   const { exercises: exerciseData } = useExercises(isAdmin); // for the dynamic muscle categories
-  const routines: any[] = Array.isArray(routineData) ? routineData : [];
-  const exercises: any[] = Array.isArray(exerciseData) ? exerciseData : [];
+  const routines: Routine[] = Array.isArray(routineData) ? routineData : [];
+  const exercises: Exercise[] = Array.isArray(exerciseData) ? exerciseData : [];
   const loading = checking || (isAdmin && routinesLoading);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -256,10 +260,10 @@ export default function RoutineManagement() {
   const [saving, setSaving] = useState(false);
 
   // Form states
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{ id: string; name: string; schedule: EditableDay[] }>({
     id: '',
     name: '',
-    schedule: [] as any[]
+    schedule: []
   });
 
   const musclesMap: Record<string, string> = {
@@ -292,7 +296,6 @@ export default function RoutineManagement() {
   };
 
   // Trích xuất danh sách Category (Muscle Group) duy nhất từ Database
-  const dynamicCategories = Array.from(new Set(exercises.map(ex => ex.muscle))).filter(Boolean);
 
   const handleOpenAdd = () => {
     setFormData({
@@ -304,11 +307,11 @@ export default function RoutineManagement() {
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (routine: any) => {
+  const handleOpenEdit = (routine: Routine) => {
     setFormData({
       id: routine.id,
       name: routine.name,
-      schedule: routine.schedule || []
+      schedule: (routine.schedule || []).map(d => ({ ...d, exercises: d.exercises ?? [], targets: d.targets ?? [] }))
     });
     setIsEditing(true);
     setIsModalOpen(true);
@@ -329,7 +332,7 @@ export default function RoutineManagement() {
     }
   };
 
-  const deriveTargetsFromExercises = (dayExercises: any[], catalogExercises: any[]) => {
+  const deriveTargetsFromExercises = (dayExercises: RoutineExercise[], catalogExercises: Exercise[]) => {
     if (!dayExercises || dayExercises.length === 0) return [];
 
     const counts: Record<string, number> = {};
@@ -403,7 +406,7 @@ export default function RoutineManagement() {
       ...formData,
       schedule: [
         ...formData.schedule,
-        { day: '', name: '', targets: [] }
+        { day: '', name: '', targets: [], exercises: [] }
       ]
     });
   };
@@ -414,37 +417,9 @@ export default function RoutineManagement() {
     setFormData({ ...formData, schedule: newSchedule });
   };
 
-  const updateDay = (dayIndex: number, field: string, value: string) => {
+  const updateDay = (dayIndex: number, field: 'day' | 'name', value: string) => {
     const newSchedule = [...formData.schedule];
-    newSchedule[dayIndex][field] = value;
-    setFormData({ ...formData, schedule: newSchedule });
-  };
-
-  const addTarget = (dayIndex: number) => {
-    const newSchedule = [...formData.schedule];
-    newSchedule[dayIndex].targets.push({ id: '', label: '', count: 3 });
-    setFormData({ ...formData, schedule: newSchedule });
-  };
-
-  const removeTarget = (dayIndex: number, targetIndex: number) => {
-    const newSchedule = [...formData.schedule];
-    newSchedule[dayIndex].targets.splice(targetIndex, 1);
-    setFormData({ ...formData, schedule: newSchedule });
-  };
-
-  const updateTarget = (dayIndex: number, targetIndex: number, muscleId: string) => {
-    const newSchedule = [...formData.schedule];
-    newSchedule[dayIndex].targets[targetIndex] = {
-      ...newSchedule[dayIndex].targets[targetIndex],
-      id: muscleId,
-      label: musclesMap[muscleId] || muscleId
-    };
-    setFormData({ ...formData, schedule: newSchedule });
-  };
-
-  const updateTargetCount = (dayIndex: number, targetIndex: number, count: number) => {
-    const newSchedule = [...formData.schedule];
-    newSchedule[dayIndex].targets[targetIndex].count = count;
+    newSchedule[dayIndex] = { ...newSchedule[dayIndex], [field]: value };
     setFormData({ ...formData, schedule: newSchedule });
   };
 
@@ -479,17 +454,18 @@ export default function RoutineManagement() {
     setFormData({ ...formData, schedule: newSchedule });
   };
 
-  const updateExerciseInDay = (dayIndex: number, exIndex: number, field: string, value: any) => {
+  const updateExerciseInDay = (dayIndex: number, exIndex: number, field: keyof RoutineExercise, value: string | number | boolean) => {
     const newSchedule = [...formData.schedule];
     if (field === 'exerciseName') {
-      const foundEx = exercises.find(e => e.name === value);
-      newSchedule[dayIndex].exercises[exIndex].exerciseName = value;
+      const name = String(value);
+      const foundEx = exercises.find(e => e.name === name);
+      newSchedule[dayIndex].exercises[exIndex].exerciseName = name;
       newSchedule[dayIndex].exercises[exIndex].exerciseId = foundEx ? String(foundEx._id || '') : '';
       if (foundEx) {
         newSchedule[dayIndex].exercises[exIndex].muscle = foundEx.muscle;
       }
     } else {
-      newSchedule[dayIndex].exercises[exIndex][field] = value;
+      newSchedule[dayIndex].exercises[exIndex] = { ...newSchedule[dayIndex].exercises[exIndex], [field]: value };
     }
     setFormData({ ...formData, schedule: newSchedule });
   };
@@ -709,7 +685,7 @@ export default function RoutineManagement() {
                           if (autoTargets.length > 0) {
                             return (
                               <div className="flex flex-wrap gap-2 pt-1">
-                                {autoTargets.map((tgt: any) => (
+                                {autoTargets.map(tgt => (
                                   <div key={tgt.id} className="px-3 py-1.5 bg-inset border border-primary/30 rounded-xl text-xs flex items-center gap-2 shadow-sm">
                                     <span className="text-white font-extrabold">{tgt.label}</span>
                                     <span className="px-2 py-0.5 bg-primary-soft text-primary border border-primary/40 rounded-full font-black text-xs">
@@ -744,7 +720,7 @@ export default function RoutineManagement() {
                           />
                         </div>
 
-                        {dayObj.exercises?.map((exObj: any, exIndex: number) => (
+                        {dayObj.exercises?.map((exObj, exIndex) => (
                           <div key={exIndex} className="p-3 bg-zinc-900 rounded-xl border border-white/5 space-y-2">
                             <div className="flex items-center gap-2 flex-wrap">
                               <SearchableExerciseSelect
@@ -806,7 +782,7 @@ export default function RoutineManagement() {
 
                   {formData.schedule.length === 0 && (
                     <div className="text-center p-8 border border-dashed border-zinc-800 rounded-2xl text-zinc-500">
-                      Chưa có ngày tập nào. Hãy bấm "+ Thêm Ngày Mới" để bắt đầu.
+                      Chưa có ngày tập nào. Hãy bấm &quot;+ Thêm Ngày Mới&quot; để bắt đầu.
                     </div>
                   )}
 

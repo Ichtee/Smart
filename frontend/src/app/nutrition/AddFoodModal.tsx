@@ -107,8 +107,8 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
       } else {
         throw new Error(data.error?.message || 'Upload ảnh thất bại');
       }
-    } catch (err: any) {
-      setImageUploadError(err.message || 'Không thể tải ảnh lên ImgBB');
+    } catch (err) {
+      setImageUploadError(err instanceof Error && err.message ? err.message : 'Không thể tải ảnh lên ImgBB');
     } finally {
       setUploadingImage(false);
     }
@@ -405,7 +405,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                   className="w-4 h-4 rounded text-primary bg-slate-900 border-slate-700 focus:ring-0 cursor-pointer"
                 />
                 <span className="text-xs text-slate-300 font-semibold flex items-center gap-1.5">
-                  <span>⭐</span> Lưu vào <b className="text-white font-bold">"Món ăn của tôi"</b> để dùng lại sau
+                  <span>⭐</span> Lưu vào <b className="text-white font-bold">&quot;Món ăn của tôi&quot;</b> để dùng lại sau
                 </span>
               </label>
 

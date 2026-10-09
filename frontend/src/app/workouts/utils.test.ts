@@ -5,13 +5,18 @@ import {
   toFixedReps,
   getYouTubeEmbedUrl,
   getYouTubeSearchUrl,
-  findLibraryExercise,
+  findLibraryExercise as findInLibrary,
   formatWorkoutDayTitle,
   DAY_ORDER,
   DEFAULT_ROUTINES,
   MUSCLE_NAMES_VI,
   VALID_MODEL_MUSCLES,
 } from './utils';
+import type { RoutineExercise } from '@/types/domain';
+import type { WorkoutExercise } from './types';
+
+// These tests use minimal fixtures on purpose (raw API objects, templates without a name or id)
+const findLibraryExercise = (library: object[], template: object) => findInLibrary(library as WorkoutExercise[], template as RoutineExercise);
 
 describe('normalizeMuscleId', () => {
   test.each([

@@ -75,7 +75,7 @@ describe('Login: client-side checks (nothing is sent)', () => {
   });
 
   test('a missing password is refused', async () => {
-    const { user, identifier, submit } = setup();
+    const { user, identifier } = setup();
     await user.type(identifier, 'dana');
     // the field is `required`, so bypass the browser check by submitting the form directly
     identifier.form!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));

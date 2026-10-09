@@ -2,6 +2,8 @@
 import useSWR, { SWRConfiguration, mutate as globalMutate, unload } from 'swr';
 import { apiFetch, resetAuthVerified } from '@/utils/api';
 import { toDateStr } from '@/utils/dateUtils';
+import type { AdminUser, Exercise, Routine } from '@/types/domain';
+import type { DbFood } from '@/app/nutrition/types';
 
 export class ApiError extends Error {
   status: number;
@@ -80,17 +82,17 @@ export const refreshProfile = async () => {
 /** `enabled` false skips the request (admin pages wait until the visitor is known to be an admin). */
 export function useRoutines(enabled = true) {
   const { data, error, isLoading, mutate } = useSWR(enabled ? '/api/routines' : null, fetcher, STATIC);
-  return { routines: data as any[] | undefined, error, isLoading, mutate };
+  return { routines: data as Routine[] | undefined, error, isLoading, mutate };
 }
 
 export function useExercises(enabled = true) {
   const { data, error, isLoading, mutate } = useSWR(enabled ? '/api/exercises' : null, fetcher, STATIC);
-  return { exercises: data as any[] | undefined, error, isLoading, mutate };
+  return { exercises: data as Exercise[] | undefined, error, isLoading, mutate };
 }
 
 export function useFoods(enabled = true) {
   const { data, error, isLoading, mutate } = useSWR(enabled ? '/api/foods' : null, fetcher, STATIC);
-  return { foods: data as any[] | undefined, error, isLoading, mutate };
+  return { foods: data as DbFood[] | undefined, error, isLoading, mutate };
 }
 
 /** Streak numbers; revalidates on mount/focus because it changes whenever a workout is ticked. */
@@ -103,7 +105,7 @@ export function useStreak() {
 /** All accounts (admin only). Always fresh on mount; the API returns a bare array or { users, total }. */
 export function useAdminUsers(enabled: boolean) {
   const { data, error, isLoading, mutate } = useSWR(enabled ? '/api/users' : null, fetcher, { revalidateOnFocus: false, shouldRetryOnError: false });
-  const users: any[] = Array.isArray(data) ? data : (data?.users || []);
+  const users: AdminUser[] = Array.isArray(data) ? data : (data?.users || []);
   const total: number = Array.isArray(data) ? data.length : (data?.total || users.length);
   return { users, total, error, isLoading, mutate };
 }

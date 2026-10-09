@@ -51,11 +51,10 @@ export default function BodyPage() {
 
   // Start the form from the most recent weight (people change it by a kilo or two)
   const [prefilled, setPrefilled] = useState(false);
-  useEffect(() => {
-    if (prefilled || !summary) return;
-    setForm(f => (f.weight ? f : { ...f, weight: String(summary.latest.weight) }));
+  if (!prefilled && summary) {
     setPrefilled(true);
-  }, [summary, prefilled]);
+    setForm(f => (f.weight ? f : { ...f, weight: String(summary.latest.weight) }));
+  }
 
   const setField = (name: 'weight' | 'bodyFat' | 'waist' | 'neck' | 'hip') => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [name]: e.target.value }));
