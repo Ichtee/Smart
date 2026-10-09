@@ -14,9 +14,11 @@ const round = (n) => Math.round(n * 10) / 10;
 
 // -> plain text describing the user's profile and last 7 days of meals/workouts (days without data are left out)
 const buildUserContext = async (user) => {
-  const lines = PROFILE_FIELDS.filter(([key]) => isSet(user[key])).map(([key, label]) => `${label}: ${user[key]}`);
-
   // ponytail: UTC day boundary; off by one day near midnight for users far from UTC
+  // Without today's date some models can't tell whether the latest logged day is today.
+  const lines = [`Hôm nay: ${new Date().toISOString().slice(0, 10)}`,
+    ...PROFILE_FIELDS.filter(([key]) => isSet(user[key])).map(([key, label]) => `${label}: ${user[key]}`)];
+
   const since = new Date(Date.now() - DAYS_BACK * 86400000).toISOString().slice(0, 10);
   const [nutrition, workouts] = await Promise.all([
     NutritionLog.find({ user: user._id, date: { $gte: since } }).sort({ date: 1 }).lean(),

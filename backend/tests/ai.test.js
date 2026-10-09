@@ -157,6 +157,11 @@ describe('buildUserContext', () => {
   beforeEach(db.clear);
   afterAll(db.close);
 
+  test("states today's date so the model knows which logged day is today", async () => {
+    const { user } = await createUser();
+    expect(await buildUserContext(user)).toContain(`Hôm nay: ${today()}`);
+  });
+
   test('builds context for a brand-new user', async () => {
     const { user } = await createUser();
     await expect(buildUserContext(user)).resolves.toEqual(expect.any(String));
