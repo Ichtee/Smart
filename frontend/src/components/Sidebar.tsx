@@ -46,7 +46,12 @@ export default function Sidebar() {
   const initial = displayName.trim().split(/\s+/).pop()?.charAt(0).toUpperCase() || '?';
   const profileActive = pathname === PROFILE_ITEM.href;
 
-  useEffect(() => { setMoreOpen(false); }, [pathname]);
+  // close the "Thêm" menu when the page changes (adjusting state while rendering, not in an effect)
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
+    setMoreOpen(false);
+  }
   useEffect(() => {
     if (!moreOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMoreOpen(false); };
@@ -60,7 +65,9 @@ export default function Sidebar() {
         method: 'POST',
         credentials: 'include'
       });
-    } catch (e) {}
+    } catch {
+      // the server could not be reached: the local sign-out below still happens
+    }
     localStorage.clear();
     clearApiCache();
     router.push('/');

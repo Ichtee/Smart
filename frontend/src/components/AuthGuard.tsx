@@ -50,6 +50,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const isAdminRoute = pathname.startsWith('/dashboard/admin');
 
     if (isPublic) {
+      // Deliberately set here, after mount: deriving it during render would make the server render the
+      // public pages' content, which today is only shown once the client has mounted.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAuthState('public');
       return;
     }
@@ -119,7 +122,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                 username: user.username,
                 role: user.role
               }));
-            } catch (e) {}
+            } catch {
+              // storage unavailable: the cached copy is only a convenience
+            }
 
             // Admin route — non-admin user → redirect with clear message
             if (isAdminRoute && user.role !== 'admin') {
@@ -153,7 +158,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
           // Other HTTP errors (500 etc.) — retry
           continue;
-        } catch (e) {
+        } catch {
           // Network error / timeout — retry (backend cold start)
           continue;
         }
