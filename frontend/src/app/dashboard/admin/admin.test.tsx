@@ -128,6 +128,22 @@ describe('admin users page edits', () => {
     expect(gets.length).toBe(2); // initial load + reload after the save
   });
 
+  test('the plan column defaults to Free and an admin can switch an account to Pro', async () => {
+    let plan: string | undefined;
+    vi.mocked(apiFetch).mockImplementation(async (path, init) => {
+      if (path === '/api/users/profile') return json(200, ADMIN);
+      if (path === '/api/users/u1' && init?.method === 'PUT') { plan = JSON.parse(String(init.body)).plan; return json(200, {}); }
+      if (path === '/api/users') return json(200, [{ ...lan, plan }]);
+      return json(200, []);
+    });
+    render(<UserManagement />);
+    const select = (await screen.findByRole('combobox', { name: 'Gói của lan@example.com' })) as HTMLSelectElement;
+    expect(select.value).toBe('free'); // an account without the field counts as free
+    await userEvent.selectOptions(select, 'pro');
+    await waitFor(() => expect(plan).toBe('pro'));
+    await waitFor(() => expect((screen.getByRole('combobox', { name: 'Gói của lan@example.com' }) as HTMLSelectElement).value).toBe('pro'));
+  });
+
   test('a refused update shows the server message', async () => {
     vi.mocked(apiFetch).mockImplementation(async (path, init) => {
       if (path === '/api/users/profile') return json(200, ADMIN);

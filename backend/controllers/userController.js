@@ -183,6 +183,7 @@ const registerUser = async (req, res) => {
         name: trimmedName,
         username: trimmedUsername,
         email: trimmedEmail,
+        plan: 'free', // never taken from the request
         verificationToken,
         verificationTokenExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
       });
@@ -278,6 +279,7 @@ const loginUser = async (req, res) => {
         bodyFat: user.bodyFat ?? null,
         activityLevel: user.activityLevel,
         role: user.role,
+        plan: user.plan || 'free',
         lastActiveRoutineId: user.lastActiveRoutineId || 'ppl',
         lastActiveRoutineName: user.lastActiveRoutineName || '',
         lastActiveDayIndex: user.lastActiveDayIndex || 0,
@@ -568,6 +570,7 @@ const updateProfile = async (req, res) => {
         bodyFat: currentBodyFat,
         activityLevel: updatedUser.activityLevel,
         role: updatedUser.role,
+        plan: updatedUser.plan || 'free',
         lastActiveRoutineId: updatedUser.lastActiveRoutineId,
         lastActiveRoutineName: updatedUser.lastActiveRoutineName,
         lastActiveDayIndex: updatedUser.lastActiveDayIndex,
@@ -638,6 +641,11 @@ const updateUserRoleAndStatus = async (req, res) => {
         user.role = req.body.role;
       }
 
+      if (req.body.plan !== undefined) {
+        if (!['free', 'pro'].includes(req.body.plan)) return res.status(400).json({ message: 'Invalid plan' });
+        user.plan = req.body.plan;
+      }
+
       if (req.body.isEmailVerified !== undefined) {
         if (req.body.isEmailVerified && !user.password) {
           return res.status(400).json({ message: 'Tài khoản này chưa đặt mật khẩu: người dùng cần hoàn tất đăng ký qua link trong email.' });
@@ -658,6 +666,7 @@ const updateUserRoleAndStatus = async (req, res) => {
         _id: updatedUser._id,
         name: updatedUser.name,
         role: updatedUser.role,
+        plan: updatedUser.plan || 'free',
         isEmailVerified: updatedUser.isEmailVerified
       });
     } else {

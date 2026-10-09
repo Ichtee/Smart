@@ -55,7 +55,10 @@ export default function AccountMenu() {
       {open && (
         <div role="menu" className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-border bg-card p-2 shadow-2xl">
           <div className="border-b border-border px-3 pb-2 pt-1">
-            <p className="truncate text-sm font-bold">{profile?.name || profile?.username || 'Tài khoản'}</p>
+            <p className="flex items-center gap-2 text-sm font-bold">
+              <span className="truncate">{profile?.name || profile?.username || 'Tài khoản'}</span>
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${profile?.plan === 'pro' ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground'}`}>{profile?.plan === 'pro' ? 'Pro' : 'Free'}</span>
+            </p>
             {profile?.email && <p className="truncate text-xs text-muted-foreground">{profile.email}</p>}
           </div>
           <div className="pt-1">

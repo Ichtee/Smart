@@ -159,6 +159,7 @@ export default function UserManagement() {
                 <tr className="border-b border-white/10 text-zinc-400 text-sm">
                   <th className="p-4 font-medium">Người dùng</th>
                   <th className="p-4 font-medium">Vai trò</th>
+                  <th className="p-4 font-medium">Gói</th>
                   <th className="p-4 font-medium">Trạng thái</th>
                   <th className="p-4 font-medium">Chỉ số (Cân nặng / Chiều cao)</th>
                   <th className="p-4 font-medium text-right">Thao tác</th>
@@ -187,6 +188,17 @@ export default function UserManagement() {
                         >
                           <option value="user">User</option>
                           <option value="admin">Admin</option>
+                        </select>
+                      </td>
+                      <td className="p-4">
+                        <select
+                          aria-label={`Gói của ${user.email}`}
+                          value={user.plan ?? 'free'}
+                          onChange={(e) => handleUpdateField(user._id, 'plan', e.target.value)}
+                          className={`bg-zinc-900 border rounded-lg p-1.5 text-xs font-semibold focus:outline-none ${user.plan === 'pro' ? 'border-primary/40 text-primary' : 'border-zinc-700 text-zinc-300'}`}
+                        >
+                          <option value="free">Free</option>
+                          <option value="pro">Pro</option>
                         </select>
                       </td>
                       <td className="p-4">

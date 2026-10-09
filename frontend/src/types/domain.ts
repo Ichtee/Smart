@@ -68,6 +68,8 @@ export interface AdminUser {
   username?: string;
   email: string;
   role?: string;
+  /** free = limited AI use, pro = no AI limits */
+  plan?: 'free' | 'pro';
   age?: number | null;
   gender?: string;
   height?: number | null;

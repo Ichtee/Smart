@@ -103,6 +103,12 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
+  // free = limited AI use; pro = no AI limits. Everyone signs up as free (payment to upgrade comes later; an admin can set it now).
+  plan: {
+    type: String,
+    enum: ['free', 'pro'],
+    default: 'free'
+  },
   lastActiveRoutineId: {
     type: String,
     default: 'ppl'

@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 // Integration tests make many requests from one IP; limiters are skipped when NODE_ENV === 'test'
 // (read at request time so a test can switch it off to exercise the limiter itself).
 const skipInTests = () => process.env.NODE_ENV === 'test';
+// The pro plan has no AI limits (these limiters run after `protect`, so req.user is there)
+const skipForPro = (req) => skipInTests() || req.user?.plan === 'pro';
 
 // Key by authenticated user when the JWT is valid (cheap verify, no DB hit), otherwise by IP.
 // Users behind the same NAT no longer share one bucket.
@@ -66,11 +68,11 @@ const emailFlowLimiter = rateLimit({
   message: { message: 'Too many requests. Please try again after 15 minutes.' },
 });
 
-// AI endpoints: 50 requests per day per user. Every call spends Gemini quota.
+// AI endpoints: 50 requests per day per free user. Every call spends Gemini quota.
 const aiLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000, // 24 hours
   max: 50,
-  skip: skipInTests,
+  skip: skipForPro,
   keyGenerator: userOrIpKey,
   standardHeaders: true,
   legacyHeaders: false,
@@ -82,7 +84,7 @@ const aiLimiter = rateLimit({
 const routineLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000, // 24 hours
   max: 2,
-  skip: skipInTests,
+  skip: skipForPro,
   skipFailedRequests: true,
   keyGenerator: userOrIpKey,
   standardHeaders: true,

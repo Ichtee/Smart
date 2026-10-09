@@ -84,6 +84,7 @@ export default function Register() {
                 <Logo size="lg" />
               </Link>
               <p className="text-xs text-muted-foreground font-medium mt-3">Tạo tài khoản Smart Fitness mới. Bạn sẽ đặt mật khẩu sau khi xác nhận email.</p>
+              <p className="mt-2 rounded-full border border-border px-3 py-1 text-[11px] font-bold text-muted-foreground">Tài khoản mới dùng gói Free · gói Pro không giới hạn AI (sắp ra mắt)</p>
             </div>
 
             {error && (

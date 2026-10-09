@@ -3,7 +3,7 @@ const request = require('supertest');
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-const { userOrIpKey, loginLimiter, routineLimiter } = require('../middleware/rateLimiter');
+const { userOrIpKey, loginLimiter, routineLimiter, aiLimiter } = require('../middleware/rateLimiter');
 
 const sign = (id, secret = process.env.JWT_SECRET) => jwt.sign({ id }, secret);
 
@@ -81,6 +81,21 @@ describe('limiters', () => {
     expect(blocked.status).toBe(429);
     expect(blocked.body.message).toMatch(/2 lần/);
     expect((await as('u2')).status).toBe(200);
+  });
+
+  test('the pro plan has no AI limits: aiLimiter and routineLimiter let it through, a free user is still limited', async () => {
+    const appFor = (plan) => {
+      const app = express();
+      app.use((req, res, next) => { req.user = { plan }; next(); });
+      app.post('/routine', aiLimiter, routineLimiter, (req, res) => res.json({}));
+      return app;
+    };
+    const pro = appFor('pro');
+    for (let i = 0; i < 4; i++) expect((await request(pro).post('/routine')).status).toBe(200);
+    const free = appFor('free');
+    expect((await request(free).post('/routine')).status).toBe(200);
+    expect((await request(free).post('/routine')).status).toBe(200);
+    expect((await request(free).post('/routine')).status).toBe(429);
   });
 
   test('is skipped under NODE_ENV=test so the integration suites are not throttled', async () => {

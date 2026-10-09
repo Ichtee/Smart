@@ -78,6 +78,11 @@ describe('POST /api/users/register', () => {
     expect(JSON.stringify(user)).not.toContain('attackerpass1');
   });
 
+  test('every new account is on the free plan, whatever the client sends', async () => {
+    await register({ ...valid(), plan: 'pro' });
+    expect((await User.findOne({ username: 'vana' })).plan).toBe('free');
+  });
+
   test('never lets a client choose its own role', async () => {
     await register({ ...valid(), role: 'admin' });
     expect((await User.findOne({ username: 'vana' })).role).toBe('user');
@@ -978,6 +983,22 @@ describe('admin user management', () => {
     const demoteSelf = await request(app).put(`/api/users/${admin.user._id}`).set(admin.auth).send({ role: 'user' });
     expect(demoteSelf.status).toBe(400);
     expect((await User.findById(admin.user._id)).role).toBe('admin');
+  });
+
+  test('the plan is shown on login and the profile, and only an admin can change it', async () => {
+    const user = await createUser({ username: 'planuser', email: 'plan@example.com' });
+    const admin = await createUser({ role: 'admin' });
+
+    expect((await request(app).get('/api/users/profile').set(user.auth)).body.plan).toBe('free');
+    expect((await request(app).put(`/api/users/${user.user._id}`).set(user.auth).send({ plan: 'pro' })).status).toBe(403);
+    expect((await request(app).put('/api/users/profile').set(user.auth).send({ plan: 'pro' })).body.plan).toBe('free'); // not via the profile either
+
+    expect((await request(app).put(`/api/users/${user.user._id}`).set(admin.auth).send({ plan: 'vip' })).status).toBe(400);
+    const up = await request(app).put(`/api/users/${user.user._id}`).set(admin.auth).send({ plan: 'pro' });
+    expect(up.status).toBe(200);
+    expect(up.body.plan).toBe('pro');
+    const login = await request(app).post('/api/users/login').send({ username: 'planuser', password: 'password123' });
+    expect(login.body.plan).toBe('pro');
   });
 
   test('verifying an account by hand clears the TTL fields so it is not auto-deleted', async () => {
