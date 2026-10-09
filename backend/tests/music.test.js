@@ -1,3 +1,8 @@
+const request = require('supertest');
+const app = require('../app');
+const db = require('./helpers/db');
+const { createUser } = require('./helpers/auth');
+const MusicTrack = require('../models/MusicTrack');
 const { parseMusicLink, fetchOEmbed, MusicError } = require('../utils/musicLinks');
 
 const YT = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
@@ -102,5 +107,128 @@ describe('fetchOEmbed', () => {
   test('maps a network error to 502', async () => {
     fetchSpy.mockRejectedValue(new Error('timeout'));
     await expect(fetchOEmbed(yt)).rejects.toMatchObject({ status: 502 });
+  });
+});
+
+describe('/api/music', () => {
+  let fetchSpy;
+  beforeAll(db.connect);
+  beforeEach(async () => {
+    await db.clear();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ title: 'Song', author_name: 'Artist', thumbnail_url: 'https://img/x.jpg' }),
+    });
+  });
+  afterEach(() => { jest.restoreAllMocks(); });
+  afterAll(db.close);
+
+  const preview = (auth, body) => request(app).post('/api/music/preview').set(auth).send(body);
+  const add = (auth, body) => request(app).post('/api/music/tracks').set(auth).send(body);
+  const list = (auth) => request(app).get('/api/music/tracks').set(auth);
+  const remove = (auth, id) => request(app).delete(`/api/music/tracks/${id}`).set(auth);
+
+  test('401 without token on every route', async () => {
+    const id = '64b64b64b64b64b64b64b64b';
+    expect((await request(app).post('/api/music/preview').send({ url: YT })).status).toBe(401);
+    expect((await request(app).get('/api/music/tracks')).status).toBe(401);
+    expect((await request(app).post('/api/music/tracks').send({ url: YT })).status).toBe(401);
+    expect((await request(app).delete(`/api/music/tracks/${id}`)).status).toBe(401);
+  });
+
+  test('preview returns metadata and saves nothing', async () => {
+    const { auth } = await createUser();
+    const res = await preview(auth, { url: 'https://youtu.be/dQw4w9WgXcQ?si=abc' });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      source: 'youtube', url: YT, videoId: 'dQw4w9WgXcQ', title: 'Song', author: 'Artist', thumbnail: 'https://img/x.jpg',
+    });
+    expect(await MusicTrack.countDocuments()).toBe(0);
+  });
+
+  test("add stores the oEmbed metadata, not the client's", async () => {
+    const { auth, user } = await createUser();
+    const res = await add(auth, { url: YT, title: 'HACK', thumbnail: 'https://evil/x.jpg' });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ source: 'youtube', url: YT, videoId: 'dQw4w9WgXcQ', title: 'Song', author: 'Artist', thumbnail: 'https://img/x.jpg' });
+    expect(res.body.user).toBeUndefined();
+    expect(Object.keys(res.body).sort()).toEqual(['_id', 'author', 'createdAt', 'source', 'thumbnail', 'title', 'url', 'videoId']);
+    const saved = await MusicTrack.findOne({ user: user._id });
+    expect(saved.title).toBe('Song');
+  });
+
+  test('add rejects a duplicate with 409, even through a different link variant', async () => {
+    const { auth } = await createUser();
+    expect((await add(auth, { url: YT })).status).toBe(201);
+    const res = await add(auth, { url: 'https://youtu.be/dQw4w9WgXcQ?si=other' });
+    expect(res.status).toBe(409);
+    expect(res.body.message).toBe('Bài này đã có trong thư viện.');
+    expect(await MusicTrack.countDocuments()).toBe(1);
+  });
+
+  test('two users can each add the same track', async () => {
+    const a = await createUser();
+    const b = await createUser();
+    expect((await add(a.auth, { url: YT })).status).toBe(201);
+    expect((await add(b.auth, { url: YT })).status).toBe(201);
+  });
+
+  test('add refuses past 200 tracks', async () => {
+    const { auth, user } = await createUser();
+    await MusicTrack.insertMany(Array.from({ length: 200 }, (_, i) => ({
+      user: user._id, source: 'soundcloud', url: `https://soundcloud.com/a/t${i}`, title: `T${i}`,
+    })));
+    const res = await add(auth, { url: YT });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Thư viện tối đa 200 bài.');
+    expect(await MusicTrack.countDocuments()).toBe(200);
+  });
+
+  test('list returns only my tracks in added order', async () => {
+    const me = await createUser();
+    const other = await createUser();
+    await add(me.auth, { url: 'https://soundcloud.com/a/first' });
+    await add(other.auth, { url: 'https://soundcloud.com/a/theirs' });
+    await add(me.auth, { url: 'https://soundcloud.com/a/second' });
+    const res = await list(me.auth);
+    expect(res.status).toBe(200);
+    expect(res.body.map(t => t.url)).toEqual(['https://soundcloud.com/a/first', 'https://soundcloud.com/a/second']);
+  });
+
+  test("cannot delete another user's track", async () => {
+    const owner = await createUser();
+    const thief = await createUser();
+    const { body: track } = await add(owner.auth, { url: YT });
+    const res = await remove(thief.auth, track._id);
+    expect(res.status).toBe(404);
+    expect(await MusicTrack.countDocuments()).toBe(1);
+  });
+
+  test('delete removes my track', async () => {
+    const { auth } = await createUser();
+    const { body: track } = await add(auth, { url: YT });
+    const res = await remove(auth, track._id);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ id: track._id });
+    expect(await MusicTrack.countDocuments()).toBe(0);
+  });
+
+  test('400 for an invalid id on delete', async () => {
+    const { auth } = await createUser();
+    expect((await remove(auth, 'not-an-id')).status).toBe(400);
+  });
+
+  test('passes MusicError status and message through', async () => {
+    const { auth } = await createUser();
+    const bad = await add(auth, { url: 'https://evil.com/x' });
+    expect(bad.status).toBe(400);
+    expect(bad.body.message).toBe('Chỉ hỗ trợ link YouTube hoặc SoundCloud.');
+
+    fetchSpy.mockResolvedValue({ ok: false, status: 404, json: async () => ({}) });
+    const gone = await preview(auth, { url: YT });
+    expect(gone.status).toBe(422);
+    expect(gone.body.message).toBe('Không tìm thấy bài này (link sai hoặc đã bị xoá).');
   });
 });
