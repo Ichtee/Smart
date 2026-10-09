@@ -6,6 +6,8 @@ export interface YTPlayer {
   playVideo(): void;
   pauseVideo(): void;
   setVolume(volume: number): void;
+  getCurrentTime(): number;
+  seekTo(seconds: number, allowSeekAhead: boolean): void;
   destroy(): void;
 }
 
@@ -32,6 +34,8 @@ export interface SCWidget {
   play(): void;
   pause(): void;
   setVolume(volume: number): void;
+  getPosition(callback: (ms: number) => void): void;
+  seekTo(ms: number): void;
 }
 
 export interface SCNamespace {
