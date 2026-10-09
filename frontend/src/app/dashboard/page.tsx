@@ -505,9 +505,7 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="hidden items-center justify-center rounded-3xl border border-dashed border-border p-6 text-center text-sm font-semibold text-muted-foreground 2xl:flex">
-                Chọn một ngày trên lịch để xem chi tiết tập luyện và ăn uống.
-              </div>
+              <div aria-hidden="true" className="hidden rounded-3xl border border-border bg-card 2xl:block" />
             )}
           </div>
         </div>
