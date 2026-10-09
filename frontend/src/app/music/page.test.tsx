@@ -204,17 +204,27 @@ describe('Music page: playlists', () => {
     expect(library.removeTrack).not.toHaveBeenCalled();
   });
 
-  test('adds a track to a playlist, and a playlist that already has it is disabled', async () => {
-    const { library, user } = setup();
-    const select = screen.getByRole('combobox', { name: 'Thêm Song 1 vào playlist' });
-    expect(within(select).getByRole('option', { name: 'Gym' })).toBeDisabled();
-    expect(within(select).getByRole('option', { name: 'Chạy' })).toBeEnabled();
+  test('"Thêm bài" opens a search over the library; tracks already in the playlist are marked and a pick is appended', async () => {
+    const { library, user, openPlaylist } = setup();
+    expect(screen.queryByRole('button', { name: 'Thêm bài' })).not.toBeInTheDocument(); // only inside a playlist
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
 
-    await user.selectOptions(select, 'p2');
-    expect(library.setPlaylistTracks).toHaveBeenCalledWith('p2', ['t1']);
+    await openPlaylist('Gym'); // Song 3, Song 1
+    await user.click(screen.getByRole('button', { name: 'Thêm bài' }));
+    const dialog = screen.getByRole('dialog', { name: 'Thêm bài vào Gym' });
+    expect(within(dialog).getByRole('button', { name: 'Thêm Song 1' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Thêm Song 2' })).toBeEnabled();
 
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Thêm Song 2 vào playlist' }), 'p1');
-    expect(library.setPlaylistTracks).toHaveBeenLastCalledWith('p1', ['t3', 't1', 't2']);
+    await user.type(within(dialog).getByRole('textbox', { name: 'Tìm bài trong thư viện' }), 'song 2');
+    expect(within(dialog).queryByText('Song 3')).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Thêm Song 2' }));
+    expect(library.setPlaylistTracks).toHaveBeenCalledWith('p1', ['t3', 't1', 't2']);
+
+    await user.clear(within(dialog).getByRole('textbox', { name: 'Tìm bài trong thư viện' }));
+    await user.type(within(dialog).getByRole('textbox', { name: 'Tìm bài trong thư viện' }), 'zzz');
+    expect(within(dialog).getByText('Không tìm thấy bài phù hợp.')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Xong' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   test('removing from a playlist keeps the track in the library', async () => {

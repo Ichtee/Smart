@@ -10,3 +10,6 @@ afterEach(() => {
     // storage unavailable
   }
 });
+
+// jsdom has no pointer capture; the music widget's drag uses it
+Element.prototype.setPointerCapture ??= () => {};

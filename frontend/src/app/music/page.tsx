@@ -8,6 +8,7 @@ import { useMusic } from '@/components/music/musicContext';
 import { useMusicLibrary, type Track } from '@/hooks/useMusicLibrary';
 import { ListMusic, Loader2, Music, Play, Plus } from 'lucide-react';
 import TrackRow from './TrackRow';
+import AddTracksModal from './AddTracksModal';
 
 interface Preview { source: 'youtube' | 'soundcloud'; url: string; title: string; author: string; thumbnail: string }
 
@@ -31,6 +32,7 @@ export default function MusicPage() {
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'create' | 'rename' | null>(null);
   const [nameInput, setNameInput] = useState('');
+  const [picking, setPicking] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
 
   const selected = playlists.find(p => p._id === selectedId) ?? null;
@@ -102,9 +104,8 @@ export default function MusicPage() {
     run(() => library.removeTrack(track._id));
   };
 
-  const addToPlaylist = (track: Track, playlistId: string) => {
-    const playlist = playlists.find(p => p._id === playlistId);
-    if (playlist && !playlist.trackIds.includes(track._id)) run(() => library.setPlaylistTracks(playlistId, [...playlist.trackIds, track._id]));
+  const addToSelected = (track: Track) => {
+    if (selected && !selected.trackIds.includes(track._id)) run(() => library.setPlaylistTracks(selected._id, [...selected.trackIds, track._id]));
   };
 
   const moveTrack = (from: number, to: number) => {
@@ -205,6 +206,7 @@ export default function MusicPage() {
               </button>
               {selected && (
                 <>
+                  <button type="button" onClick={() => setPicking(true)} className={`${action} flex items-center gap-1`}><Plus className="size-3.5" /> Thêm bài</button>
                   <button type="button" onClick={() => openForm('rename')} className={action}>Đổi tên</button>
                   <button type="button" onClick={removePlaylist} className={`${action} hover:text-destructive`}>Xoá playlist</button>
                 </>
@@ -218,7 +220,7 @@ export default function MusicPage() {
             <EmptyState
               icon={<ListMusic className="size-7" />}
               title={selected ? 'Playlist này chưa có bài' : 'Chưa có bài nào'}
-              hint={selected ? 'Mở "Tất cả bài" rồi chọn "Thêm vào playlist" ở bài bạn muốn.' : 'Dán link YouTube hoặc SoundCloud ở trên để thêm.'}
+              hint={selected ? 'Bấm "Thêm bài" để chọn bài từ thư viện.' : 'Dán link YouTube hoặc SoundCloud ở trên để thêm.'}
             />
           ) : (
             <ul role="tabpanel" className="space-y-2">
@@ -227,13 +229,11 @@ export default function MusicPage() {
                   key={track._id}
                   track={track}
                   current={music.current?._id === track._id}
-                  playlists={playlists}
                   inPlaylist={selected}
                   first={index === 0}
                   last={index === visible.length - 1}
                   onPlay={() => music.playTrack(track._id, selected ? selected._id : null)}
                   onPlayNext={() => music.enqueue(track._id)}
-                  onAddToPlaylist={playlistId => addToPlaylist(track, playlistId)}
                   onRemoveFromPlaylist={() => selected && run(() => library.setPlaylistTracks(selected._id, visibleIds.filter(id => id !== track._id)))}
                   onDelete={() => deleteTrack(track)}
                   onMove={delta => moveTrack(index, index + delta)}
@@ -246,6 +246,7 @@ export default function MusicPage() {
           )}
         </div>
       </main>
+      {picking && selected && <AddTracksModal playlist={selected} tracks={tracks} onAdd={addToSelected} onClose={() => setPicking(false)} />}
     </div>
   );
 }

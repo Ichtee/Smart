@@ -33,7 +33,7 @@ interface ExerciseChecklistProps {
 }
 
 // 44px touch targets: usable with sweaty hands in the gym
-const STEP_BTN = 'size-11 rounded-xl bg-surface-elevated hover:bg-slate-700 text-primary font-black flex items-center justify-center border border-slate-700 active:scale-95 cursor-pointer';
+const STEP_BTN = 'size-9 sm:size-11 rounded-xl bg-surface-elevated hover:bg-slate-700 text-primary font-black flex items-center justify-center border border-slate-700 active:scale-95 cursor-pointer';
 const CHIP = 'bg-inset px-2.5 py-1 rounded-xl border border-slate-800 text-sm';
 
 export default function ExerciseChecklist({
@@ -74,9 +74,9 @@ export default function ExerciseChecklist({
             Các bài đã chọn ({activeSelectedExercises.length})
           </p>
           <span className="flex items-center flex-wrap gap-x-4 gap-y-1">
-            <Link href="/routines" className="inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"><ClipboardList className="size-4" aria-hidden="true" /> Lịch tập của tôi</Link>
-            <Link href="/records" className="inline-flex items-center gap-1.5 text-sm font-bold text-pr hover:underline"><Trophy className="size-4" aria-hidden="true" /> Kỷ lục cá nhân</Link>
-            <Link href="/volume" className="inline-flex items-center gap-1.5 text-sm font-bold text-success hover:underline"><BarChart3 className="size-4" aria-hidden="true" /> Khối lượng theo tuần</Link>
+            <Link href="/routines" className="inline-flex items-center gap-1.5 py-2 text-sm font-bold text-primary hover:underline"><ClipboardList className="size-4" aria-hidden="true" /> Lịch tập của tôi</Link>
+            <Link href="/records" className="inline-flex items-center gap-1.5 py-2 text-sm font-bold text-pr hover:underline"><Trophy className="size-4" aria-hidden="true" /> Kỷ lục cá nhân</Link>
+            <Link href="/volume" className="inline-flex items-center gap-1.5 py-2 text-sm font-bold text-success hover:underline"><BarChart3 className="size-4" aria-hidden="true" /> Khối lượng theo tuần</Link>
           </span>
           <span className="text-sm text-slate-400 font-semibold hidden sm:inline">
             {isWorkoutSaved ? 'Tích chọn để đánh dấu hoàn thành' : 'Chỉnh sửa theo ý bạn rồi bấm LƯU để bắt đầu'}
@@ -96,10 +96,10 @@ export default function ExerciseChecklist({
         {activeSelectedExercises.length > 0 ? (
           activeSelectedExercises.map((ex, i) => (
             <div key={ex.id} className="flex flex-col gap-2">
-              <div className={`p-3.5 sm:p-4 rounded-2xl bg-inset border transition-all flex items-start justify-between gap-3 sm:gap-4 shadow-lg group ${ex.completed ? 'border-success/50' : 'border-slate-800/90 hover:border-primary/40'}`}>
+              <div className={`relative p-3.5 sm:p-4 rounded-2xl bg-inset border transition-all flex items-start justify-between gap-3 sm:gap-4 shadow-lg group ${ex.completed ? 'border-success/50' : 'border-slate-800/90 hover:border-primary/40'}`}>
 
                 <div className="flex-1 space-y-2 min-w-0">
-                  <div className="flex items-start justify-between flex-wrap gap-2">
+                  <div className="flex items-start justify-between flex-wrap gap-2 pr-14 sm:pr-0">
                     <h3
                       onClick={() => setSelectedDetailExercise(ex)}
                       className="font-bold text-foreground text-lg sm:text-xl hover:text-primary cursor-pointer transition-colors flex flex-wrap items-center gap-2"
@@ -133,7 +133,7 @@ export default function ExerciseChecklist({
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     {/* Sets adjustment */}
                     {!isWorkoutSaved ? (
-                      <div className="flex items-center gap-2 bg-inset px-2 py-1.5 rounded-xl border border-slate-800">
+                      <div className="flex items-center gap-1 sm:gap-2 bg-inset px-1.5 sm:px-2 py-1.5 rounded-xl border border-slate-800">
                         <span className="text-slate-400 font-semibold">Hiệp:</span>
                         <button
                           aria-label={`Giảm số hiệp của ${ex.name}`}
@@ -149,7 +149,7 @@ export default function ExerciseChecklist({
                             const clean = e.target.value.replace(/[^0-9]/g, '');
                             updateExerciseSets(ex.id, parseInt(clean) || 1);
                           }}
-                          className="w-9 bg-transparent text-primary font-black text-center focus:outline-none text-base"
+                          className="w-7 sm:w-9 bg-transparent text-primary font-black text-center focus:outline-none text-base"
                         />
                         <button
                           aria-label={`Tăng số hiệp của ${ex.name}`}
@@ -165,7 +165,7 @@ export default function ExerciseChecklist({
 
                     {/* Reps adjustment */}
                     {!isWorkoutSaved ? (
-                      <div className="flex items-center gap-2 bg-inset px-2 py-1.5 rounded-xl border border-slate-800">
+                      <div className="flex items-center gap-1 sm:gap-2 bg-inset px-1.5 sm:px-2 py-1.5 rounded-xl border border-slate-800">
                         <span className="text-slate-400 font-semibold">Lần:</span>
                         <button
                           aria-label={`Giảm số lần của ${ex.name}`}
@@ -188,7 +188,7 @@ export default function ExerciseChecklist({
                               return updated;
                             });
                           }}
-                          className="w-12 bg-transparent text-primary font-black text-center focus:outline-none text-base"
+                          className="w-10 sm:w-12 bg-transparent text-primary font-black text-center focus:outline-none text-base"
                         />
                         <button
                           aria-label={`Tăng số lần của ${ex.name}`}
@@ -337,7 +337,7 @@ export default function ExerciseChecklist({
                   disabled={!isWorkoutSaved}
                   aria-label={ex.completed ? `Bỏ đánh dấu ${ex.name}` : `Hoàn thành ${ex.name}`}
                   title={!isWorkoutSaved ? 'Vui lòng bấm LƯU ở trên để bắt đầu tập' : 'Đánh dấu hoàn thành'}
-                  className={`size-12 rounded-2xl border-2 transition-all flex items-center justify-center shrink-0 ${ex.completed
+                  className={`absolute right-3 top-3 sm:static size-12 rounded-2xl border-2 transition-all flex items-center justify-center shrink-0 ${ex.completed
                       ? 'bg-success border-success text-slate-950 shadow-lg shadow-success/30 scale-105 cursor-pointer'
                       : isWorkoutSaved
                         ? 'border-primary/60 hover:border-primary bg-inset text-slate-600 cursor-pointer'

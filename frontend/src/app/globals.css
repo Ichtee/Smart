@@ -416,3 +416,20 @@ html, body {
     will-change: scroll-position;
   }
 }
+
+/* iOS Safari zooms the page when a field under 16px gets focus */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* thumb-sized targets for the small text buttons (icon buttons set their own size-N) */
+@media (max-width: 640px) {
+  button:not([class*="size-"]):not([class*="w-4"]):not([class*="h-4"]),
+  [role="tab"] {
+    min-height: 36px;
+  }
+}

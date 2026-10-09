@@ -135,8 +135,8 @@ export default function AiMealTab({ dayLoaded, onAdd }: Props) {
       {rows.length > 0 && (
         <div className="space-y-2">
           {rows.map((r, i) => (
-            <div key={i} className="flex items-center gap-2 rounded-xl border border-slate-800 p-3">
-              <div className="flex-1 min-w-0">
+            <div key={i} className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 p-3">
+              <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
                 <p className="text-sm font-bold text-white truncate">{r.name}</p>
                 <p className="text-xs text-slate-400">
                   {[r.quantity, r.protein !== undefined && `P ${r.protein}g`, r.carbs !== undefined && `C ${r.carbs}g`, r.fat !== undefined && `F ${r.fat}g`].filter(Boolean).join(' · ')}
@@ -164,7 +164,7 @@ export default function AiMealTab({ dayLoaded, onAdd }: Props) {
                 className="w-20 rounded-lg border border-slate-800 bg-inset px-2 py-1 text-sm text-white text-right"
               />
               <span className="text-xs text-slate-400">kcal</span>
-              <button type="button" aria-label={`Xóa ${r.name}`} onClick={() => setRows(rs => rs.filter((_, j) => j !== i))} className="text-slate-500 hover:text-destructive cursor-pointer">
+              <button type="button" aria-label={`Xóa ${r.name}`} onClick={() => setRows(rs => rs.filter((_, j) => j !== i))} className="ml-auto sm:ml-0 text-slate-500 hover:text-destructive cursor-pointer">
                 <Trash2 className="size-4" />
               </button>
             </div>
