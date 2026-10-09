@@ -54,13 +54,19 @@ async function seed() {
   const admin = await createActiveUser('Fit Admin');
   await api('/__e2e/make-admin', { username: admin.username });
   const adminToken = await login(admin);
+  // the backend keeps running between runs, so reuse what an earlier run already created
+  const known = await api('/api/exercises', undefined, adminToken);
+  const haveRoutines = new Set((await api('/api/routines')).map((r) => r.id));
   const ex = [];
   for (let i = 0; i < 15; i++) {
+    const name = `Exercise ${i + 1}`;
     const muscle = MUSCLES[i % MUSCLES.length];
-    const created = await api('/api/exercises', { name: `Exercise ${i + 1}`, muscle, defaultSets: 3, defaultReps: '10', equipment: 'Barbell' }, adminToken);
-    ex.push({ id: created._id, name: `Exercise ${i + 1}`, muscle });
+    const found = known.find((e) => e.name === name);
+    const created = found ?? await api('/api/exercises', { name, muscle, defaultSets: 3, defaultReps: '10', equipment: 'Barbell' }, adminToken);
+    ex.push({ id: created._id, name, muscle });
   }
   for (const [id, count] of [['ppl', 6], ['big', 15]]) {
+    if (haveRoutines.has(id)) continue;
     await api('/api/routines', {
       id, name: id === 'ppl' ? 'Push Pull Legs' : 'Big Routine', type: 'PPL', frequencyDaysPerWeek: 7,
       schedule: DAYS.map((day) => ({

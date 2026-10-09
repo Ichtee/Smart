@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
+import AppShell from '@/components/AppShell';
 import { fetcher, isUnauthorizedError } from '@/hooks/useApi';
 import { MUSCLE_NAMES_VI } from '../workouts/utils';
 import { BarChart3, Loader2 } from 'lucide-react';
@@ -74,54 +74,44 @@ export default function VolumePage() {
   const max = Math.max(1, ...rows.flatMap(r => r.weekly));
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">
-      <Sidebar />
-      <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-8 overflow-y-auto pb-28 md:pb-10">
-        <div className="max-w-[1200px] w-full mx-auto space-y-6">
-          <div className="border-b border-border pb-6">
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight flex items-center gap-3">
-              <BarChart3 className="size-8 text-primary" /> Khối lượng tập theo tuần
-            </h1>
-            <p className="text-muted-foreground text-xs sm:text-sm font-semibold mt-1">
-              Số hiệp bạn đã hoàn thành cho từng nhóm cơ trong {WEEKS_SHOWN} tuần gần nhất (tuần bắt đầu từ thứ Hai).
-            </p>
-          </div>
-
-          {error && !isUnauthorizedError(error) && (
-            <div role="alert" className="p-4 rounded-2xl border bg-destructive/10 border-destructive/30 text-destructive text-xs font-semibold flex items-center justify-between gap-3">
-              <span>Không tải được khối lượng tập.</span>
-              <button type="button" onClick={() => mutate()} className="underline cursor-pointer">Thử lại</button>
-            </div>
-          )}
-
-          {!error && rows.length === 0 && (
-            <EmptyState icon={<BarChart3 className="size-7" />} title="Chưa có hiệp nào được hoàn thành trong thời gian này." hint="Hoàn thành một hiệp ở trang Tập luyện để xem khối lượng theo nhóm cơ." action={{ label: "Đến trang tập luyện", href: "/workouts" }} />
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {rows.map(r => {
-              const name = MUSCLE_NAMES_VI[r.muscle] || r.muscle;
-              const average = r.total / weeks.length;
-              return (
-                <section key={r.muscle} aria-label={name} className="bg-card border border-border rounded-3xl p-5 sm:p-6 space-y-3" data-testid="volume-card">
-                  <div className="flex items-start justify-between gap-3">
-                    <h2 className="text-lg font-black">{name}</h2>
-                    <span className="text-xs font-bold text-muted-foreground">{r.total} hiệp</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Tuần này: <span className="font-bold text-foreground">{r.weekly[r.weekly.length - 1]}</span> hiệp · Trung bình {average.toFixed(1)} hiệp/tuần
-                  </p>
-                  <WeekBars name={name} weeks={weeks} values={r.weekly} max={max} />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{shortDate(weeks[0])}</span>
-                    <span>{shortDate(weeks[weeks.length - 1])}</span>
-                  </div>
-                </section>
-              );
-            })}
-          </div>
+    <AppShell
+      title="Khối lượng tập theo tuần"
+      icon={<BarChart3 className="size-6 text-primary" />}
+      subtitle={`Số hiệp bạn đã hoàn thành cho từng nhóm cơ trong ${WEEKS_SHOWN} tuần gần nhất (tuần bắt đầu từ thứ Hai).`}
+    >
+      {error && !isUnauthorizedError(error) && (
+        <div role="alert" className="p-4 rounded-2xl border bg-destructive/10 border-destructive/30 text-destructive text-xs font-semibold flex items-center justify-between gap-3">
+          <span>Không tải được khối lượng tập.</span>
+          <button type="button" onClick={() => mutate()} className="underline cursor-pointer">Thử lại</button>
         </div>
-      </main>
-    </div>
+      )}
+
+      {!error && rows.length === 0 && (
+        <EmptyState icon={<BarChart3 className="size-7" />} title="Chưa có hiệp nào được hoàn thành trong thời gian này." hint="Hoàn thành một hiệp ở trang Tập luyện để xem khối lượng theo nhóm cơ." action={{ label: "Đến trang tập luyện", href: "/workouts" }} />
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        {rows.map(r => {
+          const name = MUSCLE_NAMES_VI[r.muscle] || r.muscle;
+          const average = r.total / weeks.length;
+          return (
+            <section key={r.muscle} aria-label={name} className="bg-card border border-border rounded-3xl p-5 sm:p-6 space-y-3" data-testid="volume-card">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-lg font-black">{name}</h2>
+                <span className="text-xs font-bold text-muted-foreground">{r.total} hiệp</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Tuần này: <span className="font-bold text-foreground">{r.weekly[r.weekly.length - 1]}</span> hiệp · Trung bình {average.toFixed(1)} hiệp/tuần
+              </p>
+              <WeekBars name={name} weeks={weeks} values={r.weekly} max={max} />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{shortDate(weeks[0])}</span>
+                <span>{shortDate(weeks[weeks.length - 1])}</span>
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </AppShell>
   );
 }
