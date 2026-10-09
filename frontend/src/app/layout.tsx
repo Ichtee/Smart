@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 };
 
 // Runs before paint so a saved light theme does not flash dark first. Dark is the default.
-const themeScript = `try{if(localStorage.getItem('theme')==='light')document.documentElement.classList.add('light')}catch(e){}`;
+const themeScript = `try{var d=document.documentElement;if(localStorage.getItem('theme')==='light')d.classList.add('light');var h=parseFloat(localStorage.getItem('accentHue'));if(h>=0&&h<=360)d.style.setProperty('--accent-h',h)}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

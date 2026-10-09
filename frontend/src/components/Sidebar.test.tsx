@@ -32,6 +32,14 @@ describe('Sidebar', () => {
     expect(desktop.getByRole('link', { name: label })).toHaveAttribute('href', href);
   });
 
+  test('the word Smart goes to the dashboard; the logo opens the theme colour panel instead', async () => {
+    render(<Sidebar />);
+    const side = within(screen.getByRole('complementary'));
+    expect(side.getByRole('link', { name: 'Smart' })).toHaveAttribute('href', '/dashboard');
+    await userEvent.click(side.getByRole('button', { name: 'Đổi màu giao diện' }));
+    expect(screen.getByRole('dialog', { name: 'Màu giao diện' })).toBeInTheDocument();
+  });
+
   test('the profile is the account card at the bottom: name, email and the initial of the given name', () => {
     render(<Sidebar />);
     const card = within(screen.getByRole('complementary')).getByRole('link', { name: 'Hồ sơ' });

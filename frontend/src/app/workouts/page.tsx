@@ -804,7 +804,7 @@ export default function Workouts() {
 
   const { highlighterData, modelColors } = useMemo(() => {
     let data: IExerciseData[] = [];
-    let colors = ['#B8F200', '#2EE59D'];
+    let colors = ['var(--primary)', '#2EE59D'];
 
     if (effectiveTargets.length > 0) {
       const rawMuscles: string[] = effectiveTargets.map(t => toModelMuscle(normalizeMuscleId(t.id)));
@@ -816,12 +816,12 @@ export default function Workouts() {
           { name: 'All', muscles: allMuscles },
           { name: 'Selected', muscles: [safeSelected] }
         ];
-        colors = ['#B8F200', '#2EE59D'];
+        colors = ['var(--primary)', '#2EE59D'];
       } else {
         data = [
           { name: currentTabWorkout?.name || 'Workout', muscles: allMuscles }
         ];
-        colors = ['#B8F200'];
+        colors = ['var(--primary)'];
       }
     } else if (selectedMuscle) {
       const safeSelected = toModelMuscle(normalizeMuscleId(selectedMuscle));

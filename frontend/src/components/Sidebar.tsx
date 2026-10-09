@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Logo } from './smart/logo';
+import { LogoMark } from './smart/logo';
 import ThemeToggle from './ThemeToggle';
-import { LayoutGrid, Sparkles, Music, Dumbbell, Utensils, Scale, User, LogOut, Trophy, CalendarDays, BarChart3, Menu, X } from 'lucide-react';
+import ThemeColorPicker from './ThemeColorPicker';
+import { Palette, LayoutGrid, Sparkles, Music, Dumbbell, Utensils, Scale, User, LogOut, Trophy, CalendarDays, BarChart3, Menu, X } from 'lucide-react';
 import { API_URL } from '@/utils/api';
 import { clearApiCache, useProfile } from '@/hooks/useApi';
 
@@ -82,9 +83,10 @@ export default function Sidebar() {
 
       {/* Desktop Left Vertical Sidebar (Fixed to Viewport) */}
       <aside className="hidden md:flex flex-col w-60 border-r border-border bg-card/60 backdrop-blur-2xl px-4 py-5 fixed top-0 bottom-0 left-0 h-screen z-40 select-none overflow-y-auto">
-        <Link href="/dashboard" className="flex items-center gap-3 px-3 pb-5 mb-4 border-b border-border">
-          <Logo size="lg" />
-        </Link>
+        <div className="flex items-center gap-2.5 px-3 pb-5 mb-4 border-b border-border">
+          <ThemeColorPicker className="rounded-xl"><LogoMark size="lg" /></ThemeColorPicker>
+          <Link href="/dashboard" className="text-2xl font-semibold tracking-tight text-foreground">Smart</Link>
+        </div>
 
         <nav className="flex-1 space-y-6" aria-label="Điều hướng chính">
           {GROUPS.map((group, gi) => (
@@ -211,6 +213,9 @@ export default function Sidebar() {
                 <LogOut className="size-5" />
                 <span>Đăng xuất</span>
               </button>
+              <ThemeColorPicker className="inline-flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-surface-elevated">
+                <Palette className="size-4" />
+              </ThemeColorPicker>
               <ThemeToggle />
             </div>
           </div>
