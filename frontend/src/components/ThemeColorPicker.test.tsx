@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import ThemeColorPicker from './ThemeColorPicker';
 
 afterEach(() => {
-  document.documentElement.style.removeProperty('--accent-h');
+  document.documentElement.removeAttribute('style');
   localStorage.clear();
 });
 
@@ -39,6 +39,30 @@ describe('ThemeColorPicker', () => {
     await user.click(screen.getByRole('button', { name: 'Về màu mặc định' }));
     expect(document.documentElement.style.getPropertyValue('--accent-h')).toBe('125');
     expect(localStorage.getItem('accentHue')).toBe('125');
+  });
+
+  test('an exact RGB colour (hex box) becomes the accent, with readable text on it, and survives in storage', async () => {
+    const user = setup();
+    await user.click(screen.getByRole('button', { name: 'Đổi màu giao diện' }));
+    const box = screen.getByRole('textbox', { name: 'Mã màu hex' });
+    await user.clear(box);
+    await user.type(box, '#ff3366');
+    const style = document.documentElement.style;
+    expect(style.getPropertyValue('--primary')).toBe('#ff3366');
+    expect(style.getPropertyValue('--primary-foreground')).toBe('#ffffff');
+    expect(JSON.parse(localStorage.getItem('accentVars')!)['--primary']).toBe('#ff3366');
+
+    await user.clear(box);
+    await user.type(box, '#ffee00'); // a light colour gets dark text
+    expect(style.getPropertyValue('--primary-foreground')).toBe('#101010');
+
+    await user.clear(box);
+    await user.type(box, '#12'); // not a full colour yet: nothing changes
+    expect(style.getPropertyValue('--primary')).toBe('#ffee00');
+
+    await user.click(screen.getByRole('button', { name: 'Xanh dương' })); // a hue pick drops the exact colour
+    expect(style.getPropertyValue('--primary')).toBe('');
+    expect(localStorage.getItem('accentVars')).toBeNull();
   });
 
   test('reopening shows the hue that is applied', async () => {
