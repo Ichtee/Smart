@@ -374,7 +374,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-          <div className="2xl:min-h-0 2xl:overflow-y-auto">
+          <div className="2xl:order-last 2xl:min-h-0 2xl:overflow-y-auto">
             <MetabolismCard profile={profile} />
           </div>
             {selectedDiaryDate ? (
