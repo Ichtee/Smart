@@ -56,7 +56,7 @@ describe('ProgressRing', () => {
 
   test('no target or a negative value gives an empty ring, never NaN', () => {
     const { container, rerender } = render(<ProgressRing value={5} max={0} />);
-    const c = 2 * Math.PI * ((120 - 10) / 2);
+    const c = 2 * Math.PI * ((96 - 10) / 2); // the default size is 96
     expect(Number(arc(container).getAttribute('stroke-dashoffset'))).toBeCloseTo(c);
     rerender(<ProgressRing value={-4} max={100} />);
     expect(Number(arc(container).getAttribute('stroke-dashoffset'))).toBeCloseTo(c);

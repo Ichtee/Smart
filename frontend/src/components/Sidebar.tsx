@@ -78,10 +78,10 @@ export default function Sidebar() {
   return (
     <>
       {/* Invisible layout spacer to reserve sidebar width in flex containers */}
-      <div className="hidden md:block w-64 lg:w-72 shrink-0 h-screen" />
+      <div className="hidden md:block w-60 shrink-0 h-screen" />
 
       {/* Desktop Left Vertical Sidebar (Fixed to Viewport) */}
-      <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-border bg-card/60 backdrop-blur-2xl px-4 py-5 fixed top-0 bottom-0 left-0 h-screen z-40 select-none overflow-y-auto">
+      <aside className="hidden md:flex flex-col w-60 border-r border-border bg-card/60 backdrop-blur-2xl px-4 py-5 fixed top-0 bottom-0 left-0 h-screen z-40 select-none overflow-y-auto">
         <Link href="/dashboard" className="flex items-center gap-3 px-3 pb-5 mb-4 border-b border-border">
           <Logo size="lg" />
         </Link>

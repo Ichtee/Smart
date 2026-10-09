@@ -13,7 +13,7 @@ interface Props {
 }
 
 /** Circular progress (calories, protein, weekly goal). Over-target is clamped to a full ring. */
-export default function ProgressRing({ value, max, size = 120, stroke = 10, colorClass = 'text-primary', label, children, className = '' }: Props) {
+export default function ProgressRing({ value, max, size = 96, stroke = 10, colorClass = 'text-primary', label, children, className = '' }: Props) {
   const ratio = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
