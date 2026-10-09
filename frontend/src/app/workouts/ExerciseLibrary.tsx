@@ -26,7 +26,7 @@ export default function ExerciseLibrary({
 }: ExerciseLibraryProps) {
   return (
     <>
-      <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 space-y-4 shadow-2xl">
+      <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-4 sm:p-5 space-y-3 shadow-2xl xl:col-span-4 xl:flex xl:min-h-0 xl:flex-col">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
             <Library className="size-5" aria-hidden /> {selectedMuscle ? `Thư viện bài tập: ${MUSCLE_NAMES_VI[normalizeMuscleId(selectedMuscle)] || selectedMuscle}` : 'Thư viện bài tập (Tất cả)'}
@@ -45,7 +45,7 @@ export default function ExerciseLibrary({
           </div>
         </div>
 
-        <div className="space-y-3 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="space-y-3 max-h-[380px] xl:max-h-none xl:min-h-0 xl:flex-1 overflow-y-auto pr-2 custom-scrollbar">
           {filteredLibraryExercises.length > 0 ? (
             filteredLibraryExercises.map(ex => {
               const isAlreadySelected = currentSelectedIds.includes(ex.id);

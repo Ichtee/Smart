@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
+import AppShell from '@/components/AppShell';
+import { Zap } from 'lucide-react';
 import { apiFetch, isUnauthorized } from '@/utils/api';
 import { useRoutines, useExercises, useProfile, useStreak, isUnauthorizedError } from '@/hooks/useApi';
 import { useServerSave } from '@/hooks/useServerSave';
@@ -834,18 +835,18 @@ export default function Workouts() {
   }).filter(t => t.isExceeded);
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-clip">
-      <Sidebar />
-      <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-6 pb-28 md:pb-10">
-        <div className="max-w-[1600px] w-full mx-auto space-y-6">
-
-        {/* Top Control Bar: Brand / Live Time / Routine Selector */}
+    <AppShell
+      title="Smart Workouts"
+      icon={<Zap className="size-6 text-primary" aria-hidden />}
+      subtitle="Hệ thống Quản lý & Luyện tập Thông minh"
+      actions={
         <WorkoutTopBar
           activeRoutineId={activeRoutineId}
           handleRoutineChange={handleRoutineChange}
           routinesMap={routinesMap}
         />
-
+      }
+    >
         {/* Fetch Error / Cold Start Retry Banner */}
         {fetchError && (
           <div className="bg-destructive/10 border border-destructive/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-destructive shadow-xl">
@@ -880,6 +881,8 @@ export default function Workouts() {
 
         <SaveStatusBanner status={saveStatus} onRetry={retrySave} />
 
+        {/* row 1: progress tiles | day tabs */}
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* Stats Dashboard Row */}
         <WorkoutStatsRow
           activeRoutine={activeRoutine}
@@ -897,9 +900,10 @@ export default function Workouts() {
           safeDayIndex={safeDayIndex}
           sortedSchedule={sortedSchedule}
         />
+        </div>
 
         {/* Main Workouts Layout: Body Highlighter (Left) + Detailed List (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+        <div className="grid grid-cols-1 gap-4 xl:min-h-[30rem] xl:flex-1 xl:grid-cols-12">
 
           {/* Left Panel: Body Map */}
           <BodyMapPanel
@@ -913,9 +917,9 @@ export default function Workouts() {
           />
 
           {/* Right Panel: Exercise Details & Checklist */}
-          <div className="lg:col-span-7 space-y-6">
+          <div className="contents">
 
-            <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-6">
+            <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3 xl:col-span-5 xl:flex xl:min-h-0 xl:flex-col">
 
               {/* Header with Save / Locked Action / Reset */}
               <WorkoutActionBar
@@ -962,6 +966,7 @@ export default function Workouts() {
               />
 
               {/* Selected / Checklist Exercises */}
+              <div className="xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
               <ExerciseChecklist
                 activeSelectedExercises={activeSelectedExercises}
                 adjustExerciseReps={adjustExerciseReps}
@@ -984,6 +989,7 @@ export default function Workouts() {
                 toggleRestTimerPause={toggleRestTimerPause}
                 updateExerciseSets={updateExerciseSets}
               />
+              </div>
 
             </div>
 
@@ -1003,13 +1009,10 @@ export default function Workouts() {
 
         </div>
 
-      </div>
-
       {/* Exercise Detail Modal */}
       <ExerciseDetailModal currentSelectedIds={currentSelectedIds} handleAddExerciseFromLibrary={handleAddExerciseFromLibrary} isWorkoutSaved={isWorkoutSaved} selectedDetailExercise={selectedDetailExercise} setSelectedDetailExercise={setSelectedDetailExercise} />
 
       {/* Modal End */}
-      </main>
-    </div>
+    </AppShell>
   );
 }

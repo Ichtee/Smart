@@ -25,7 +25,7 @@ export default function BodyMapPanel({
 }: BodyMapPanelProps) {
   return (
     <>
-      <div className="lg:col-span-5 lg:sticky lg:top-6 h-fit self-start bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 z-20">
+      <div className="xl:col-span-3 xl:min-h-0 xl:overflow-y-auto bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3 z-20">
         <div className="flex justify-between items-center w-full border-b border-slate-800/80 pb-3">
           <h2 className="text-base sm:text-lg font-bold text-primary flex items-center gap-2">
             <PersonStanding className="size-5" aria-hidden /> Sơ đồ cơ bắp 3D
@@ -47,7 +47,7 @@ export default function BodyMapPanel({
         </div>
 
         <div className={`${showMobileBodyModel ? 'block' : 'hidden'} lg:block space-y-3`}>
-          <div className="w-full max-w-[240px] sm:max-w-xs mx-auto py-2">
+          <div className="w-full max-w-[240px] sm:max-w-xs xl:max-w-[210px] mx-auto py-2">
             <Model
               type={modelType}
               data={highlighterData}

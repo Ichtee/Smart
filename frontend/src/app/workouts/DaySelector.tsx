@@ -21,7 +21,7 @@ export default function DaySelector({
 }: DaySelectorProps) {
   return (
     <>
-      <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-xl space-y-3 sm:space-y-4">
+      <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 p-4 sm:p-4 rounded-2xl sm:rounded-3xl shadow-xl space-y-2 xl:col-span-7">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <CalendarDays className="size-5 text-primary" aria-hidden />
@@ -46,7 +46,7 @@ export default function DaySelector({
                 <button
                   key={index}
                   onClick={() => handleSelectDayTab(index)}
-                  className={`relative px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-xs font-extrabold transition-all duration-300 flex flex-col items-center min-w-[110px] sm:min-w-[130px] shrink-0 snap-start ${isActive
+                  className={`relative px-4 sm:px-4 py-2 sm:py-2 rounded-xl sm:rounded-2xl text-xs sm:text-xs font-extrabold transition-all duration-300 flex flex-col items-center min-w-[110px] sm:min-w-[130px] shrink-0 snap-start ${isActive
                       ? 'bg-primary text-slate-950 shadow-[0_0_20px_var(--glow)] scale-105 z-10'
                       : 'bg-surface-elevated border border-slate-800/90 text-slate-400 hover:bg-edge hover:text-white'
                     }`}
