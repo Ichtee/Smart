@@ -32,11 +32,11 @@ export default function NutritionSummaryCards({
 }: NutritionSummaryCardsProps) {
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 sm:gap-8">
+      <div className="grid grid-cols-2 gap-3 xl:contents">
 
         {/* Calorie Circle Card */}
-        <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl flex flex-col items-center justify-between group hover:border-primary/30 transition-all">
-          <div className="flex items-center justify-between w-full mb-3 sm:mb-6">
+        <div className="xl:col-span-4 bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col items-center justify-between group hover:border-primary/30 transition-all">
+          <div className="flex items-center justify-between w-full mb-3 sm:mb-3">
             <h2 className="text-primary font-extrabold uppercase tracking-wider text-xs sm:text-xs">Mục tiêu Calo</h2>
             <button
               onClick={() => setShowDetailModal(true)}
@@ -46,7 +46,7 @@ export default function NutritionSummaryCards({
             </button>
           </div>
 
-          <div className="relative w-36 h-36 sm:w-52 sm:h-52 flex items-center justify-center">
+          <div className="relative w-36 h-36 sm:w-40 sm:h-40 xl:w-32 xl:h-32 flex items-center justify-center">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" className="text-slate-800/80" strokeWidth="7" />
               <circle
@@ -59,13 +59,13 @@ export default function NutritionSummaryCards({
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-xl sm:text-4xl font-black text-white drop-shadow-md">{targetCalories}</span>
-              <span className="text-slate-400 text-xs sm:text-xs font-bold uppercase tracking-wider mt-0.5">Kcal / Ngày</span>
+              <span className="text-xl sm:text-3xl xl:text-2xl font-black text-white drop-shadow-md">{targetCalories}</span>
+              <span className="text-slate-400 text-xs sm:text-xs xl:text-[10px] font-bold uppercase tracking-wider xl:tracking-normal mt-0.5">Kcal / Ngày</span>
             </div>
           </div>
 
           {/* TDEE and Deficit Info */}
-          <div className="w-full mt-4 sm:mt-6 bg-inset rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 border border-slate-800 text-center text-xs sm:text-xs flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+          <div className="w-full mt-4 sm:mt-3 bg-inset rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 border border-slate-800 text-center text-xs sm:text-xs flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
             <span className="text-slate-400 font-semibold">TDEE: <strong className="text-white font-extrabold">{tdee} kcal</strong></span>
             <span className="text-slate-700 hidden sm:inline">|</span>
             {calorieDeficit < 0 ? (
@@ -77,23 +77,23 @@ export default function NutritionSummaryCards({
             )}
           </div>
 
-          <div className="w-full mt-3 sm:mt-6 grid grid-cols-2 gap-2 sm:gap-4 text-center">
-            <div className="bg-inset p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-800">
+          <div className="w-full mt-3 sm:mt-3 grid grid-cols-2 gap-2 sm:gap-3 text-center">
+            <div className="bg-inset p-2.5 sm:p-2 rounded-xl sm:rounded-2xl border border-slate-800">
               <div className="text-slate-400 text-xs sm:text-xs font-bold uppercase tracking-wider mb-0.5">Đã nạp</div>
-              <div className="text-sm sm:text-2xl font-black text-primary">{caloriesConsumed}</div>
+              <div className="text-sm sm:text-xl font-black text-primary">{caloriesConsumed}</div>
             </div>
-            <div className="bg-success-soft/30 p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border border-success/20">
+            <div className="bg-success-soft/30 p-2.5 sm:p-2 rounded-xl sm:rounded-2xl border border-success/20">
               <div className="text-success text-xs sm:text-xs font-bold uppercase tracking-wider mb-0.5">Còn lại</div>
-              <div className="text-sm sm:text-2xl font-black text-success">{caloriesRemaining}</div>
+              <div className="text-sm sm:text-xl font-black text-success">{caloriesRemaining}</div>
             </div>
           </div>
         </div>
 
         {/* Water Tracker Card */}
-        <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl flex flex-col items-center justify-between group hover:border-primary/30 transition-all">
-          <h2 className="text-primary font-extrabold uppercase tracking-wider text-xs sm:text-xs mb-3 sm:mb-6">Lượng nước</h2>
+        <div className="xl:col-span-3 bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col items-center justify-between group hover:border-primary/30 transition-all">
+          <h2 className="text-primary font-extrabold uppercase tracking-wider text-xs sm:text-xs mb-3 sm:mb-3">Lượng nước</h2>
 
-          <div className="relative w-36 h-36 sm:w-52 sm:h-52 flex items-center justify-center">
+          <div className="relative w-36 h-36 sm:w-40 sm:h-40 xl:w-32 xl:h-32 flex items-center justify-center">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" className="text-slate-800/80" strokeWidth="7" />
               <circle
@@ -106,16 +106,16 @@ export default function NutritionSummaryCards({
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-xl sm:text-4xl font-black text-white drop-shadow-md">{waterGlasses * mlPerGlass}</span>
-              <span className="text-slate-400 text-xs sm:text-xs font-bold uppercase tracking-wider mt-0.5">ml / {waterGoalMl} ml</span>
+              <span className="text-xl sm:text-3xl xl:text-2xl font-black text-white drop-shadow-md">{waterGlasses * mlPerGlass}</span>
+              <span className="text-slate-400 text-xs sm:text-xs xl:text-[10px] font-bold uppercase tracking-wider xl:tracking-normal mt-0.5">ml / {waterGoalMl} ml</span>
             </div>
           </div>
 
-          <div className="flex flex-col items-center w-full mt-4 sm:mt-6 space-y-2 sm:space-y-4">
+          <div className="flex flex-col items-center w-full mt-4 sm:mt-3 space-y-2 sm:space-y-2">
             <div className="flex items-center gap-3 sm:gap-6">
               <button
                 onClick={() => updateWater(-1)}
-                className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-inset border border-slate-800 flex items-center justify-center text-lg sm:text-2xl font-black hover:bg-surface-elevated transition-colors text-slate-300 active:scale-95"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-inset border border-slate-800 flex items-center justify-center text-lg sm:text-2xl font-black hover:bg-surface-elevated transition-colors text-slate-300 active:scale-95"
               >-</button>
 
               <div className="flex flex-col items-center">
@@ -143,7 +143,7 @@ export default function NutritionSummaryCards({
 
               <button
                 onClick={() => updateWater(1)}
-                className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-primary text-slate-950 font-black flex items-center justify-center text-lg sm:text-2xl hover:bg-primary transition-colors shadow-lg shadow-primary/20 active:scale-95"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-primary text-slate-950 font-black flex items-center justify-center text-lg sm:text-2xl hover:bg-primary transition-colors shadow-lg shadow-primary/20 active:scale-95"
               >+</button>
             </div>
           </div>

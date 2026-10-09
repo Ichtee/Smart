@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import Sidebar from '@/components/Sidebar';
+import AppShell from '@/components/AppShell';
+import { Salad } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, isUnauthorized } from '@/utils/api';
 import { calcEnergyPlan } from '@/utils/nutritionCalc';
@@ -243,11 +244,19 @@ export default function Nutrition() {
   }
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">
-      <Sidebar />
-      <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-8 overflow-y-auto pb-28 md:pb-10">
-        <div className="max-w-[1600px] w-full mx-auto space-y-6 sm:space-y-8">
-
+    <AppShell
+      title="Nhật ký ăn uống & Dinh dưỡng"
+      icon={<Salad className="size-6 text-primary" aria-hidden />}
+      subtitle="Theo dõi và ghi chép chi tiết lượng Calo và Nước nạp vào cơ thể."
+      actions={
+        <NutritionDateBar
+          changeDateByDays={changeDateByDays}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          todayStr={todayStr}
+        />
+      }
+    >
         {profileError && (
           <div className="bg-destructive/10 border border-destructive/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-destructive">
             <p className="font-extrabold text-white">Không tải được hồ sơ, mục tiêu Calo đang dùng giá trị mặc định.</p>
@@ -274,14 +283,8 @@ export default function Nutrition() {
 
         <SaveStatusBanner status={saveStatus} onRetry={retrySave} />
 
-        <NutritionDateBar
-          changeDateByDays={changeDateByDays}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          todayStr={todayStr}
-        />
-
-        {/* Calorie & Water Dashboard */}
+        {/* row 1: calories | water | macros (one row on a wide screen) */}
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <NutritionSummaryCards
           calorieDeficit={calorieDeficit}
           caloriesConsumed={caloriesConsumed}
@@ -298,6 +301,7 @@ export default function Nutrition() {
         />
 
         <MacroSummary meals={meals} targetCalories={targetCalories} profile={profile} />
+        </div>
 
         {/* Meal Logging Section */}
         <MealSections
@@ -311,8 +315,6 @@ export default function Nutrition() {
           setActiveMealCategory={setActiveMealCategory}
           setSelectedPreviewImage={setSelectedPreviewImage}
         />
-
-      </div>
 
       {/* Add Food Item Modal */}
       {activeMealCategory && (
@@ -345,7 +347,6 @@ export default function Nutrition() {
         setSelectedPreviewImage={setSelectedPreviewImage}
       />
 
-      </main>
-    </div>
+    </AppShell>
   );
 }

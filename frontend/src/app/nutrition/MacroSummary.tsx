@@ -23,14 +23,14 @@ export default function MacroSummary({ meals, targetCalories, profile }: Props) 
   const eaten = sumMacros(Object.values(meals).flat());
   const target = macroTargets(targetCalories, profile);
   return (
-    <section aria-label="Dinh dưỡng đa lượng" className="rounded-2xl sm:rounded-3xl border border-border bg-card p-4 sm:p-6">
-      <h2 className="mb-4 font-display text-2xl font-bold">Protein · Carb · Chất béo</h2>
-      <div className="grid grid-cols-3 gap-3 sm:gap-6">
+    <section aria-label="Dinh dưỡng đa lượng" className="rounded-2xl sm:rounded-3xl border border-border bg-card p-4 sm:p-5 xl:col-span-5 xl:flex xl:flex-col">
+      <h2 className="mb-3 font-display text-xl font-bold">Protein · Carb · Chất béo</h2>
+      <div className="grid grid-cols-3 gap-3 sm:gap-6 xl:flex-1 xl:content-center">
         {MACROS.map(m => (
           <div key={m.key} className="flex flex-col items-center gap-2 text-center">
             <p className={`text-sm font-bold ${m.color}`}>{m.label}</p>
-            <ProgressRing value={eaten[m.key]} max={target[m.key]} label={`${m.label} hôm nay`} colorClass={m.color} size={96}>
-              <span className="font-display text-2xl font-bold leading-none">{Math.round(eaten[m.key])}</span>
+            <ProgressRing value={eaten[m.key]} max={target[m.key]} label={`${m.label} hôm nay`} colorClass={m.color} size={88}>
+              <span className="font-display text-xl font-bold leading-none">{Math.round(eaten[m.key])}</span>
               <span className="text-xs text-muted-foreground">/ {target[m.key]} g</span>
             </ProgressRing>
           </div>

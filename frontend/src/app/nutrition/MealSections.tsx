@@ -28,7 +28,7 @@ export default function MealSections({
 }: MealSectionsProps) {
   return (
     <>
-      <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl space-y-4 sm:space-y-6">
+      <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3 xl:flex xl:min-h-[26rem] xl:flex-1 xl:flex-col">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 sm:pb-4 gap-2">
           <h3 className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
             <Utensils className="size-5 text-primary" aria-hidden /> Ghi chép bữa ăn trong ngày
@@ -50,7 +50,7 @@ export default function MealSections({
           <p role="status" className="text-xs font-semibold text-primary">{copyNotice}</p>
         )}
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-4">
           {[
             { name: 'Bữa Sáng', icon: '🍳' },
             { name: 'Bữa Trưa', icon: '🍱' },
@@ -62,7 +62,7 @@ export default function MealSections({
             const categoryCalories = itemList.reduce((sum, item) => sum + item.calories, 0);
 
             return (
-              <div key={categoryName} className="bg-inset border border-slate-800/90 rounded-2xl p-3.5 sm:p-6 space-y-3 sm:space-y-4 hover:border-primary/30 transition-all">
+              <div key={categoryName} className="bg-inset border border-slate-800/90 rounded-2xl p-3.5 sm:p-4 space-y-3 hover:border-primary/30 transition-all xl:flex xl:min-h-0 xl:flex-col">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2 sm:gap-3">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-surface-elevated rounded-xl flex items-center justify-center text-base sm:text-xl shrink-0">
@@ -85,7 +85,7 @@ export default function MealSections({
                 </div>
 
                 {/* Food Items List */}
-                <div className="space-y-2 pt-2 border-t border-slate-800/60">
+                <div className="space-y-2 pt-2 border-t border-slate-800/60 xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
                   {itemList.length > 0 ? (
                     itemList.map(item => (
                       <div key={item.id} className="flex items-center justify-between bg-card p-3 rounded-xl border border-slate-800/60 text-xs">
