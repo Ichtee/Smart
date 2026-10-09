@@ -3,6 +3,7 @@ const app = require('../app');
 const db = require('./helpers/db');
 const { createUser } = require('./helpers/auth');
 const MusicTrack = require('../models/MusicTrack');
+const Playlist = require('../models/Playlist');
 const { parseMusicLink, fetchOEmbed, MusicError } = require('../utils/musicLinks');
 
 const YT = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
@@ -238,5 +239,180 @@ describe('/api/music', () => {
     const gone = await preview(auth, { url: YT });
     expect(gone.status).toBe(422);
     expect(gone.body.message).toBe('Không tìm thấy bài này (link sai hoặc đã bị xoá).');
+  });
+});
+
+describe('/api/music/playlists', () => {
+  beforeAll(db.connect);
+  beforeEach(async () => {
+    await db.clear();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterEach(() => { jest.restoreAllMocks(); });
+  afterAll(db.close);
+
+  const create = (auth, body) => request(app).post('/api/music/playlists').set(auth).send(body);
+  const list = (auth) => request(app).get('/api/music/playlists').set(auth);
+  const patch = (auth, id, body) => request(app).patch(`/api/music/playlists/${id}`).set(auth).send(body);
+  const remove = (auth, id) => request(app).delete(`/api/music/playlists/${id}`).set(auth);
+  const makeTracks = (user, n) => MusicTrack.insertMany(Array.from({ length: n }, (_, i) => ({
+    user: user._id, source: 'soundcloud', url: `https://soundcloud.com/a/t${user._id}-${i}`, title: `T${i}`,
+  })));
+  const ids = (docs) => docs.map(d => String(d._id));
+
+  test('401 without token on every playlist route', async () => {
+    const id = '64b64b64b64b64b64b64b64b';
+    expect((await request(app).get('/api/music/playlists')).status).toBe(401);
+    expect((await request(app).post('/api/music/playlists').send({ name: 'x' })).status).toBe(401);
+    expect((await request(app).patch(`/api/music/playlists/${id}`).send({ name: 'x' })).status).toBe(401);
+    expect((await request(app).delete(`/api/music/playlists/${id}`)).status).toBe(401);
+  });
+
+  test('create trims the name and starts empty', async () => {
+    const { auth } = await createUser();
+    const res = await create(auth, { name: '  Chạy bộ  ' });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ name: 'Chạy bộ', trackIds: [] });
+    expect(Object.keys(res.body).sort()).toEqual(['_id', 'createdAt', 'name', 'trackIds']);
+  });
+
+  test.each([
+    ['empty', { name: '' }],
+    ['blank', { name: '   ' }],
+    ['61 characters', { name: 'a'.repeat(61) }],
+    ['a number', { name: 5 }],
+    ['missing', {}],
+  ])('rejects a bad name: %s', async (_label, body) => {
+    const { auth } = await createUser();
+    const res = await create(auth, body);
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Tên playlist từ 1 đến 60 ký tự.');
+    expect(await Playlist.countDocuments()).toBe(0);
+  });
+
+  test('refuses past 30 playlists', async () => {
+    const { auth, user } = await createUser();
+    await Playlist.insertMany(Array.from({ length: 30 }, (_, i) => ({ user: user._id, name: `P${i}` })));
+    const res = await create(auth, { name: 'one more' });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Tối đa 30 playlist.');
+  });
+
+  test('list returns only my playlists in created order', async () => {
+    const me = await createUser();
+    const other = await createUser();
+    await create(me.auth, { name: 'first' });
+    await create(other.auth, { name: 'theirs' });
+    await create(me.auth, { name: 'second' });
+    const res = await list(me.auth);
+    expect(res.status).toBe(200);
+    expect(res.body.map(p => p.name)).toEqual(['first', 'second']);
+  });
+
+  test('patch renames', async () => {
+    const { auth } = await createUser();
+    const { body: made } = await create(auth, { name: 'old' });
+    const res = await patch(auth, made._id, { name: ' new ' });
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('new');
+  });
+
+  test('patch sets trackIds in the given order', async () => {
+    const { auth, user } = await createUser();
+    const tracks = ids(await makeTracks(user, 3));
+    const { body: made } = await create(auth, { name: 'mix' });
+    const order = [tracks[2], tracks[0], tracks[1]];
+    const res = await patch(auth, made._id, { trackIds: order });
+    expect(res.status).toBe(200);
+    expect(res.body.trackIds).toEqual(order);
+    expect((await list(auth)).body[0].trackIds).toEqual(order);
+    expect((await patch(auth, made._id, { trackIds: [] })).body.trackIds).toEqual([]);
+  });
+
+  test('rejects invalid trackIds and saves nothing', async () => {
+    const me = await createUser();
+    const other = await createUser();
+    const mine = ids(await makeTracks(me.user, 2));
+    const theirs = ids(await makeTracks(other.user, 1));
+    const { body: made } = await create(me.auth, { name: 'mix' });
+    await patch(me.auth, made._id, { trackIds: mine });
+
+    const bad = [
+      ["another user's track", [mine[0], theirs[0]]],
+      ['a duplicate id', [mine[0], mine[0]]],
+      ['a malformed id', ['not-an-id']],
+      ['a track that does not exist', ['64b64b64b64b64b64b64b64b']],
+      ['201 ids', Array.from({ length: 201 }, () => mine[0])],
+      ['a non-array', 'abc'],
+    ];
+    for (const [, trackIds] of bad) {
+      const res = await patch(me.auth, made._id, { trackIds });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Danh sách bài không hợp lệ.');
+    }
+    expect((await list(me.auth)).body[0].trackIds).toEqual(mine);
+  });
+
+  test('patch with an empty body is a 400', async () => {
+    const { auth } = await createUser();
+    const { body: made } = await create(auth, { name: 'x' });
+    const res = await patch(auth, made._id, {});
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Không có gì để cập nhật.');
+  });
+
+  test('patch rejects a bad name', async () => {
+    const { auth } = await createUser();
+    const { body: made } = await create(auth, { name: 'x' });
+    expect((await patch(auth, made._id, { name: '' })).status).toBe(400);
+  });
+
+  test("cannot patch or delete another user's playlist", async () => {
+    const owner = await createUser();
+    const thief = await createUser();
+    const { body: made } = await create(owner.auth, { name: 'mine' });
+    expect((await patch(thief.auth, made._id, { name: 'stolen' })).status).toBe(404);
+    expect((await remove(thief.auth, made._id)).status).toBe(404);
+    const [kept] = (await list(owner.auth)).body;
+    expect(kept.name).toBe('mine');
+  });
+
+  test('400 for an invalid id on patch and delete', async () => {
+    const { auth } = await createUser();
+    expect((await patch(auth, 'nope', { name: 'x' })).status).toBe(400);
+    expect((await remove(auth, 'nope')).status).toBe(400);
+  });
+
+  test('delete removes my playlist but not its tracks', async () => {
+    const { auth, user } = await createUser();
+    const tracks = ids(await makeTracks(user, 2));
+    const { body: made } = await create(auth, { name: 'gone' });
+    await patch(auth, made._id, { trackIds: tracks });
+    const res = await remove(auth, made._id);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ id: made._id });
+    expect(await Playlist.countDocuments()).toBe(0);
+    expect(await MusicTrack.countDocuments({ user: user._id })).toBe(2);
+  });
+
+  test('deleting a track removes it from every playlist', async () => {
+    const me = await createUser();
+    const other = await createUser();
+    const [a, b] = ids(await makeTracks(me.user, 2));
+    const [theirs] = ids(await makeTracks(other.user, 1));
+    const { body: p1 } = await create(me.auth, { name: 'one' });
+    const { body: p2 } = await create(me.auth, { name: 'two' });
+    const { body: p3 } = await create(other.auth, { name: 'theirs' });
+    await patch(me.auth, p1._id, { trackIds: [a, b] });
+    await patch(me.auth, p2._id, { trackIds: [b, a] });
+    await patch(other.auth, p3._id, { trackIds: [theirs] });
+
+    const res = await request(app).delete(`/api/music/tracks/${a}`).set(me.auth);
+    expect(res.status).toBe(200);
+
+    const mine = (await list(me.auth)).body;
+    expect(mine.find(p => p._id === p1._id).trackIds).toEqual([b]);
+    expect(mine.find(p => p._id === p2._id).trackIds).toEqual([b]);
+    expect((await list(other.auth)).body[0].trackIds).toEqual([theirs]);
   });
 });
