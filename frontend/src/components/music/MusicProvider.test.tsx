@@ -65,6 +65,7 @@ vi.mock('@/utils/embedPlayers', () => {
 
 const nav = vi.hoisted(() => ({ pathname: '/workouts' }));
 vi.mock('next/navigation', () => ({ usePathname: () => nav.pathname }));
+vi.mock('./MiniPlayer', () => ({ default: () => null })); // the Probe below mounts the embed hosts instead
 vi.mock('@/hooks/useWakeLock', () => ({ useWakeLock: vi.fn() }));
 vi.mock('@/utils/musicSession', () => ({ loadSession: vi.fn(() => null), saveSession: vi.fn(), clearSession: vi.fn() }));
 

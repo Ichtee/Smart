@@ -1,59 +1,21 @@
 'use client';
-import {
-  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore,
-  type ReactNode, type RefObject,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { useMusicLibrary, type Track } from '@/hooks/useMusicLibrary';
+import { useMusicLibrary } from '@/hooks/useMusicLibrary';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { isPublicPath } from '@/components/AuthGuard';
 import { loadSoundCloudApi, loadYouTubeApi, type SCWidget, type YTPlayer } from '@/utils/embedPlayers';
 import { advance, buildOrder, previous as previousId, type RepeatMode } from '@/utils/musicQueue';
 import { clearSession, loadSession, saveSession } from '@/utils/musicSession';
+import { MusicContext, type MusicContextValue } from './musicContext';
+import MiniPlayer from './MiniPlayer';
+
+export { useMusic, type MusicContextValue } from './musicContext';
 
 // YouTube's rules: an embedded player must stay visible and at least 200x200 while it is loaded.
 const EMBED_SIZE = 200;
 const MAX_QUEUE = 200;
 const SAVE_EVERY_MS = 5000;
-
-export interface MusicContextValue {
-  current: Track | null;
-  playing: boolean;
-  /** the library has loaded, so lists are meaningful */
-  ready: boolean;
-  /** null = all tracks */
-  activePlaylistId: string | null;
-  shuffle: boolean;
-  repeat: RepeatMode;
-  volume: number;
-  queue: Track[];
-  canPrevious: boolean;
-  canNext: boolean;
-  /** where the player's UI mounts the embed (the YouTube host div or the SoundCloud iframe) */
-  ytHostRef: RefObject<HTMLDivElement | null>;
-  scIframeRef: RefObject<HTMLIFrameElement | null>;
-  playTrack(trackId: string, playlistId?: string | null): void;
-  /** starts a playlist (null = all tracks); needs the library to be loaded, as it is on /music and in the mini player */
-  playPlaylist(playlistId: string | null): void;
-  togglePlay(): void;
-  next(): void;
-  previous(): void;
-  setShuffle(on: boolean): void;
-  setRepeat(mode: RepeatMode): void;
-  setVolume(volume: number): void;
-  enqueue(trackId: string): void;
-  dequeue(index: number): void;
-  clearQueue(): void;
-  stop(): void;
-}
-
-const MusicContext = createContext<MusicContextValue | null>(null);
-
-export function useMusic(): MusicContextValue {
-  const value = useContext(MusicContext);
-  if (!value) throw new Error('useMusic must be used inside <MusicProvider>');
-  return value;
-}
 
 interface PlayerState {
   currentId: string | null;
@@ -432,5 +394,10 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     stop,
   };
 
-  return <MusicContext.Provider value={value}>{children}</MusicContext.Provider>;
+  return (
+    <MusicContext.Provider value={value}>
+      {children}
+      <MiniPlayer />
+    </MusicContext.Provider>
+  );
 }
