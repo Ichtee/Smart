@@ -154,8 +154,8 @@ export default function UserManagement() {
           <div className="flex-1 flex justify-center items-center p-8"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>
         ) : (
           <div className="flex-1 overflow-auto custom-scrollbar pr-2">
-            <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 bg-zinc-900 z-10">
+            <table className="block w-full text-left border-collapse md:table">
+              <thead className="hidden md:table-header-group sticky top-0 bg-zinc-900 z-10">
                 <tr className="border-b border-white/10 text-zinc-400 text-sm">
                   <th className="p-4 font-medium">Người dùng</th>
                   <th className="p-4 font-medium">Vai trò</th>
@@ -165,11 +165,11 @@ export default function UserManagement() {
                   <th className="p-4 font-medium text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="block space-y-3 md:table-row-group md:space-y-0">
                 {filteredUsers.length > 0 ? (
                   filteredUsers.map((user) => (
-                    <tr key={user._id} className="border-b border-slate-800/80 hover:bg-surface-elevated/50 transition-colors group">
-                      <td className="p-4">
+                    <tr key={user._id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-slate-800/80 p-3 md:table-row md:rounded-none md:border-0 md:border-b md:p-0 hover:bg-surface-elevated/50 transition-colors group">
+                      <td className="w-full p-1 md:w-auto md:p-4">
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm uppercase ${user.role === 'admin' ? 'bg-destructive/20 text-destructive border border-destructive/30' : 'bg-primary/20 text-primary border border-primary/30'}`}>
                             {user.name ? user.name.charAt(0) : '?'}
@@ -180,7 +180,7 @@ export default function UserManagement() {
                           </div>
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className="p-1 md:p-4">
                         <select 
                           value={user.role} 
                           onChange={(e) => handleUpdateField(user._id, 'role', e.target.value)}
@@ -190,7 +190,7 @@ export default function UserManagement() {
                           <option value="admin">Admin</option>
                         </select>
                       </td>
-                      <td className="p-4">
+                      <td className="p-1 md:p-4">
                         <select
                           aria-label={`Gói của ${user.email}`}
                           value={user.plan ?? 'free'}
@@ -201,7 +201,7 @@ export default function UserManagement() {
                           <option value="pro">Pro</option>
                         </select>
                       </td>
-                      <td className="p-4">
+                      <td className="p-1 md:p-4">
                         <select 
                           value={user.isEmailVerified ? 'true' : 'false'} 
                           onChange={(e) => handleUpdateField(user._id, 'isEmailVerified', e.target.value === 'true')}
@@ -211,10 +211,10 @@ export default function UserManagement() {
                           <option value="false">Chưa xác thực</option>
                         </select>
                       </td>
-                      <td className="p-4 text-sm text-zinc-400">
+                      <td className="p-1 text-sm text-zinc-400 md:p-4">
                         {user.weight ? `${user.weight} kg` : '--'} / {user.height ? `${user.height} cm` : '--'}
                       </td>
-                      <td className="p-4 text-right whitespace-nowrap flex justify-end gap-4 items-center h-full pt-6">
+                      <td className="ml-auto flex items-center justify-end gap-4 whitespace-nowrap p-1 text-right md:h-full md:p-4 md:pt-6">
                         <button 
                           onClick={() => confirmDeleteUser(user)} 
                           className="text-destructive hover:text-destructive text-sm font-medium"
@@ -232,7 +232,7 @@ export default function UserManagement() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-zinc-500">
+                    <td colSpan={6} className="w-full p-8 text-center text-zinc-500">
                       Không tìm thấy người dùng nào.
                     </td>
                   </tr>
