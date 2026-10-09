@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
+import AppShell from '@/components/AppShell';
 import { apiFetch, describeError } from '@/utils/api';
 import { fetcher, refreshProfile, useProfile, isUnauthorizedError } from '@/hooks/useApi';
 import { toDateStr, todayStr } from '@/utils/dateUtils';
@@ -124,24 +124,16 @@ export default function BodyPage() {
   }
 
   const changeText = summary?.change == null ? '—' : `${summary.change > 0 ? '+' : ''}${summary.change} kg`;
-  const inputClass = 'w-full bg-background border border-input rounded-2xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary transition-colors';
+  const inputClass = 'w-full bg-background border border-input rounded-2xl px-4 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors';
   const labelClass = 'block text-xs sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2';
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">
-      <Sidebar />
-      <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-8 overflow-y-auto pb-28 md:pb-10">
-        <div className="max-w-[1200px] w-full mx-auto space-y-6">
-          <div className="border-b border-border pb-6">
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight flex items-center gap-3">
-              <Scale className="size-8 text-primary" /> Số đo cơ thể
-            </h1>
-            <p className="text-muted-foreground text-xs sm:text-sm font-semibold mt-1">
-              Ghi cân nặng theo ngày để theo dõi tiến độ. Cân nặng mới nhất sẽ được dùng để tính lại mục tiêu calo của bạn.
-            </p>
-          </div>
-
-          {error && !isUnauthorizedError(error) && (
+    <AppShell
+      title="Số đo cơ thể"
+      icon={<Scale className="size-6 text-primary" />}
+      subtitle="Ghi cân nặng theo ngày để theo dõi tiến độ. Cân nặng mới nhất sẽ được dùng để tính lại mục tiêu calo của bạn."
+    >
+{error && !isUnauthorizedError(error) && (
             <div role="alert" className="p-4 rounded-2xl border bg-destructive/10 border-destructive/30 text-destructive text-xs font-semibold flex items-center justify-between gap-3">
               <span>Không tải được lịch sử số đo.</span>
               <button type="button" onClick={() => mutate()} className="underline cursor-pointer">Thử lại</button>
@@ -155,33 +147,26 @@ export default function BodyPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-3 sm:gap-6">
-            <div className="bg-card border border-border rounded-2xl p-4 sm:p-6">
+<div className="grid grid-cols-1 gap-4 xl:min-h-[34rem] xl:flex-1 xl:grid-cols-12">
+<div className="flex flex-col gap-4 xl:col-span-4 xl:min-h-0 xl:overflow-y-auto">
+<div className="grid grid-cols-3 gap-3">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-4">
               <p className={labelClass}>Hiện tại</p>
-              <p className="text-xl sm:text-3xl font-black">{summary ? `${summary.latest.weight} kg` : '—'}</p>
+              <p className="text-xl sm:text-2xl font-black">{summary ? `${summary.latest.weight} kg` : '—'}</p>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-4 sm:p-6">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-4">
               <p className={labelClass}>Thay đổi</p>
-              <p className="text-xl sm:text-3xl font-black" data-testid="weight-change">{changeText}</p>
+              <p className="text-xl sm:text-2xl font-black" data-testid="weight-change">{changeText}</p>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-4 sm:p-6">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-4">
               <p className={labelClass}>Thấp / Cao nhất</p>
-              <p className="text-xl sm:text-3xl font-black">{summary ? `${summary.min} / ${summary.max}` : '—'}</p>
+              <p className="text-xl sm:text-2xl font-black">{summary ? `${summary.min} / ${summary.max}` : '—'}</p>
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-3xl p-5 sm:p-8">
-            <h2 className="text-lg font-bold mb-4">Cân nặng theo thời gian</h2>
-            <BodyChart metrics={metrics} />
-          </div>
-
-          {profile && <BodyCompositionCard metrics={metrics} gender={profile.gender} />}
-
-          {profile && <CalorieAdvicePanel metrics={metrics} profile={profile} />}
-
-          <form onSubmit={handleSubmit} noValidate className="bg-card border border-border rounded-3xl p-5 sm:p-8 space-y-5">
+<form onSubmit={handleSubmit} noValidate className="bg-card border border-border rounded-3xl p-4 sm:p-5 space-y-3">
             <h2 className="text-lg font-bold">Ghi số đo</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="body-date" className={labelClass}>Ngày</label>
                 <input id="body-date" type="date" value={date} max={today} onChange={e => setDate(e.target.value)} className={inputClass} />
@@ -239,13 +224,25 @@ export default function BodyPage() {
               {saving ? 'Đang lưu...' : 'Lưu số đo'}
             </button>
           </form>
+</div>
 
-          {history.length > 0 && (
-            <div className="bg-card border border-border rounded-3xl p-5 sm:p-8">
+<div className="flex flex-col gap-4 xl:col-span-5 xl:min-h-0 xl:overflow-y-auto">
+<div className="bg-card border border-border rounded-3xl p-4 sm:p-5">
+            <h2 className="text-lg font-bold mb-4">Cân nặng theo thời gian</h2>
+            <BodyChart metrics={metrics} />
+          </div>
+
+{profile && <BodyCompositionCard metrics={metrics} gender={profile.gender} />}
+
+{profile && <CalorieAdvicePanel metrics={metrics} profile={profile} />}
+</div>
+
+{history.length > 0 && (
+            <div className="bg-card border border-border rounded-3xl p-4 sm:p-5 xl:col-span-3 xl:flex xl:min-h-0 xl:flex-col">
               <h2 className="text-lg font-bold mb-4">Lịch sử</h2>
-              <ul className="divide-y divide-border">
+              <ul className="divide-y divide-border xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
                 {history.map(m => (
-                  <li key={m.date} className="flex items-center justify-between py-3 text-sm" data-testid="history-row">
+                  <li key={m.date} className="flex items-center justify-between py-2 text-sm" data-testid="history-row">
                     <span className="font-semibold">{formatDateVi(m.date)}</span>
                     <span className="flex items-center gap-4">
                       <span className="font-black">{m.weight} kg</span>
@@ -260,8 +257,7 @@ export default function BodyPage() {
               </ul>
             </div>
           )}
-        </div>
-      </main>
-    </div>
+</div>
+    </AppShell>
   );
 }
