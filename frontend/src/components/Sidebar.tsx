@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from './smart/logo';
 import ThemeToggle from './ThemeToggle';
-import { LayoutGrid, Sparkles, Dumbbell, Utensils, Scale, User, LogOut, Trophy, CalendarDays, BarChart3, Menu, X } from 'lucide-react';
+import { LayoutGrid, Sparkles, Music, Dumbbell, Utensils, Scale, User, LogOut, Trophy, CalendarDays, BarChart3, Menu, X } from 'lucide-react';
 import { API_URL } from '@/utils/api';
 import { clearApiCache, useProfile } from '@/hooks/useApi';
 
@@ -17,6 +17,7 @@ const GROUPS = [
       { label: 'Lịch tập cá nhân', href: '/routines', icon: CalendarDays },
       { label: 'Kỷ lục', href: '/records', icon: Trophy },
       { label: 'Khối lượng', href: '/volume', icon: BarChart3 },
+      { label: 'Thư viện nhạc', href: '/music', icon: Music },
     ],
   },
   {

@@ -23,6 +23,7 @@ describe('Sidebar', () => {
     ['Lịch tập cá nhân', '/routines'],
     ['Kỷ lục', '/records'],
     ['Khối lượng', '/volume'],
+    ['Thư viện nhạc', '/music'],
     ['Dinh dưỡng', '/nutrition'],
     ['Cơ thể', '/body'],
   ])('the desktop sidebar links to %s', (label, href) => {
@@ -53,7 +54,7 @@ describe('Sidebar', () => {
 
     await userEvent.click(bar.getByRole('button', { name: /Thêm/ }));
     const menu = within(screen.getByRole('dialog', { name: 'Menu' }));
-    expect(menu.getAllByRole('link').map(l => l.getAttribute('href'))).toEqual(['/coach', '/routines', '/records', '/volume', '/profile']);
+    expect(menu.getAllByRole('link').map(l => l.getAttribute('href'))).toEqual(['/coach', '/routines', '/records', '/volume', '/music', '/profile']);
     expect(menu.getByRole('button', { name: /Đăng xuất/ })).toBeInTheDocument();
 
     await userEvent.keyboard('{Escape}');
