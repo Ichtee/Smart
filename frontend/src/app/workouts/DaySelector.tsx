@@ -37,7 +37,7 @@ export default function DaySelector({
 
         {/* Day Selector Tabs */}
         {sortedSchedule.length > 0 && activeRoutineId !== 'none' && (
-          <div className="flex overflow-x-auto gap-2 sm:gap-3 pt-3 pb-2 custom-scrollbar snap-x">
+          <div className="flex overflow-x-auto sm:overflow-visible gap-2 pt-3 pb-2 custom-scrollbar snap-x">
             {sortedSchedule.map((dayObj, index) => {
               const isRealToday = dayObj.day === realTodayString;
               const isActive = safeDayIndex === index;
@@ -46,7 +46,7 @@ export default function DaySelector({
                 <button
                   key={index}
                   onClick={() => handleSelectDayTab(index)}
-                  className={`relative px-4 sm:px-4 py-2 sm:py-2 rounded-xl sm:rounded-2xl text-xs sm:text-xs font-extrabold transition-all duration-300 flex flex-col items-center min-w-[110px] sm:min-w-[130px] shrink-0 snap-start ${isActive
+                  className={`relative px-4 sm:px-4 py-2 sm:py-2 rounded-xl sm:rounded-2xl text-xs sm:text-xs font-extrabold transition-all duration-300 flex flex-col items-center min-w-[110px] shrink-0 sm:shrink sm:flex-1 sm:min-w-0 snap-start ${isActive
                       ? 'bg-primary text-slate-950 shadow-[0_0_20px_var(--glow)] scale-105 z-10'
                       : 'bg-surface-elevated border border-slate-800/90 text-slate-400 hover:bg-edge hover:text-white'
                     }`}
@@ -60,7 +60,7 @@ export default function DaySelector({
                     </span>
                   )}
                   <span className="uppercase tracking-wider opacity-80 mb-0.5">{dayObj.day}</span>
-                  <span className="text-xs sm:text-sm font-black truncate max-w-full">{dayObj.name}</span>
+                  <span className="text-xs sm:text-xs font-black text-center leading-tight line-clamp-2 max-w-full">{dayObj.name}</span>
                 </button>
               );
             })}

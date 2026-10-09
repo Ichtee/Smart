@@ -56,6 +56,32 @@ describe('AiMealTab', () => {
     expect(typeof added[0].id).toBe('string');
   });
 
+  test('editing the grams rescales calories and macros from the AI estimate', async () => {
+    const RICE = { name: 'Cơm', quantity: '1 chén (200 gram)', calories: 260, protein: 5, carbs: 57, fat: 0.5 };
+    vi.mocked(postAi).mockResolvedValue({ items: [RICE, BREAD] });
+    const { user, onAdd, analyse } = setup();
+    await analyse();
+    await screen.findByText('Cơm');
+
+    expect(screen.queryByRole('spinbutton', { name: 'Khối lượng Bánh mì' })).not.toBeInTheDocument(); // no weight in "1 ổ"
+    const grams = screen.getByRole('spinbutton', { name: 'Khối lượng Cơm' });
+    expect(grams).toHaveValue(200);
+    await user.clear(grams);
+    await user.type(grams, '100');
+    expect(screen.getByRole('spinbutton', { name: 'Calo Cơm' })).toHaveValue(130);
+
+    await user.click(screen.getByRole('button', { name: 'Thêm 2 món' }));
+    expect(onAdd.mock.calls[0][0][0]).toMatchObject({ name: 'Cơm', calories: 130, quantity: '1 chén (100 gram)', protein: 2.5, carbs: 28.5, fat: 0.3 });
+  });
+
+  test('an empty or zero weight blocks adding', async () => {
+    vi.mocked(postAi).mockResolvedValue({ items: [{ name: 'Cơm', quantity: '200 gram', calories: 260 }] });
+    const { user, analyse } = setup();
+    await analyse();
+    await user.clear(await screen.findByRole('spinbutton', { name: 'Khối lượng Cơm' }));
+    expect(screen.getByRole('button', { name: 'Thêm 1 món' })).toBeDisabled();
+  });
+
   test('add button disabled until day loaded', async () => {
     vi.mocked(postAi).mockResolvedValue({ items: [EGG] });
     const { analyse } = setup({ dayLoaded: false });

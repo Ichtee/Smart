@@ -1,12 +1,12 @@
 'use client';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toFixedReps, MUSCLE_NAMES_VI } from './utils';
 import Link from 'next/link';
 import type { ExerciseDetailsMap } from './types';
 import { setWeightText, withSetWeight } from './setWeights';
 import ProgressRing from '@/components/ui/ProgressRing';
-import { Check, ClipboardList, Flame, Info, Lightbulb, Lock, Minus, Pause, Pin, Play, Plus, SkipForward, Target, Timer, Trophy, X, Zap, BarChart3 } from 'lucide-react';
+import { Check, ChevronDown, ClipboardList, Flame, Info, Lightbulb, Lock, Minus, Pause, Pin, Play, Plus, SkipForward, Target, Timer, Trophy, X, Zap, BarChart3 } from 'lucide-react';
 import type { ActiveExercise, DetailExercise } from './types';
 
 interface ExerciseChecklistProps {
@@ -60,6 +60,8 @@ export default function ExerciseChecklist({
 }: ExerciseChecklistProps) {
   // a weight box only saves when its text changed since it got focus (tabbing through does not save)
   const weightOnFocus = useRef('');
+  // the per-set rows are folded away until asked for, to keep the exercise cards short
+  const [openSets, setOpenSets] = useState<Record<string, boolean>>({});
   const allDone = isWorkoutSaved && activeSelectedExercises.length > 0 && activeSelectedExercises.every(ex => ex.completed);
   const timerExercise = restTimerActive ? activeSelectedExercises.find(ex => ex.id === restTimerExerciseId) : null;
   const timerTone = restTimerSeconds <= 10 ? 'text-destructive' : restTimerSeconds <= 30 ? 'text-warning' : 'text-primary';
@@ -231,16 +233,22 @@ export default function ExerciseChecklist({
 
                   {/* ═══ SET BREAKDOWN LIST ═══ */}
                   <div className="w-full mt-2 pt-2 border-t border-slate-800/80 space-y-1">
-                    <div className="flex items-center justify-between text-sm font-bold text-slate-400 uppercase tracking-wider">
-                      <span className="text-primary">
+                    <button
+                      type="button"
+                      aria-expanded={!!openSets[ex.id]}
+                      onClick={() => setOpenSets(prev => ({ ...prev, [ex.id]: !prev[ex.id] }))}
+                      className="w-full min-h-11 flex items-center justify-between gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider cursor-pointer"
+                    >
+                      <span className="text-primary inline-flex items-center gap-1.5">
+                        <ChevronDown className={`size-4 transition-transform ${openSets[ex.id] ? 'rotate-180' : ''}`} aria-hidden="true" />
                         Các hiệp tập ({ex.sets} Hiệp)
                       </span>
                       <span className="text-sm text-primary font-bold bg-primary-soft/60 border border-primary/30 px-2 py-0.5 rounded-md">
                         {(completedSetsMap[ex.id] || []).length} / {ex.sets} Hoàn thành
                       </span>
-                    </div>
+                    </button>
 
-                    <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
+                    <div className={`grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2 ${openSets[ex.id] ? '' : 'hidden'}`}>
                       {Array.from({ length: ex.sets }).map((_, setIdx) => {
                         const isSetDone = (completedSetsMap[ex.id] || []).includes(setIdx);
                         const setLabelName = `${ex.name} #${setIdx + 1}`;

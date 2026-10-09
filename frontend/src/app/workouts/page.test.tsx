@@ -578,6 +578,16 @@ describe('Workouts: restoring a saved day from the server', () => {
     expect(screen.getByText(/5 \/ 5 Hoàn thành/)).toBeInTheDocument(); // all five sets show as done
   });
 
+  test('the per-set rows are folded until the header is clicked', async () => {
+    const { user } = await setup();
+    const header = screen.getAllByRole('button', { name: /Các hiệp tập/ })[0];
+    expect(header).toHaveAttribute('aria-expanded', 'false');
+    expect(header.nextElementSibling).toHaveClass('hidden');
+    await user.click(header);
+    expect(header).toHaveAttribute('aria-expanded', 'true');
+    expect(header.nextElementSibling).not.toHaveClass('hidden');
+  });
+
   test('per-set progress survives a reload (it comes back from detailsMap.completedSets)', async () => {
     server.logs['2026-10-07'] = savedLegs({ completedIds: [], detailsMap: { 'e-squat': { sets: 4, reps: '8', completedSets: [0, 1] } } });
     await setup();
