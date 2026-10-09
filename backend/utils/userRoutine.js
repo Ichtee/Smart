@@ -9,7 +9,13 @@ const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const text = (v, max) => (typeof v === 'string' ? v.trim().replace(/\s+/g, ' ').slice(0, max) : '');
 const whole = (v) => (typeof v === 'number' || typeof v === 'string') && String(v).trim() !== '' ? Number(v) : NaN;
 
-const cleanExercise = (raw, dayLabel, index) => {
+// Reps are one fixed number: a range ("8-12", e.g. from the AI or an old draft) collapses to its midpoint.
+const fixedReps = (s) => {
+  const m = /^(\d{1,3})\s*-\s*(\d{1,3})$/.exec(s);
+  return m ? String(Math.round((Number(m[1]) + Number(m[2])) / 2)) : s;
+};
+
+const cleanExercise =(raw, dayLabel, index) => {
   const where = `${dayLabel}, bài ${index + 1}`;
   if (!isObj(raw)) return { error: `${where}: dữ liệu bài tập không hợp lệ.` };
 
@@ -22,8 +28,8 @@ const cleanExercise = (raw, dayLabel, index) => {
   const sets = raw.sets === undefined ? 3 : whole(raw.sets);
   if (!Number.isInteger(sets) || sets < 1 || sets > 50) return { error: `${where}: số hiệp phải từ 1 đến 50.` };
 
-  const repsRange = raw.repsRange === undefined ? '10' : text(String(raw.repsRange), 20);
-  if (!/^\d{1,3}(\s*-\s*\d{1,3})?$/.test(repsRange)) return { error: `${where}: số lần phải là một số hoặc khoảng (VD: 8-12).` };
+  const repsRange = raw.repsRange === undefined ? '10' : fixedReps(text(String(raw.repsRange), 20));
+  if (!/^\d{1,3}$/.test(repsRange)) return { error: `${where}: số lần phải là một số cố định (VD: 10).` };
 
   const rest = raw.restTimeSeconds === undefined ? 90 : whole(raw.restTimeSeconds);
   if (!Number.isInteger(rest) || rest < 0 || rest > 600) return { error: `${where}: thời gian nghỉ phải từ 0 đến 600 giây.` };

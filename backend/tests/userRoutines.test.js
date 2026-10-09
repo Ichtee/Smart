@@ -54,6 +54,7 @@ describe('cleanUserRoutine (pure)', () => {
     expect(routine.name).toBe('Full Body');
     expect(routine.schedule[0].name).toBe('A');
     expect(routine.schedule[0].exercises[0]).toMatchObject({ exerciseName: 'Squat', sets: 3, repsRange: '10', rir: '1', restTimeSeconds: 90, exerciseId: '' });
+    expect(cleanUserRoutine(body()).routine.schedule[0].exercises[0].repsRange).toBe('10'); // '8-12' collapses to a fixed number
   });
 
   test.each([

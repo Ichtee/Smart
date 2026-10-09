@@ -208,11 +208,14 @@ export default function Nutrition() {
   };
 
   // Called by the add-food modal with a fully validated item
+  // Several items can be added in one tick (AI meal), so build on the ref, which is updated synchronously, not on the stale `meals`.
   const handleAddItem = (category: string, item: MealItem) => {
+    const current = latest.current.meals;
     const updatedMeals = {
-      ...meals,
-      [category]: [...(meals[category] || []), item]
+      ...current,
+      [category]: [...(current[category] || []), item]
     };
+    latest.current = { ...latest.current, meals: updatedMeals };
     setMeals(updatedMeals);
     pushNutritionToBackend(selectedDate, waterGlasses, mlPerGlass, updatedMeals);
   };

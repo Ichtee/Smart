@@ -343,7 +343,7 @@ describe('POST /api/ai/routine', () => {
     expect(res.status).toBe(200);
     const exercises = res.body.routine.schedule[0].exercises;
     expect(exercises).toHaveLength(1);
-    expect(exercises[0]).toMatchObject({ exerciseId: String(lib[0]._id), exerciseName: 'Bench Press', muscle: 'chest', sets: 4, repsRange: '6-8' });
+    expect(exercises[0]).toMatchObject({ exerciseId: String(lib[0]._id), exerciseName: 'Bench Press', muscle: 'chest', sets: 4, repsRange: '7' });
   });
 
   test('502 when the cleaned routine is invalid', async () => {

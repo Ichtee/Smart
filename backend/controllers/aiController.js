@@ -178,7 +178,7 @@ const generateRoutine = async (req, res) => {
     const library = exercises.map(e => `${e._id}|${e.name}|${e.muscle}|${e.equipment || ''}`).join('\n');
     const goal = req.user.goal || 'chưa đặt';
 
-    const system = `Bạn là huấn luyện viên tạo lịch tập tuần. Tạo đúng ${daysPerWeek} ngày tập (các ngày còn lại bỏ trống hoặc là ngày nghỉ). Chỉ dùng exerciseId có trong danh sách bài tập (định dạng id|tên|nhóm cơ|dụng cụ). Chọn số hiệp, số lần (VD "8-12") và thời gian nghỉ phù hợp mục tiêu. Tên lịch và tên buổi tập bằng tiếng Việt.
+    const system = `Bạn là huấn luyện viên tạo lịch tập tuần. Tạo đúng ${daysPerWeek} ngày tập (các ngày còn lại bỏ trống hoặc là ngày nghỉ). Chỉ dùng exerciseId có trong danh sách bài tập (định dạng id|tên|nhóm cơ|dụng cụ). Số lần mỗi hiệp (repsRange) phải là MỘT SỐ CỐ ĐỊNH (VD "10"), tuyệt đối không dùng khoảng như "8-12". Chọn số hiệp, số lần và thời gian nghỉ phù hợp mục tiêu. Tên lịch và tên buổi tập bằng tiếng Việt.
 
 Mục tiêu người dùng: ${goal}
 Dụng cụ: ${EQUIPMENT[equipment]}
