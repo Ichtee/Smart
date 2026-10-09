@@ -33,3 +33,6 @@ Thumbs.db
 .idea/
 
 .playwright-mcp/
+
+# Local DB backups from backend scripts
+backend/backups/

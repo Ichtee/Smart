@@ -36,6 +36,10 @@ const exerciseSchema = new mongoose.Schema({
   },
   secondaryMuscles: [{
     type: String
+  }],
+  // demo photos (free-exercise-db), shown when there is no video
+  images: [{
+    type: String
   }]
 }, { timestamps: true });
 

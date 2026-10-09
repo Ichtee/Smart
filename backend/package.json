@@ -7,7 +7,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "migrate": "node utils/runMigrations.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "import:exercises": "node utils/importExercises.js",
+    "audit:exercises": "node utils/auditExercises.js"
   },
   "keywords": [],
   "author": "",

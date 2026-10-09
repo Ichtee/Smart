@@ -156,6 +156,7 @@ export default function Workouts() {
       equipment: ex.equipment || 'Tạ đơn / Cáp / Máy',
       description: ex.description || 'Bài tập giúp cô lập và phát triển nhóm cơ hiệu quả.',
       videoUrl: ex.videoUrl || '',
+      images: ex.images || [],
       normMuscle: normalizeMuscleId(ex.muscle),
       name: ex.name,
       defaultSets: ex.defaultSets || 1,

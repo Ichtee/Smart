@@ -27,6 +27,7 @@ export interface WorkoutExercise {
   equipment: string;
   description: string;
   videoUrl: string;
+  images: string[];
   defaultSets: number;
   defaultReps: string;
 }

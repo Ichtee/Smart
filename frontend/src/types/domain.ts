@@ -14,6 +14,7 @@ export interface Exercise {
   equipment?: string;
   description?: string;
   videoUrl?: string;
+  images?: string[];
 }
 
 /** One exercise inside a routine day. */

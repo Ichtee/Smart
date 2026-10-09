@@ -90,6 +90,16 @@ export default function ExerciseDetailModal({ currentSelectedIds, handleAddExerc
                     );
                   }
 
+                  if (selectedDetailExercise.images?.length) {
+                    return (
+                      <div className="grid grid-cols-2 gap-2">
+                        {selectedDetailExercise.images.slice(0, 2).map((src, i) => (
+                          <img key={src} src={src} alt={`${selectedDetailExercise.name} - bước ${i + 1}`} loading="lazy" className="w-full rounded-2xl border border-slate-800 bg-white object-contain aspect-[4/3]" />
+                        ))}
+                      </div>
+                    );
+                  }
+
                   return (
                     <div className="p-4 bg-inset rounded-2xl border border-slate-800 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-destructive-soft/80 border border-destructive/40 text-destructive font-bold flex items-center justify-center text-xl shrink-0">
@@ -155,7 +165,7 @@ export default function ExerciseDetailModal({ currentSelectedIds, handleAddExerc
                 <h4 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
                   <span>📖</span> Hướng dẫn kỹ thuật
                 </h4>
-                <p className="text-xs text-slate-300 leading-relaxed">
+                <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-line">
                   {selectedDetailExercise.description || 'Bài tập này giúp cô lập và phát triển nhóm cơ mục tiêu hiệu quả. Hãy giữ tư thế chuẩn, kiểm soát đà rơi tạ và siết chặt cơ ở đỉnh chuyển động.'}
                 </p>
               </div>
