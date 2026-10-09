@@ -100,7 +100,7 @@ export default function MiniPlayer() {
       className="w-[17rem] max-h-[80vh] overflow-y-auto rounded-3xl border border-border bg-card shadow-2xl p-4 space-y-3"
     >
       <div onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag} className="touch-none cursor-grab active:cursor-grabbing flex items-center justify-between gap-2">
-        <h2 className="text-sm font-black flex items-center gap-2"><Music className="size-4 text-primary" /> Nhạc tập</h2>
+        <h2 className="text-sm font-black flex items-center gap-2"><Music className="size-4 text-primary" />Trình phát nhạc</h2>
         <div className="flex gap-1.5">
           <button type="button" aria-label="Thu nhỏ" onClick={() => switchTo(false)} className={iconButton}><Minimize2 className="size-4" /></button>
           <Link href="/music" aria-label="Mở thư viện" className={iconButton}><ListMusic className="size-4" /></Link>

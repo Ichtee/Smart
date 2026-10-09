@@ -85,7 +85,7 @@ describe('MiniPlayer', () => {
   test('dragging the header moves the widget, and the icon does not open after a drag', async () => {
     const { user } = setup();
     const box = screen.getByLabelText('Đang phát').parentElement!;
-    const header = screen.getByRole('heading', { name: 'Nhạc tập' }).parentElement!;
+    const header = screen.getByRole('heading', { name: 'Trình phát nhạc' }).parentElement!;
     header.setPointerCapture = vi.fn();
     fireEvent.pointerDown(header, { clientX: 100, clientY: 100, button: 0, pointerId: 1 });
     fireEvent.pointerMove(header, { clientX: 140, clientY: 160, pointerId: 1 });
