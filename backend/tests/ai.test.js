@@ -22,6 +22,7 @@ describe('gemini.generate', () => {
     errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     process.env.GEMINI_API_KEY = 'k';
     delete process.env.GEMINI_MODEL;
+    delete process.env.GEMINI_FALLBACK_MODEL;
     fetchSpy = jest.spyOn(global, 'fetch');
   });
   afterEach(() => { fetchSpy.mockRestore(); errorSpy.mockRestore(); });
@@ -73,6 +74,40 @@ describe('gemini.generate', () => {
     expect(err).toBeInstanceOf(AiError);
     expect(err.status).toBe(502);
     expect(err.message).toBe('AI không phản hồi hợp lệ, vui lòng thử lại.');
+  });
+
+  describe('with a fallback model', () => {
+    beforeEach(() => {
+      process.env.GEMINI_MODEL = 'gemini-3.6-flash';
+      process.env.GEMINI_FALLBACK_MODEL = 'gemini-3.5-flash-lite';
+    });
+    afterEach(() => { delete process.env.GEMINI_MODEL; delete process.env.GEMINI_FALLBACK_MODEL; });
+
+    test.each([429, 503])('retries once on the fallback model when the main model answers %i', async (status) => {
+      fetchSpy.mockResolvedValueOnce(errResponse(status)).mockResolvedValueOnce(okResponse(geminiReply('a')));
+      await expect(call()).resolves.toBe('a');
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(fetchSpy.mock.calls[0][0]).toContain('models/gemini-3.6-flash:');
+      expect(fetchSpy.mock.calls[1][0]).toContain('models/gemini-3.5-flash-lite:');
+    });
+
+    test('gives up with 503 when the fallback is busy too', async () => {
+      fetchSpy.mockResolvedValue(errResponse(429));
+      await expect(call()).rejects.toMatchObject({ status: 503 });
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    test('does not retry on other failures', async () => {
+      fetchSpy.mockResolvedValue(errResponse(500));
+      await expect(call()).rejects.toMatchObject({ status: 502 });
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test('without a fallback model a busy main model is not retried', async () => {
+    fetchSpy.mockResolvedValue(errResponse(503));
+    await expect(call()).rejects.toMatchObject({ status: 503 });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   test('throws 502 when the network call fails', async () => {

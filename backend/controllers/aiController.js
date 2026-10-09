@@ -97,7 +97,7 @@ const parseMeal = async (req, res) => {
       system: MEAL_SYSTEM,
       contents: [{ role: 'user', parts }],
       schema: MEAL_SCHEMA,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 2048, // thinking models spend ~500-800 of these before answering
     });
 
     const items = [];
@@ -191,7 +191,7 @@ ${library}`;
       system,
       contents: [{ role: 'user', parts: [{ text: 'Hãy tạo lịch tập.' }] }],
       schema: ROUTINE_SCHEMA,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192, // thinking models spend ~500-800 of these before answering
     });
 
     const schedule = (Array.isArray(result.schedule) ? result.schedule : []).map(d => ({

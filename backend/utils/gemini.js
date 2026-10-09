@@ -25,23 +25,32 @@ const generate = async ({ system, contents, schema, maxOutputTokens = 1024 }) =>
     generationConfig.responseSchema = schema;
   }
 
-  let res;
-  try {
-    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents, generationConfig }),
-      signal: AbortSignal.timeout(30000),
-    });
-  } catch (err) {
-    console.error('Gemini request failed:', err.message);
-    throw new AiError(502, BAD_REPLY);
+  const post = async (name) => {
+    try {
+      return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${name}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents, generationConfig }),
+        signal: AbortSignal.timeout(30000),
+      });
+    } catch (err) {
+      console.error('Gemini request failed:', err.message);
+      throw new AiError(502, BAD_REPLY);
+    }
+  };
+  const busy = (r) => r.status === 429 || r.status === 503;
+
+  let res = await post(model);
+  // Newer models have small free daily quotas and are often overloaded: try the fallback model once.
+  const fallback = process.env.GEMINI_FALLBACK_MODEL;
+  if (busy(res) && fallback && fallback !== model) {
+    console.error(`Gemini ${model} busy (${res.status}), retrying on ${fallback}`);
+    res = await post(fallback);
   }
 
   if (!res.ok) {
     console.error('Gemini error status:', res.status);
-    const overloaded = res.status === 429 || res.status === 503;
-    throw new AiError(overloaded ? 503 : 502, overloaded ? OVERLOADED : BAD_REPLY);
+    throw new AiError(busy(res) ? 503 : 502, busy(res) ? OVERLOADED : BAD_REPLY);
   }
 
   const body = await res.json().catch(() => null);
