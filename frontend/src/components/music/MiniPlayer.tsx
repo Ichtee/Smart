@@ -21,9 +21,9 @@ const iconButton = 'size-9 rounded-full border border-border flex items-center j
 
 /**
  * What is playing, and the controls for it: playlist, shuffle, repeat, the "play next" queue.
- * The library itself (adding links, playlists) lives on /music. Renders nothing while idle.
+ * The library itself (adding links, playlists) lives on /music. While idle it is just a shortcut icon to the library.
  */
-export default function MiniPlayer() {
+export default function MiniPlayer({ idleShortcut = false }: { idleShortcut?: boolean }) {
   const music = useMusic();
   const { current, playing, activePlaylistId, shuffle, repeat, volume, queue, canPrevious, canNext, ytHostRef, scIframeRef } = music;
   const { playlists } = useMusicLibrary(current !== null);
@@ -72,7 +72,17 @@ export default function MiniPlayer() {
     drag.current = null;
   };
 
-  if (!current) return null;
+  if (!current) {
+    return idleShortcut ? (
+      <Link
+        href="/music"
+        aria-label="Mở thư viện nhạc"
+        className="fixed right-4 bottom-24 md:right-6 md:bottom-6 z-40 flex size-12 items-center justify-center rounded-full border border-primary bg-card text-primary shadow-2xl"
+      >
+        <Music className="size-5" />
+      </Link>
+    ) : null;
+  }
 
   return (
     <div

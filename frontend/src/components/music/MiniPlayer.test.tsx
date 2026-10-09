@@ -63,6 +63,14 @@ describe('MiniPlayer', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  test('idle with the shortcut on: only an icon that opens the library; without it, nothing', () => {
+    setup({ current: null });
+    const { container, unmount } = render(<MiniPlayer idleShortcut />);
+    expect(screen.getByRole('link', { name: 'Mở thư viện nhạc' })).toHaveAttribute('href', '/music');
+    expect(container.querySelector('iframe')).toBeNull();
+    unmount();
+  });
+
   test('shows the title, the source credit and the 200x200 embed', () => {
     setup();
     expect(screen.getByText('Song 1')).toBeInTheDocument();

@@ -397,7 +397,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   return (
     <MusicContext.Provider value={value}>
       {children}
-      <MiniPlayer />
+      <MiniPlayer idleShortcut={active && !onMusicPage} />
     </MusicContext.Provider>
   );
 }
