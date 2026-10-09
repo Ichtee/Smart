@@ -1,8 +1,7 @@
 'use client';
-import { useRouter } from 'next/navigation';
-import { User } from 'lucide-react';
 import Sidebar from './Sidebar';
 import GoogleTranslate from './GoogleTranslate';
+import AccountMenu from './AccountMenu';
 
 interface AppShellProps {
   title: string;
@@ -20,7 +19,6 @@ interface AppShellProps {
  * Below `md` the page scrolls normally and leaves room for the bottom bar.
  */
 export default function AppShell({ title, subtitle, icon, actions, children }: AppShellProps) {
-  const router = useRouter();
   return (
     <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-clip">
       <Sidebar />
@@ -34,14 +32,7 @@ export default function AppShell({ title, subtitle, icon, actions, children }: A
           <div className="flex shrink-0 items-center gap-3">
             {actions}
             <GoogleTranslate />
-            <button
-              type="button"
-              onClick={() => router.push('/profile')}
-              aria-label="Hồ sơ"
-              className="flex size-10 cursor-pointer items-center justify-center rounded-full border border-primary/30 bg-primary/15 text-primary transition hover:scale-105"
-            >
-              <User className="size-5" />
-            </button>
+            <AccountMenu />
           </div>
         </header>
         <main className="flex min-h-0 flex-1 flex-col gap-4 p-4 pb-28 md:overflow-y-auto md:p-6 md:pb-6">{children}</main>

@@ -103,11 +103,11 @@ describe('Dashboard: loading and header', () => {
     expect(screen.queryByRole('status', { name: 'Đang tải' })).not.toBeInTheDocument();
   });
 
-  test('normal users get no Admin Panel button; the profile icon goes to /profile', async () => {
+  test('normal users get no Admin Panel button; the profile icon opens the account menu', async () => {
     const { user } = await setup();
     expect(screen.queryByRole('button', { name: /Admin Panel/ })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Hồ sơ' }));
-    expect(nav.push).toHaveBeenCalledWith('/profile');
+    await user.click(screen.getByRole('button', { name: 'Tài khoản' }));
+    expect(screen.getByRole('menuitem', { name: /Thông tin cá nhân/ })).toHaveAttribute('href', '/profile');
   });
 
   test('admins get an Admin Panel button that opens the admin area', async () => {

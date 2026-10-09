@@ -34,10 +34,56 @@ describe('AppShell', () => {
     expect(screen.getAllByRole('main')).toHaveLength(1);
   });
 
-  test('the profile button goes to /profile', async () => {
+  const openMenu = async () => {
     render(<AppShell title="Cơ thể"><p>nội dung</p></AppShell>);
-    await userEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Hồ sơ' }));
-    expect(nav.push).toHaveBeenCalledWith('/profile');
+    await userEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Tài khoản' }));
+  };
+
+  test('the profile button opens a menu with profile, change password and sign out', async () => {
+    await openMenu();
+    expect(screen.getByRole('menuitem', { name: /Thông tin cá nhân/ })).toHaveAttribute('href', '/profile');
+    expect(screen.getByRole('menuitem', { name: /Đổi mật khẩu/ })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /Đăng xuất/ })).toBeInTheDocument();
+  });
+
+  test('sign out calls the server, then goes home', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    await openMenu();
+    await userEvent.click(screen.getByRole('menuitem', { name: /Đăng xuất/ }));
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/users/logout');
+    expect(nav.push).toHaveBeenCalledWith('/');
+    vi.unstubAllGlobals();
+  });
+
+  test('change password sends the current and the new password', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    vi.stubGlobal('fetch', fetchMock);
+    await openMenu();
+    await userEvent.click(screen.getByRole('menuitem', { name: /Đổi mật khẩu/ }));
+    await userEvent.type(screen.getByLabelText('Mật khẩu hiện tại'), 'old-pass-1');
+    await userEvent.type(screen.getByLabelText("Mật khẩu mới (8–100 ký tự)"), 'new-pass-22');
+    await userEvent.type(screen.getByLabelText('Nhập lại mật khẩu mới'), 'new-pass-22');
+    await userEvent.click(screen.getByRole('button', { name: 'Đổi mật khẩu' }));
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain('/api/users/profile');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body)).toEqual({ password: 'new-pass-22', currentPassword: 'old-pass-1' });
+    vi.unstubAllGlobals();
+  });
+
+  test('change password refuses when the two new passwords differ', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await openMenu();
+    await userEvent.click(screen.getByRole('menuitem', { name: /Đổi mật khẩu/ }));
+    await userEvent.type(screen.getByLabelText('Mật khẩu hiện tại'), 'old-pass-1');
+    await userEvent.type(screen.getByLabelText("Mật khẩu mới (8–100 ký tự)"), 'new-pass-22');
+    await userEvent.type(screen.getByLabelText('Nhập lại mật khẩu mới'), 'other-pass-3');
+    await userEvent.click(screen.getByRole('button', { name: 'Đổi mật khẩu' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('chưa khớp');
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 
   test('renders the navigation: the desktop sidebar and the mobile bottom bar', () => {

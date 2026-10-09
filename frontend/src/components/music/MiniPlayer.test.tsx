@@ -72,6 +72,38 @@ describe('MiniPlayer', () => {
     expect(document.querySelector('iframe')).toBeNull();
   });
 
+  test('minimizing leaves a small icon, the player stays mounted, and the icon opens it again', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: 'Thu nhỏ' }));
+    expect(screen.getByLabelText('Đang phát')).toHaveAttribute('hidden');
+    expect(screen.getByTestId('music-yt-host')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Mở trình phát nhạc' }));
+    expect(screen.getByLabelText('Đang phát')).not.toHaveAttribute('hidden');
+    expect(screen.queryByRole('button', { name: 'Mở trình phát nhạc' })).toBeNull();
+  });
+
+  test('dragging the header moves the widget, and the icon does not open after a drag', async () => {
+    const { user } = setup();
+    const box = screen.getByLabelText('Đang phát').parentElement!;
+    const header = screen.getByRole('heading', { name: 'Nhạc tập' }).parentElement!;
+    header.setPointerCapture = vi.fn();
+    fireEvent.pointerDown(header, { clientX: 100, clientY: 100, button: 0, pointerId: 1 });
+    fireEvent.pointerMove(header, { clientX: 140, clientY: 160, pointerId: 1 });
+    fireEvent.pointerUp(header, { pointerId: 1 });
+    expect(box.style.left).not.toBe('');
+    expect(box.style.right).toBe('auto');
+    await user.click(screen.getByRole('button', { name: 'Thu nhỏ' }));
+    const icon = screen.getByRole('button', { name: 'Mở trình phát nhạc' });
+    icon.setPointerCapture = vi.fn();
+    fireEvent.pointerDown(icon, { clientX: 10, clientY: 10, button: 0, pointerId: 1 });
+    fireEvent.pointerMove(icon, { clientX: 60, clientY: 60, pointerId: 1 });
+    fireEvent.pointerUp(icon, { pointerId: 1 });
+    fireEvent.click(icon);
+    expect(screen.getByRole('button', { name: 'Mở trình phát nhạc' })).toBeInTheDocument();
+    fireEvent.click(icon);
+    expect(screen.queryByRole('button', { name: 'Mở trình phát nhạc' })).toBeNull();
+  });
+
   test('a SoundCloud track shows the widget iframe with the track url', () => {
     setup({ current: sc(3) });
     expect(screen.getByText('Nguồn: SoundCloud')).toBeInTheDocument();
