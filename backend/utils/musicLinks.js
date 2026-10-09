@@ -74,10 +74,12 @@ const fetchOEmbed = async ({ source, url }) => {
     throw new MusicError(502, LOOKUP_FAILED);
   }
   const body = await res.json().catch(() => ({}));
+  // limits mirror models/MusicTrack.js; a title over the limit must not turn into a failed save
+  const thumbnail = String(body.thumbnail_url || '');
   return {
-    title: String(body.title || url),
-    author: String(body.author_name || ''),
-    thumbnail: String(body.thumbnail_url || ''),
+    title: String(body.title || url).slice(0, 300),
+    author: String(body.author_name || '').slice(0, 200),
+    thumbnail: thumbnail.length <= 1000 ? thumbnail : '',
   };
 };
 

@@ -85,6 +85,14 @@ describe('fetchOEmbed', () => {
     await expect(fetchOEmbed(yt)).resolves.toEqual({ title: 'Song', author: 'Artist', thumbnail: 'https://img/x.jpg' });
   });
 
+  test('over-long fields are cut to what the library can store instead of failing the save', async () => {
+    fetchSpy.mockResolvedValue(ok({ title: 'T'.repeat(400), author_name: 'A'.repeat(300), thumbnail_url: `https://img/${'x'.repeat(1100)}` }));
+    const meta = await fetchOEmbed(yt);
+    expect(meta.title).toHaveLength(300);
+    expect(meta.author).toHaveLength(200);
+    expect(meta.thumbnail).toBe('');
+  });
+
   test('missing fields become empty strings and the title falls back to the url', async () => {
     fetchSpy.mockResolvedValue(ok({}));
     await expect(fetchOEmbed(sc)).resolves.toEqual({ title: SC, author: '', thumbnail: '' });
