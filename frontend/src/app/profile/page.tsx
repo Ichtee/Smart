@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Sidebar from '@/components/Sidebar';
+import AppShell from '@/components/AppShell';
 import AccountDataPanel from './AccountDataPanel';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/utils/api';
@@ -174,20 +174,11 @@ export default function Profile() {
   }
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-hidden">
-      <Sidebar />
-      <main className="flex-1 flex flex-col min-w-0 p-4 md:p-8 lg:p-10 space-y-8 overflow-y-auto pb-28 md:pb-10">
-        <div className="max-w-[1600px] w-full mx-auto space-y-6">
-
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground flex items-center gap-3">
-              <User className="size-8 text-primary" /> Hồ sơ cá nhân
-            </h1>
-            <p className="text-muted-foreground text-xs sm:text-sm font-semibold mt-1">Quản lý thông tin và các chỉ số hình thể của bạn để có lộ trình tập luyện tốt nhất.</p>
-          </div>
-        </div>
-
+    <AppShell
+      title="Hồ sơ cá nhân"
+      icon={<User className="size-6 text-primary" />}
+      subtitle="Quản lý thông tin và các chỉ số hình thể của bạn để có lộ trình tập luyện tốt nhất."
+    >
         {message.text && (
           <div role={message.type === 'error' ? 'alert' : 'status'} className={`p-4 rounded-2xl border flex items-center gap-2 ${message.type === 'success' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-destructive/10 border-destructive/30 text-destructive'} text-xs font-semibold`}>
             {message.type === 'success' ? <CheckCircle2 className="size-4 shrink-0" /> : <AlertCircle className="size-4 shrink-0" />}
@@ -195,11 +186,9 @@ export default function Profile() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Form */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} noValidate className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
-
+        <div className="grid grid-cols-1 gap-4 xl:min-h-[34rem] xl:flex-1 xl:grid-cols-12">
+          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 xl:contents">
+            <div className="bg-card border border-border rounded-3xl p-4 sm:p-5 space-y-4 xl:col-span-4 xl:min-h-0 xl:overflow-y-auto">
               <div>
                 <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
                   <span className="size-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center text-sm font-black">1</span>
@@ -308,7 +297,11 @@ export default function Profile() {
                       className="w-full bg-background border border-input rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                     />
                   </div>
-                  <div className="col-span-2">
+                </div>
+              </div>
+            </div>
+            <div className="bg-card border border-border rounded-3xl p-4 sm:p-5 space-y-4 xl:col-span-4 xl:min-h-0 xl:overflow-y-auto">
+              <div>
                     <GoalPlanFields
                       idPrefix="profile"
                       goalLabel="Mục tiêu tập luyện"
@@ -321,9 +314,6 @@ export default function Profile() {
                       inputClassName="w-full bg-background border border-input rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                     />
                   </div>
-                </div>
-              </div>
-
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"
@@ -343,31 +333,28 @@ export default function Profile() {
                   )}
                 </button>
               </div>
-            </form>
-            <AccountDataPanel />
-          </div>
-
-          {/* Right Column - Stats Card */}
-          <div className="lg:col-span-1">
-            <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden group hover:border-primary/30 transition-colors duration-500 sticky top-6">
+            </div>
+          </form>
+          <div className="flex flex-col gap-4 xl:col-span-4 xl:min-h-0 xl:overflow-y-auto">
+            <div className="bg-card border border-border rounded-3xl p-4 sm:p-5 relative overflow-hidden group hover:border-primary/30 transition-colors duration-500 sticky top-6">
               <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-50" />
 
               <div className="relative z-10 flex flex-col items-center">
-                <div className="size-24 rounded-full bg-primary/20 p-1 mb-6 shadow-xl border border-primary/40">
-                  <div className="w-full h-full bg-background rounded-full flex items-center justify-center text-4xl font-extrabold text-foreground uppercase">
+                <div className="size-16 rounded-full bg-primary/20 p-1 mb-3 shadow-xl border border-primary/40">
+                  <div className="w-full h-full bg-background rounded-full flex items-center justify-center text-2xl font-extrabold text-foreground uppercase">
                     {formData.name ? formData.name.charAt(0) : '?'}
                   </div>
                 </div>
 
                 <h3 className="text-xl font-bold text-foreground mb-1">{formData.name || 'Người dùng'}</h3>
-                <p className="text-primary text-xs font-semibold mb-8 uppercase tracking-wider">Thành viên Smart</p>
+                <p className="text-primary text-xs font-semibold mb-4 uppercase tracking-wider">Thành viên Smart</p>
 
-                <div className="w-full bg-background rounded-2xl p-6 border border-border">
+                <div className="w-full bg-background rounded-2xl p-4 border border-border">
                   <h4 className="text-muted-foreground text-xs font-semibold mb-4 uppercase tracking-wider text-center">Chỉ số BMI</h4>
 
                   {bmi > 0 ? (
                     <div className="flex flex-col items-center">
-                      <div className={`text-5xl font-mono font-black ${bmiColor} mb-2`}>
+                      <div className={`text-4xl font-mono font-black ${bmiColor} mb-2`}>
                         {bmi.toFixed(1)}
                       </div>
                       <div className={`px-4 py-1.5 rounded-full bg-secondary text-xs font-bold ${bmiColor} border border-border`}>
@@ -382,13 +369,13 @@ export default function Profile() {
                 </div>
 
                 {formData.goal && (
-                  <div className="w-full mt-4 bg-background rounded-2xl p-5 border border-border flex items-center justify-between">
+                  <div className="w-full mt-3 bg-background rounded-2xl p-3 border border-border flex items-center justify-between">
                     <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Mục tiêu</span>
                     <span className="text-primary font-bold text-sm">{formData.goal}{goalHasPace(formData.goal) ? ` · ${formData.goalPace}` : ''}</span>
                   </div>
                 )}
 
-                <div className="w-full mt-4 bg-background rounded-2xl p-5 border border-border flex items-center justify-between gap-3" data-testid="profile-bodyfat">
+                <div className="w-full mt-3 bg-background rounded-2xl p-3 border border-border flex items-center justify-between gap-3" data-testid="profile-bodyfat">
                   <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Tỷ lệ mỡ</span>
                   {profile?.bodyFat != null ? (
                     <span className="font-bold text-sm">{profile.bodyFat}%</span>
@@ -398,10 +385,9 @@ export default function Profile() {
                 </div>
               </div>
             </div>
+            <AccountDataPanel />
           </div>
         </div>
-      </div>
-    </main>
-  </div>
-);
+    </AppShell>
+  );
 }
