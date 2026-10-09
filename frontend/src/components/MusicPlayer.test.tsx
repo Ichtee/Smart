@@ -57,6 +57,8 @@ vi.mock('@/utils/embedPlayers', () => {
     loadSoundCloudApi: vi.fn(async () => ({ Widget })),
   };
 });
+const nav = vi.hoisted(() => ({ pathname: '/workouts' }));
+vi.mock('next/navigation', () => ({ usePathname: () => nav.pathname }));
 vi.mock('@/hooks/useWakeLock', () => ({ useWakeLock: vi.fn() }));
 vi.mock('@/hooks/useApi', () => ({ fetcher: vi.fn() }));
 vi.mock('@/utils/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/utils/api')>()), apiFetch: vi.fn() }));
@@ -79,14 +81,17 @@ const LIBRARY = [track(1, 'youtube'), track(2, 'youtube'), track(3, 'soundcloud'
 const setup = async (library = LIBRARY) => {
   vi.mocked(fetcher).mockResolvedValue(library);
   const user = userEvent.setup({ delay: null });
-  render(<SWRConfig value={{ provider: () => new Map() }}><MusicPlayer /></SWRConfig>);
+  const provider = () => new Map();
+  // a new element each time: React skips re-rendering an identical one, and usePathname is only mocked
+  const ui = () => <SWRConfig value={{ provider }}><MusicPlayer /></SWRConfig>;
+  const { rerender } = render(ui());
   const open = async () => {
     await user.click(screen.getByRole('button', { name: 'Mở trình nghe nhạc' }));
     if (library.length) await screen.findByRole('button', { name: `Phát ${library[0].title}` });
   };
   const play = (title: string) => user.click(screen.getByRole('button', { name: `Phát ${title}` }));
   const lastWakeLock = () => vi.mocked(useWakeLock).mock.calls.at(-1)?.[0];
-  return { user, open, play, lastWakeLock };
+  return { user, open, play, lastWakeLock, rerender: () => rerender(ui()) };
 };
 
 const scEvent = (widget: FakeSC, name: string) => act(() => { widget.handlers[name](); });
@@ -99,6 +104,56 @@ beforeEach(() => {
   vi.mocked(fetcher).mockReset();
   vi.mocked(useWakeLock).mockClear();
   vi.stubGlobal('confirm', vi.fn(() => true));
+  nav.pathname = '/workouts';
+  localStorage.setItem('token', 'test-token');
+});
+
+describe('MusicPlayer: where it shows', () => {
+  const musicButton = () => screen.queryByRole('button', { name: 'Mở trình nghe nhạc' });
+
+  test('shows on a signed-in app page', async () => {
+    await setup();
+    expect(musicButton()).toBeInTheDocument();
+  });
+
+  test.each(['/', '/login', '/register', '/forgot-password', '/verify', '/reset-password/abc'])('renders nothing on the public path %s', async (path) => {
+    nav.pathname = path;
+    await setup();
+    expect(musicButton()).not.toBeInTheDocument();
+  });
+
+  test('renders nothing without a token', async () => {
+    localStorage.clear();
+    await setup();
+    expect(musicButton()).not.toBeInTheDocument();
+  });
+
+  test('keeps playing while the user moves between app pages', async () => {
+    const { open, play, rerender } = await setup();
+    await open();
+    await play('Song 1');
+    await waitFor(() => expect(ytPlayers()).toHaveLength(1));
+
+    nav.pathname = '/nutrition';
+    rerender();
+
+    expect(ytPlayers()[0].destroy).not.toHaveBeenCalled();
+    expect(screen.getByTestId('music-embed')).toBeInTheDocument();
+  });
+
+  test('stops the music when the user ends up on a public page, for example after signing out', async () => {
+    const { open, play, rerender } = await setup();
+    await open();
+    await play('Song 1');
+    await waitFor(() => expect(ytPlayers()).toHaveLength(1));
+
+    localStorage.clear();
+    nav.pathname = '/login';
+    rerender();
+
+    expect(ytPlayers()[0].destroy).toHaveBeenCalled();
+    expect(screen.queryByTestId('music-embed')).not.toBeInTheDocument();
+  });
 });
 
 describe('MusicPlayer: opening and adding links', () => {

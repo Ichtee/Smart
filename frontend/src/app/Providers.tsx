@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import AuthGuard from '@/components/AuthGuard';
+import MusicPlayer from '@/components/MusicPlayer';
 import { FeedbackProvider } from '@/components/ui/feedback';
 
 // The app used to mirror workout/nutrition data into localStorage (smart_* keys). The server is now
@@ -26,6 +27,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <FeedbackProvider>
         <AuthGuard>
           {children}
+          <MusicPlayer />
         </AuthGuard>
       </FeedbackProvider>
     </LanguageProvider>

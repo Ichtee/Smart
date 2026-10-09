@@ -13,6 +13,9 @@ const PUBLIC_PATHS = [
   '/verify'
 ];
 
+/** Pages anyone can open (no sign-in). */
+export const isPublicPath = (pathname: string) => PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/reset-password');
+
 const REVERIFY_MS = 5 * 60 * 1000; // skip re-verifying the token on every navigation
 const MAX_RETRIES = 2;
 const FETCH_TIMEOUT_MS = 15000; // 15s timeout per attempt — handles Render cold start
@@ -43,7 +46,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const verifyRunRef = useRef<string>('');
 
   useEffect(() => {
-    const isPublic = PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/reset-password');
+    const isPublic = isPublicPath(pathname);
     const isAdminRoute = pathname.startsWith('/dashboard/admin');
 
     if (isPublic) {

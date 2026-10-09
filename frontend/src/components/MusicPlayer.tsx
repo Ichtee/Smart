@@ -1,11 +1,13 @@
 'use client';
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
+import { usePathname } from 'next/navigation';
 import useSWR from 'swr';
 import { Loader2, Maximize2, Minus, Music, Pause, Play, SkipBack, SkipForward, Trash2, X } from 'lucide-react';
 import { apiFetch, describeError } from '@/utils/api';
 import { fetcher } from '@/hooks/useApi';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useConfirm } from '@/components/ui/feedback';
+import { isPublicPath } from '@/components/AuthGuard';
 import { loadSoundCloudApi, loadYouTubeApi, type SCWidget, type YTPlayer } from '@/utils/embedPlayers';
 
 interface Preview { source: 'youtube' | 'soundcloud'; url: string; videoId: string; title: string; author: string; thumbnail: string }
@@ -20,7 +22,30 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const readError = async (res: Response) => (await res.json().catch(() => null))?.message ?? `HTTP ${res.status}`;
 const soundCloudSrc = (url: string) => `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=false&visual=true`;
 
+const subscribeToStorage = (onChange: () => void) => {
+  window.addEventListener('storage', onChange);
+  return () => window.removeEventListener('storage', onChange);
+};
+const hasToken = () => {
+  try {
+    return localStorage.getItem('token') !== null;
+  } catch {
+    return false; // storage unavailable
+  }
+};
+
+/**
+ * Mounted once in Providers so playback survives page changes. The player itself is unmounted (which
+ * stops the music) on public pages or when there is no token, e.g. after signing out.
+ */
 export default function MusicPlayer() {
+  const pathname = usePathname();
+  const signedIn = useSyncExternalStore(subscribeToStorage, hasToken, () => false);
+  if (isPublicPath(pathname) || !signedIn) return null;
+  return <Player />;
+}
+
+function Player() {
   const confirm = useConfirm();
   const [view, setView] = useState<View>('closed');
   const [link, setLink] = useState('');
