@@ -94,9 +94,9 @@ export default function ExerciseChecklist({
         {activeSelectedExercises.length > 0 ? (
           activeSelectedExercises.map((ex, i) => (
             <div key={ex.id} className="flex flex-col gap-2">
-              <div className={`p-3.5 sm:p-5 rounded-2xl bg-inset border transition-all flex items-start justify-between gap-3 sm:gap-4 shadow-lg group ${ex.completed ? 'border-success/50' : 'border-slate-800/90 hover:border-primary/40'}`}>
+              <div className={`p-3.5 sm:p-4 rounded-2xl bg-inset border transition-all flex items-start justify-between gap-3 sm:gap-4 shadow-lg group ${ex.completed ? 'border-success/50' : 'border-slate-800/90 hover:border-primary/40'}`}>
 
-                <div className="flex-1 space-y-3 min-w-0">
+                <div className="flex-1 space-y-2 min-w-0">
                   <div className="flex items-start justify-between flex-wrap gap-2">
                     <h3
                       onClick={() => setSelectedDetailExercise(ex)}
@@ -230,7 +230,7 @@ export default function ExerciseChecklist({
                   )}
 
                   {/* ═══ SET BREAKDOWN LIST ═══ */}
-                  <div className="w-full mt-3 pt-3 border-t border-slate-800/80 space-y-2">
+                  <div className="w-full mt-2 pt-2 border-t border-slate-800/80 space-y-1">
                     <div className="flex items-center justify-between text-sm font-bold text-slate-400 uppercase tracking-wider">
                       <span className="text-primary">
                         Các hiệp tập ({ex.sets} Hiệp)
@@ -240,7 +240,7 @@ export default function ExerciseChecklist({
                       </span>
                     </div>
 
-                    <div className="space-y-2 pt-1">
+                    <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
                       {Array.from({ length: ex.sets }).map((_, setIdx) => {
                         const isSetDone = (completedSetsMap[ex.id] || []).includes(setIdx);
                         const setLabelName = `${ex.name} #${setIdx + 1}`;
@@ -248,7 +248,7 @@ export default function ExerciseChecklist({
                         return (
                           <div
                             key={setIdx}
-                            className={`p-2.5 sm:p-3 rounded-xl border transition-all flex items-center justify-between gap-3 flex-wrap text-sm ${
+                            className={`relative p-2 rounded-xl border transition-all flex items-center justify-between gap-2 text-sm ${
                               isSetDone
                                 ? 'bg-success/10 border-success/50 text-foreground shadow-sm shadow-success/10'
                                 : 'bg-inset border-slate-800/80 text-slate-300 hover:border-slate-700'
@@ -261,14 +261,14 @@ export default function ExerciseChecklist({
                               }`}>
                                 #{setIdx + 1}
                               </span>
-                              <span className="truncate text-foreground text-sm font-bold">
+                              <span className="sr-only">
                                 {setLabelName}
                               </span>
                             </div>
 
                             {/* Reps display, weight and the tick button */}
                             <div className="flex items-center gap-2.5 shrink-0">
-                              <span className="text-sm font-bold text-slate-400">
+                              <span className="sr-only">
                                 Lần: <strong className="text-primary">{toFixedReps(ex.reps)}</strong>
                               </span>
 
@@ -286,7 +286,7 @@ export default function ExerciseChecklist({
                                 }))}
                                 onFocus={(e) => { weightOnFocus.current = e.currentTarget.value; }}
                                 onBlur={(e) => { if (e.currentTarget.value !== weightOnFocus.current) persistSetWeights(); }}
-                                className="w-20 sm:w-24 h-11 bg-inset border border-slate-700 rounded-xl px-2 text-base text-center font-bold text-foreground focus:outline-none focus:border-primary disabled:opacity-40"
+                                className="w-20 h-11 bg-inset border border-slate-700 rounded-xl px-2 text-base text-center font-bold text-foreground focus:outline-none focus:border-primary disabled:opacity-40"
                               />
 
                               {/* Set Checkbox Button */}
@@ -295,7 +295,7 @@ export default function ExerciseChecklist({
                                 onClick={() => toggleCompleteSet(ex.id, setIdx, ex.sets, ex.name)}
                                 disabled={!isWorkoutSaved}
                                 title={!isWorkoutSaved ? 'Vui lòng nhấn LƯU ở trên để bắt đầu tập' : `Đánh dấu hoàn thành Hiệp ${setIdx + 1}`}
-                                className={`min-h-11 min-w-28 px-4 rounded-xl border text-sm font-black transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95 ${
+                                className={`min-h-11 min-w-24 px-3 rounded-xl border text-sm font-black transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95 ${
                                   isSetDone
                                     ? 'bg-success border-success text-slate-950 shadow-success/20 cursor-pointer'
                                     : isWorkoutSaved
