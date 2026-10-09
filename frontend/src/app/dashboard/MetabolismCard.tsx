@@ -18,7 +18,7 @@ export default function MetabolismCard({ profile }: { profile: BodyProfile }) {
     <section aria-labelledby="metabolism-title" className="bg-card border border-border rounded-3xl p-4 space-y-3">
       <div className="flex items-center justify-between border-b border-border pb-2">
         <h3 id="metabolism-title" className="text-base md:text-lg font-black text-foreground flex items-center gap-2"><BarChart3 className="size-5 text-primary" aria-hidden="true" /> Chỉ Số Chuyển Hóa</h3>
-        <Link href="/profile" className="text-xs text-primary hover:underline font-bold">Cập nhật Hồ sơ ↗</Link>
+        <Link href="/profile" className="inline-block py-2 -my-2 text-xs text-primary hover:underline font-bold">Cập nhật Hồ sơ ↗</Link>
       </div>
 
       {!plan || !byGoal ? (

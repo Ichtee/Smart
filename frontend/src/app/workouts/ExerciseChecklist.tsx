@@ -33,7 +33,7 @@ interface ExerciseChecklistProps {
 }
 
 // 44px touch targets: usable with sweaty hands in the gym
-const STEP_BTN = 'size-9 sm:size-11 rounded-xl bg-surface-elevated hover:bg-slate-700 text-primary font-black flex items-center justify-center border border-slate-700 active:scale-95 cursor-pointer';
+const STEP_BTN = 'size-8 sm:size-11 rounded-xl bg-surface-elevated hover:bg-slate-700 text-primary font-black flex items-center justify-center border border-slate-700 active:scale-95 cursor-pointer';
 const CHIP = 'bg-inset px-2.5 py-1 rounded-xl border border-slate-800 text-sm';
 
 export default function ExerciseChecklist({
@@ -133,8 +133,8 @@ export default function ExerciseChecklist({
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     {/* Sets adjustment */}
                     {!isWorkoutSaved ? (
-                      <div className="flex items-center gap-1 sm:gap-2 bg-inset px-1.5 sm:px-2 py-1.5 rounded-xl border border-slate-800">
-                        <span className="text-slate-400 font-semibold">Hiệp:</span>
+                      <div className="flex items-center gap-0.5 sm:gap-2 bg-inset px-1 sm:px-2 py-1.5 rounded-xl border border-slate-800">
+                        <span className="text-slate-400 font-semibold text-xs sm:text-sm">Hiệp:</span>
                         <button
                           aria-label={`Giảm số hiệp của ${ex.name}`}
                           onClick={() => updateExerciseSets(ex.id, ex.sets - 1)}
@@ -149,7 +149,7 @@ export default function ExerciseChecklist({
                             const clean = e.target.value.replace(/[^0-9]/g, '');
                             updateExerciseSets(ex.id, parseInt(clean) || 1);
                           }}
-                          className="w-7 sm:w-9 bg-transparent text-primary font-black text-center focus:outline-none text-base"
+                          className="w-5 sm:w-9 bg-transparent text-primary font-black text-center focus:outline-none text-base"
                         />
                         <button
                           aria-label={`Tăng số hiệp của ${ex.name}`}
@@ -165,8 +165,8 @@ export default function ExerciseChecklist({
 
                     {/* Reps adjustment */}
                     {!isWorkoutSaved ? (
-                      <div className="flex items-center gap-1 sm:gap-2 bg-inset px-1.5 sm:px-2 py-1.5 rounded-xl border border-slate-800">
-                        <span className="text-slate-400 font-semibold">Lần:</span>
+                      <div className="flex items-center gap-0.5 sm:gap-2 bg-inset px-1 sm:px-2 py-1.5 rounded-xl border border-slate-800">
+                        <span className="text-slate-400 font-semibold text-xs sm:text-sm">Lần:</span>
                         <button
                           aria-label={`Giảm số lần của ${ex.name}`}
                           onClick={() => adjustExerciseReps(ex.id, -1)}
@@ -188,7 +188,7 @@ export default function ExerciseChecklist({
                               return updated;
                             });
                           }}
-                          className="w-10 sm:w-12 bg-transparent text-primary font-black text-center focus:outline-none text-base"
+                          className="w-8 sm:w-12 bg-transparent text-primary font-black text-center focus:outline-none text-base"
                         />
                         <button
                           aria-label={`Tăng số lần của ${ex.name}`}

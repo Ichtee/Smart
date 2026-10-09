@@ -248,7 +248,7 @@ export default function BodyPage() {
                       <span className="font-black">{m.weight} kg</span>
                       {m.bodyFat != null && <span className="text-muted-foreground">{m.bodyFat}% mỡ</span>}
                       {m.waist != null && <span className="text-muted-foreground">eo {m.waist} cm</span>}
-                      <button type="button" onClick={() => handleDelete(m.date)} aria-label={`Xóa số đo ngày ${m.date}`} className="text-destructive hover:opacity-80 cursor-pointer">
+                      <button type="button" onClick={() => handleDelete(m.date)} aria-label={`Xóa số đo ngày ${m.date}`} className="p-2 -m-2 text-destructive hover:opacity-80 cursor-pointer">
                         <Trash2 className="size-4" />
                       </button>
                     </span>

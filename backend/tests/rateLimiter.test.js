@@ -3,7 +3,7 @@ const request = require('supertest');
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-const { userOrIpKey, loginLimiter } = require('../middleware/rateLimiter');
+const { userOrIpKey, loginLimiter, routineLimiter } = require('../middleware/rateLimiter');
 
 const sign = (id, secret = process.env.JWT_SECRET) => jwt.sign({ id }, secret);
 
@@ -67,6 +67,20 @@ describe('limiters', () => {
     const blocked = await request(app).post('/login');
     expect(blocked.status).toBe(429);
     expect(blocked.body.message).toMatch(/Too many login attempts/);
+  });
+
+  test('routineLimiter: 2 generated routines per user per day; failed calls and other users are not counted', async () => {
+    const app = express();
+    app.post('/routine', routineLimiter, (req, res) => res.status(req.query.fail ? 502 : 200).json({}));
+    const as = (id, q = '') => request(app).post(`/routine${q}`).set('Authorization', `Bearer ${sign(id)}`);
+
+    for (let i = 0; i < 5; i++) expect((await as('u1', '?fail=1')).status).toBe(502); // AI errors cost nothing
+    expect((await as('u1')).status).toBe(200);
+    expect((await as('u1')).status).toBe(200);
+    const blocked = await as('u1');
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.message).toMatch(/2 lần/);
+    expect((await as('u2')).status).toBe(200);
   });
 
   test('is skipped under NODE_ENV=test so the integration suites are not throttled', async () => {

@@ -205,7 +205,7 @@ export default function RoutinesPage() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-muted-foreground">Lịch có sẵn của hệ thống nằm ở trang <Link href="/workouts" className="text-primary font-bold">Tập luyện</Link>.</p>
+              <p className="text-xs text-muted-foreground">Lịch có sẵn của hệ thống nằm ở trang <Link href="/workouts" className="inline-block py-2 -my-2 text-primary font-bold">Tập luyện</Link>.</p>
             </>
           )}
 

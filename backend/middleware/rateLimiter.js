@@ -77,4 +77,17 @@ const aiLimiter = rateLimit({
   message: { message: 'Bạn đã dùng hết lượt AI hôm nay, vui lòng quay lại ngày mai.' },
 });
 
-module.exports = { generalLimiter, loginLimiter, registerLimiter, emailFlowLimiter, aiLimiter, userOrIpKey };
+// AI routine generation: 2 per day per user. One call sends the whole exercise library (~30k tokens), so it is
+// the expensive one. Rejected or failed calls (400/502/503) are not counted, only the ones that produced a routine.
+const routineLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 2,
+  skip: skipInTests,
+  skipFailedRequests: true,
+  keyGenerator: userOrIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Mỗi ngày chỉ được tạo lịch tập bằng AI 2 lần, vui lòng quay lại ngày mai.' },
+});
+
+module.exports = { generalLimiter, loginLimiter, registerLimiter, emailFlowLimiter, aiLimiter, routineLimiter, userOrIpKey };

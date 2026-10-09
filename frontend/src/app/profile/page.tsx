@@ -380,7 +380,7 @@ export default function Profile() {
                   {profile?.bodyFat != null ? (
                     <span className="font-bold text-sm">{profile.bodyFat}%</span>
                   ) : (
-                    <Link href="/body" className="text-primary text-xs font-bold hover:underline">Nhập ở trang Cơ thể</Link>
+                    <Link href="/body" className="inline-block py-2 -my-2 text-primary text-xs font-bold hover:underline">Nhập ở trang Cơ thể</Link>
                   )}
                 </div>
               </div>
