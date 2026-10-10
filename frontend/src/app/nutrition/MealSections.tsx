@@ -63,13 +63,13 @@ export default function MealSections({
 
             return (
               <div key={categoryName} className="bg-inset border border-slate-800/90 rounded-2xl p-3.5 sm:p-4 space-y-3 hover:border-primary/30 transition-all xl:flex xl:min-h-0 xl:flex-col">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex flex-col sm:flex-row xl:flex-col sm:items-center xl:items-start justify-between gap-2">
                   <div className="flex items-center gap-2 sm:gap-3">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-surface-elevated rounded-xl flex items-center justify-center text-base sm:text-xl shrink-0">
                       {mealConfig.icon}
                     </div>
                     <div>
-                      <h4 className="font-extrabold text-white text-xs sm:text-base">{categoryName}</h4>
+                      <h4 className="whitespace-nowrap font-extrabold text-white text-sm sm:text-base">{categoryName}</h4>
                       <span className="text-xs sm:text-xs text-primary font-bold">{categoryCalories} kcal</span>
                     </div>
                   </div>
@@ -77,7 +77,7 @@ export default function MealSections({
                   <div className="flex items-center gap-1.5 self-start sm:self-auto">
                     <button
                       onClick={() => setActiveMealCategory(categoryName)}
-                      className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-primary text-slate-950 text-xs sm:text-xs font-black hover:bg-primary transition-all shadow-md shadow-primary/20 cursor-pointer flex items-center gap-1"
+                      className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-primary text-slate-950 text-xs sm:text-xs font-black hover:bg-primary transition-all shadow-md shadow-primary/20 cursor-pointer flex items-center gap-1 whitespace-nowrap"
                     >
                       <span>+</span> Thêm món
                     </button>

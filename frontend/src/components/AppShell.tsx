@@ -26,7 +26,7 @@ export default function AppShell({ title, subtitle, icon, actions, children }: A
         <header className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 md:h-14 md:flex-nowrap md:justify-start md:px-6 md:py-0">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             {icon}
-            <h1 className="truncate font-display text-2xl font-bold tracking-tight md:text-3xl">{title}</h1>
+            <h1 className="truncate md:shrink-0 font-display text-2xl font-bold tracking-tight md:text-3xl">{title}</h1>
             {subtitle && <p className="hidden min-w-0 truncate text-sm font-semibold text-muted-foreground md:block">{subtitle}</p>}
           </div>
           {/* own row under the title on a phone: it would push the translate and account buttons off screen */}

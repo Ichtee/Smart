@@ -164,10 +164,10 @@ export default function GoogleTranslate() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 bg-card border border-slate-800 hover:border-primary/50 rounded-xl px-3 py-1.5 shadow-sm text-xs font-bold text-primary transition-all"
+        title={selectedLang.name} className="flex items-center gap-2 bg-card border border-slate-800 hover:border-primary/50 rounded-xl px-3 py-1.5 shadow-sm text-xs font-bold text-primary transition-all"
       >
         <span className="text-sm">🌐</span>
-        <span>{selectedLang.flag} {selectedLang.name}</span>
+        <span>{selectedLang.flag}<span className="hidden sm:inline"> {selectedLang.name}</span></span>
         <span className="text-xs text-slate-400">▼</span>
       </button>
 

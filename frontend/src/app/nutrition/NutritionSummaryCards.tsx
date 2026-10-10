@@ -112,7 +112,7 @@ export default function NutritionSummaryCards({
           </div>
 
           <div className="flex flex-col items-center w-full mt-4 sm:mt-3 space-y-2 sm:space-y-2">
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:flex-nowrap sm:gap-6">
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:flex-nowrap sm:gap-4 xl:gap-2">
               <button
                 onClick={() => updateWater(-1)}
                 className="size-11 sm:size-10 rounded-xl sm:rounded-2xl bg-inset border border-slate-800 flex items-center justify-center text-lg sm:text-2xl font-black hover:bg-surface-elevated transition-colors text-slate-300 active:scale-95"
@@ -135,7 +135,7 @@ export default function NutritionSummaryCards({
                       if (mlPerGlass > 1000) setMlPerGlass(1000);
                     }}
                     onKeyDown={(e) => { if (['e', 'E', '-', '+'].includes(e.key)) e.preventDefault(); }}
-                    className="w-10 sm:w-14 bg-transparent text-primary font-black text-center text-xs sm:text-xs focus:outline-none"
+                    className="w-12 sm:w-14 bg-transparent text-primary font-black text-center text-xs sm:text-xs focus:outline-none"
                   />
                   <span className="text-xs sm:text-xs text-slate-400 font-bold">ml/cốc</span>
                 </div>

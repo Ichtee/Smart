@@ -72,32 +72,38 @@ export default function MiniPlayer({ idleShortcut = false }: { idleShortcut?: bo
     drag.current = null;
   };
 
+  const boxProps = {
+    ref: box,
+    style: pos ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto" } : undefined,
+    className: "fixed right-4 bottom-24 md:right-6 md:bottom-6 z-40",
+  };
+  const dragProps = { onPointerDown: startDrag, onPointerMove: moveDrag, onPointerUp: endDrag, onPointerCancel: endDrag };
+
   if (!current) {
     return idleShortcut ? (
-      <Link
-        href="/music"
-        aria-label="Mở thư viện nhạc"
-        className="fixed right-4 bottom-24 md:right-6 md:bottom-6 z-40 flex size-12 items-center justify-center rounded-full border border-primary bg-card text-primary shadow-2xl"
-      >
-        <Music className="size-5" />
-      </Link>
+      <div {...boxProps}>
+        <Link
+          href="/music"
+          aria-label="Mở thư viện nhạc"
+          draggable={false}
+          {...dragProps}
+          onClick={(e) => { if (swallowClick.current) { swallowClick.current = false; e.preventDefault(); } }}
+          className="touch-none flex size-12 cursor-grab items-center justify-center rounded-full border border-primary bg-card text-primary shadow-2xl active:cursor-grabbing"
+        >
+          <Music className="size-5" />
+        </Link>
+      </div>
     ) : null;
   }
 
   return (
-    <div
-      ref={box}
-      style={pos ? { left: pos.x, top: pos.y, right: 'auto', bottom: 'auto' } : undefined}
-      className="fixed right-4 bottom-24 md:right-6 md:bottom-6 z-40"
-    >
+    <div {...boxProps}>
       {/* collapsed: only the icon shows, but the panel stays mounted so the song keeps playing */}
       {!open && (
         <button
           type="button"
           aria-label="Mở trình phát nhạc"
-          onPointerDown={startDrag}
-          onPointerMove={moveDrag}
-          onPointerUp={endDrag}
+          {...dragProps}
           onClick={() => { if (swallowClick.current) swallowClick.current = false; else switchTo(true); }}
           className="touch-none flex size-12 cursor-grab items-center justify-center rounded-full border border-primary bg-card text-primary shadow-2xl active:cursor-grabbing"
         >
@@ -109,7 +115,7 @@ export default function MiniPlayer({ idleShortcut = false }: { idleShortcut?: bo
       hidden={!open}
       className="w-[17rem] max-h-[80vh] overflow-y-auto rounded-3xl border border-border bg-card shadow-2xl p-4 space-y-3"
     >
-      <div onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag} className="touch-none cursor-grab active:cursor-grabbing flex items-center justify-between gap-2">
+      <div {...dragProps} className="touch-none cursor-grab active:cursor-grabbing flex items-center justify-between gap-2">
         <h2 className="text-sm font-black flex items-center gap-2"><Music className="size-4 text-primary" />Trình phát nhạc</h2>
         <div className="flex gap-1.5">
           <button type="button" aria-label="Thu nhỏ" onClick={() => switchTo(false)} className={iconButton}><Minimize2 className="size-4" /></button>
