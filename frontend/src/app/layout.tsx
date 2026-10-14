@@ -19,6 +19,7 @@ const displayFont = Barlow_Condensed({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#1a1c20",
 };
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export const metadata: Metadata = {
   description: "Ứng dụng theo dõi lịch tập, phân tích nhóm cơ 3D/2D và quản lý dinh dưỡng thông minh hàng ngày.",
   keywords: ["Smart Fitness", "Lịch tập", "Gym", "Fullbody", "PPL", "Upper Lower", "Dinh dưỡng", "Workout"],
   authors: [{ name: "Smart Fitness Team" }],
+  appleWebApp: { capable: true, title: "Smart Fitness", statusBarStyle: "black-translucent" },
   icons: {
     icon: "/favicon.ico",
   },
