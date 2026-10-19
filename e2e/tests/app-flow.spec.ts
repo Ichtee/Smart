@@ -83,6 +83,7 @@ test.describe('using the app after sign-up (client-side navigation, shared SWR c
     await page.getByRole('button', { name: /LƯU & BẮT ĐẦU TẬP/ }).click();
     await planSaved;
 
+    await page.getByRole('button', { name: /Các hiệp tập/ }).first().click(); // the set list is folded by default
     const box = page.getByLabel(/^Mức tạ Hiệp 1 của Bench Press/);
     await expect(box).toBeEnabled();
     const saved = postTo(page, '/api/workouts');

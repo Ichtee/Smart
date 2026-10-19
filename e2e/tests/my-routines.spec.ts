@@ -14,7 +14,7 @@ test.describe('my own routines', () => {
     await completeProfile(user);
     await uiLogin(page, user.username, user.password);
     await nav(page, 'Tập luyện');
-    await page.getByRole('link', { name: /Lịch tập của tôi/ }).first().click();
+    await page.getByRole('navigation', { name: 'Mục Tập luyện' }).getByRole('link', { name: 'Lịch tập' }).click();
     await page.waitForURL(/\/routines/);
     await expect(page.getByText(/chưa có lịch tập riêng/)).toBeVisible();
 
@@ -42,7 +42,7 @@ test.describe('my own routines', () => {
     await expect(page.getByText(/^1\.\s*Triceps Pushdown/)).toBeVisible();
 
     // edit: rename; the change is stored on the same routine
-    await page.getByRole('link', { name: /Lịch tập của tôi/ }).first().click();
+    await page.getByRole('navigation', { name: 'Mục Tập luyện' }).getByRole('link', { name: 'Lịch tập' }).click();
     await page.getByRole('button', { name: 'Sửa' }).click();
     await expect(page.getByLabel('Tên lịch tập')).toHaveValue('Arms Only');
     await page.getByLabel('Tên lịch tập').fill('Arms Day');
