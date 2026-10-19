@@ -932,8 +932,12 @@ describe('Workouts: weight lifted per set', () => {
     expect(weightBox(3).value).toBe('');
   });
 
-  test('a link leads to the personal records', async () => {
+  test('the section tabs lead to the routines, records and volume pages', async () => {
     await setup();
-    expect(screen.getByRole('link', { name: /Kỷ lục cá nhân/ })).toHaveAttribute('href', '/records');
+    const tabs = within(screen.getByRole('navigation', { name: 'Mục Tập luyện' }));
+    expect(tabs.getByRole('link', { name: 'Kỷ lục' })).toHaveAttribute('href', '/records');
+    expect(tabs.getByRole('link', { name: 'Lịch tập' })).toHaveAttribute('href', '/routines');
+    expect(tabs.getByRole('link', { name: 'Khối lượng' })).toHaveAttribute('href', '/volume');
+    expect(tabs.getByRole('link', { name: 'Buổi tập' })).toHaveAttribute('aria-current', 'page');
   });
 });

@@ -97,7 +97,7 @@ test.describe('using the app after sign-up (client-side navigation, shared SWR c
     await page.reload();
     await expect(page.getByLabel(/^Mức tạ Hiệp 1 của Bench Press/)).toHaveValue('60');
 
-    await page.getByRole('link', { name: /Kỷ lục cá nhân/ }).first().click();
+    await page.getByRole('navigation', { name: 'Mục Tập luyện' }).getByRole('link', { name: 'Kỷ lục' }).click();
     await page.waitForURL(/\/records/);
     const card = page.getByRole('region', { name: 'Bench Press' });
     await expect(card).toBeVisible();

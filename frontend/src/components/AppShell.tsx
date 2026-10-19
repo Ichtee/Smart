@@ -2,10 +2,14 @@
 import Sidebar from './Sidebar';
 import GoogleTranslate from './GoogleTranslate';
 import AccountMenu from './AccountMenu';
+import SectionTabs from './SectionTabs';
+import type { SectionId } from './sections';
 
 interface AppShellProps {
   title: string;
   subtitle?: string;
+  /** shows that section's tab row above the content (Tập luyện, Dinh dưỡng) */
+  section?: SectionId;
   icon?: React.ReactNode;
   /** buttons shown at the right of the title bar, before the language picker and the profile button */
   actions?: React.ReactNode;
@@ -18,7 +22,7 @@ interface AppShellProps {
  * so a page that fits never scrolls and a long panel can scroll on its own (`min-h-0 overflow-y-auto`).
  * Below `md` the page scrolls normally and leaves room for the bottom bar.
  */
-export default function AppShell({ title, subtitle, icon, actions, children }: AppShellProps) {
+export default function AppShell({ title, subtitle, section, icon, actions, children }: AppShellProps) {
   return (
     <div suppressHydrationWarning className="min-h-screen bg-background text-foreground flex font-sans overflow-x-clip">
       <Sidebar />
@@ -36,7 +40,10 @@ export default function AppShell({ title, subtitle, icon, actions, children }: A
             <AccountMenu />
           </div>
         </header>
-        <main className="flex min-h-0 flex-1 flex-col gap-4 p-4 pb-28 md:overflow-y-auto md:p-6 md:pb-6">{children}</main>
+        <main className="flex min-h-0 flex-1 flex-col gap-4 p-4 pb-28 md:overflow-y-auto md:p-6 md:pb-6">
+          {section && <SectionTabs section={section} />}
+          {children}
+        </main>
       </div>
     </div>
   );

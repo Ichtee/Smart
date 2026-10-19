@@ -2,11 +2,10 @@
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toFixedReps, MUSCLE_NAMES_VI } from './utils';
-import Link from 'next/link';
 import type { ExerciseDetailsMap } from './types';
 import { setWeightText, withSetWeight } from './setWeights';
 import ProgressRing from '@/components/ui/ProgressRing';
-import { Check, ChevronDown, ClipboardList, Flame, Info, Lightbulb, Lock, Minus, Pause, Pin, Play, Plus, SkipForward, Target, Timer, Trophy, X, Zap, BarChart3 } from 'lucide-react';
+import { Check, ChevronDown, Flame, Info, Lightbulb, Lock, Minus, Pause, Pin, Play, Plus, SkipForward, Target, Timer, Trophy, X, Zap } from 'lucide-react';
 import type { ActiveExercise, DetailExercise } from './types';
 
 interface ExerciseChecklistProps {
@@ -73,11 +72,6 @@ export default function ExerciseChecklist({
           <p className="text-sm font-bold text-primary uppercase tracking-wider">
             Các bài đã chọn ({activeSelectedExercises.length})
           </p>
-          <span className="flex items-center flex-wrap gap-x-4 gap-y-1">
-            <Link href="/routines" className="inline-flex items-center gap-1.5 py-2 text-sm font-bold text-primary hover:underline"><ClipboardList className="size-4" aria-hidden="true" /> Lịch tập của tôi</Link>
-            <Link href="/records" className="inline-flex items-center gap-1.5 py-2 text-sm font-bold text-pr hover:underline"><Trophy className="size-4" aria-hidden="true" /> Kỷ lục cá nhân</Link>
-            <Link href="/volume" className="inline-flex items-center gap-1.5 py-2 text-sm font-bold text-success hover:underline"><BarChart3 className="size-4" aria-hidden="true" /> Khối lượng theo tuần</Link>
-          </span>
           <span className="text-sm text-slate-400 font-semibold hidden sm:inline">
             {isWorkoutSaved ? 'Tích chọn để đánh dấu hoàn thành' : 'Chỉnh sửa theo ý bạn rồi bấm LƯU để bắt đầu'}
           </span>

@@ -5,32 +5,22 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LogoMark } from './smart/logo';
 import ThemeToggle from './ThemeToggle';
 import ThemeColorPicker from './ThemeColorPicker';
-import { Palette, LayoutGrid, Sparkles, Music, Dumbbell, Utensils, Scale, User, LogOut, Trophy, CalendarDays, BarChart3, Menu, X } from 'lucide-react';
+import { Palette, LayoutGrid, Sparkles, Music, Scale, User, LogOut, Menu, X, type LucideIcon } from 'lucide-react';
+import { SECTIONS, sectionOf, type SectionId } from './sections';
 import { API_URL } from '@/utils/api';
 import { clearApiCache, useProfile } from '@/hooks/useApi';
 
-const GROUPS = [
+interface NavItem { label: string; href: string; icon: LucideIcon; section?: SectionId }
+
+// The training and nutrition sections are one item each; their other pages are tabs inside (see sections.ts).
+const sectionItem = (section: SectionId): NavItem => ({ label: SECTIONS[section].label, href: SECTIONS[section].href, icon: SECTIONS[section].icon, section });
+const GROUPS: { title: string | null; items: NavItem[] }[] = [
   { title: null, items: [{ label: 'Tổng quan', href: '/dashboard', icon: LayoutGrid }, { label: 'Trợ lý AI', href: '/coach', icon: Sparkles }] },
-  {
-    title: 'Tập luyện',
-    items: [
-      { label: 'Tập luyện', href: '/workouts', icon: Dumbbell },
-      { label: 'Lịch tập cá nhân', href: '/routines', icon: CalendarDays },
-      { label: 'Kỷ lục', href: '/records', icon: Trophy },
-      { label: 'Khối lượng', href: '/volume', icon: BarChart3 },
-      { label: 'Thư viện nhạc', href: '/music', icon: Music },
-    ],
-  },
-  {
-    title: 'Sức khỏe',
-    items: [
-      { label: 'Dinh dưỡng', href: '/nutrition', icon: Utensils },
-      { label: 'Cơ thể', href: '/body', icon: Scale },
-    ],
-  },
+  { title: 'Tập luyện', items: [sectionItem('training'), { label: 'Thư viện nhạc', href: '/music', icon: Music }] },
+  { title: 'Sức khỏe', items: [sectionItem('nutrition'), { label: 'Cơ thể', href: '/body', icon: Scale }] },
 ];
 // the profile sits in the account card at the bottom of the desktop sidebar
-const PROFILE_ITEM = { label: 'Hồ sơ', href: '/profile', icon: User };
+const PROFILE_ITEM: NavItem = { label: 'Hồ sơ', href: '/profile', icon: User };
 
 // The four most used pages sit in the mobile bottom bar; everything else is under "Thêm".
 const MOBILE_MAIN = ['/dashboard', '/workouts', '/nutrition', '/body'];
@@ -74,7 +64,8 @@ export default function Sidebar() {
     router.push('/');
   };
 
-  const moreActive = MORE_ITEMS.some(i => i.href === pathname);
+  const isActiveItem = (item: NavItem) => pathname === item.href || (!!item.section && sectionOf(pathname) === item.section);
+  const moreActive = MORE_ITEMS.some(isActiveItem);
 
   return (
     <>
@@ -96,7 +87,7 @@ export default function Sidebar() {
               )}
               <div className="space-y-0.5">
                 {group.items.map((item) => {
-                  const isActive = pathname === item.href;
+                  const isActive = isActiveItem(item);
                   const Icon = item.icon;
                   return (
                     <Link
@@ -149,7 +140,7 @@ export default function Sidebar() {
       {/* Mobile: bottom bar with the 4 main pages + "Thêm" */}
       <nav aria-label="Điều hướng nhanh" className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-stretch justify-around">
         {MOBILE_ITEMS.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = isActiveItem(item);
           const Icon = item.icon;
           return (
             <Link
@@ -191,7 +182,7 @@ export default function Sidebar() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               {MORE_ITEMS.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive = isActiveItem(item);
                 const Icon = item.icon;
                 return (
                   <Link

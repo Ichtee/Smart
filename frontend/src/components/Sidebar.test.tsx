@@ -20,9 +20,6 @@ describe('Sidebar', () => {
     ['Tổng quan', '/dashboard'],
     ['Tập luyện', '/workouts'],
     ['Trợ lý AI', '/coach'],
-    ['Lịch tập cá nhân', '/routines'],
-    ['Kỷ lục', '/records'],
-    ['Khối lượng', '/volume'],
     ['Thư viện nhạc', '/music'],
     ['Dinh dưỡng', '/nutrition'],
     ['Cơ thể', '/body'],
@@ -62,7 +59,7 @@ describe('Sidebar', () => {
 
     await userEvent.click(bar.getByRole('button', { name: /Thêm/ }));
     const menu = within(screen.getByRole('dialog', { name: 'Menu' }));
-    expect(menu.getAllByRole('link').map(l => l.getAttribute('href'))).toEqual(['/coach', '/routines', '/records', '/volume', '/music', '/profile']);
+    expect(menu.getAllByRole('link').map(l => l.getAttribute('href'))).toEqual(['/coach', '/music', '/profile']);
     expect(menu.getByRole('button', { name: /Đăng xuất/ })).toBeInTheDocument();
 
     await userEvent.keyboard('{Escape}');
@@ -72,13 +69,25 @@ describe('Sidebar', () => {
   test('the current page is highlighted, others are not', () => {
     render(<Sidebar />);
     const desktop = within(screen.getByRole('navigation', { name: 'Điều hướng chính' }));
-    const records = desktop.getByRole('link', { name: 'Kỷ lục' });
-    expect(records).toHaveAttribute('aria-current', 'page');
-    expect(records.className).toContain('text-primary');
-    expect(desktop.getByRole('link', { name: 'Lịch tập cá nhân' })).not.toHaveAttribute('aria-current');
+    // /records is a tab of the Tập luyện section, so the section item is the active one
+    const training = desktop.getByRole('link', { name: 'Tập luyện' });
+    expect(training).toHaveAttribute('aria-current', 'page');
+    expect(training.className).toContain('text-primary');
+    expect(desktop.getByRole('link', { name: 'Thư viện nhạc' })).not.toHaveAttribute('aria-current');
+  });
+
+  test('mobile bar has 5 items and Tập luyện is active on /routines', () => {
+    nav.path = '/routines';
+    render(<Sidebar />);
+    const bar = within(screen.getByRole('navigation', { name: 'Điều hướng nhanh' }));
+    expect(bar.getAllByRole('link')).toHaveLength(4);
+    expect(bar.getByRole('button', { name: /Thêm/ })).toBeInTheDocument();
+    expect(bar.getByRole('link', { name: 'Tập luyện' })).toHaveAttribute('aria-current', 'page');
+    expect(bar.getByRole('button', { name: /Thêm/ }).className).not.toContain('text-primary');
   });
 
   test('"Thêm" is highlighted when the current page is one of its pages', () => {
+    nav.path = '/music';
     render(<Sidebar />);
     const bar = within(screen.getByRole('navigation', { name: 'Điều hướng nhanh' }));
     expect(bar.getByRole('button', { name: /Thêm/ }).className).toContain('text-primary');

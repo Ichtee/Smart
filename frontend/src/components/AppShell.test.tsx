@@ -34,6 +34,18 @@ describe('AppShell', () => {
     expect(screen.getAllByRole('main')).toHaveLength(1);
   });
 
+  test('a section shows its tab row first inside main', () => {
+    render(<AppShell title="Tập luyện" section="training"><p>nội dung</p></AppShell>);
+    const main = within(screen.getByRole('main'));
+    expect(main.getByRole('navigation', { name: 'Mục Tập luyện' })).toBeInTheDocument();
+    expect(main.getByText('nội dung')).toBeInTheDocument();
+  });
+
+  test('no section, no tab row', () => {
+    render(<AppShell title="Cơ thể"><p>nội dung</p></AppShell>);
+    expect(screen.queryByRole('navigation', { name: /^Mục / })).not.toBeInTheDocument();
+  });
+
   const openMenu = async () => {
     render(<AppShell title="Cơ thể"><p>nội dung</p></AppShell>);
     await userEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Tài khoản' }));
