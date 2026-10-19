@@ -1,12 +1,12 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 import AppShell from '@/components/AppShell';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { fetcher, isUnauthorizedError } from '@/hooks/useApi';
 import { chartPoints, pointsToPath } from '@/utils/bodyMetrics';
-import { Trophy } from 'lucide-react';
+import { Search, Trophy } from 'lucide-react';
 import EmptyState from '@/components/ui/EmptyState';
 
 export interface ExerciseRecord {
@@ -35,6 +35,7 @@ function Sparkline({ record }: { record: ExerciseRecord }) {
 
 export default function RecordsPage() {
   const router = useRouter();
+  const [query, setQuery] = useState('');
   const { data, error, isLoading, mutate } = useSWR<ExerciseRecord[]>('/api/workouts/records', fetcher, {
     revalidateOnFocus: false,
     shouldRetryOnError: false,
@@ -56,6 +57,7 @@ export default function RecordsPage() {
   }
 
   const records = data ?? [];
+  const shown = records.filter(r => r.name.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
     <AppShell title="Tập luyện" section="training" icon={<Trophy className="size-6 text-primary" aria-hidden />} subtitle="Kỷ lục cá nhân">
@@ -71,14 +73,32 @@ export default function RecordsPage() {
         <EmptyState icon={<Trophy className="size-7" />} title="Chưa có kỷ lục nào" hint="Nhập mức tạ (kg) cho một hiệp và đánh dấu hoàn thành để bắt đầu." action={{ label: "Đến trang tập luyện", href: "/workouts" }} />
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {records.map(r => (
-          <section key={r.name} aria-label={r.name} className="bg-card border border-border rounded-3xl p-5 sm:p-6 space-y-3" data-testid="record-card">
+      {records.length > 0 && (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <input
+            type="search"
+            aria-label="Tìm bài tập"
+            placeholder="Tìm bài tập..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="min-h-11 w-full rounded-xl border border-border bg-card pl-10 pr-3 text-sm focus:border-primary focus:outline-none"
+          />
+        </div>
+      )}
+      {records.length > 0 && shown.length === 0 && (
+        <p className="text-sm font-semibold text-muted-foreground">Không có bài tập nào khớp &quot;{query.trim()}&quot;.</p>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {shown.map(r => (
+          <section key={r.name} aria-label={r.name} className="bg-card border border-border rounded-2xl sm:rounded-3xl p-3 sm:p-6 space-y-2 sm:space-y-3" data-testid="record-card">
             <div className="flex items-start justify-between gap-3">
               <h2 className="text-lg font-black">{r.name}</h2>
               <span className="text-xs font-bold text-muted-foreground">{r.sessions.length} buổi</span>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="flex items-end justify-between gap-3 sm:block sm:space-y-3">
+            <div className="grid flex-1 grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Kỷ lục</p>
                 <p className="text-2xl font-black text-warning">{r.best.weight} kg</p>
@@ -90,7 +110,8 @@ export default function RecordsPage() {
                 <p className="text-xs text-muted-foreground">{r.last.date}</p>
               </div>
             </div>
-            <Sparkline record={r} />
+            <div className="w-28 shrink-0 sm:w-full"><Sparkline record={r} /></div>
+            </div>
           </section>
         ))}
       </div>

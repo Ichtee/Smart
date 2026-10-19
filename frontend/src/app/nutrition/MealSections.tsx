@@ -107,7 +107,7 @@ export default function MealSections({
                 <div data-meal-list className={`space-y-2 pt-2 border-t border-slate-800/60 xl:min-h-0 xl:flex-1 xl:overflow-y-auto ${isFolded ? 'hidden md:block' : ''}`}>
                   {itemList.length > 0 ? (
                     itemList.map(item => (
-                      <div key={item.id} className="flex items-start justify-between gap-2 bg-card p-3 rounded-xl border border-slate-800/60 text-xs">
+                      <div key={item.id} className="flex items-start justify-between gap-2 bg-card px-3 py-2 sm:py-3 rounded-xl border border-slate-800/60 text-xs">
                         <div className="flex min-w-0 items-center gap-3">
                           {item.image && (
                             <img
@@ -130,7 +130,7 @@ export default function MealSections({
                           <button
                             type="button"
                             onClick={() => handleRemoveFood(categoryName, item.id)}
-                            className="inline-flex size-11 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 cursor-pointer -my-3 -mr-2"
+                            className="inline-flex size-11 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 cursor-pointer -my-2.5 -mr-2"
                             title="Xóa món này"
                             aria-label={`Xóa ${item.name}`}
                           >

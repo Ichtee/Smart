@@ -59,6 +59,22 @@ describe('Records page', () => {
     expect(within(squat).getByText('1 buổi')).toBeInTheDocument();
   });
 
+  test('a search box narrows the list by exercise name', async () => {
+    vi.mocked(fetcher).mockResolvedValue([BENCH, SQUAT]);
+    renderPage();
+    await screen.findByRole('region', { name: 'Bench Press' });
+    const search = screen.getByRole('searchbox', { name: 'Tìm bài tập' });
+
+    await userEvent.type(search, 'squa');
+    expect(screen.queryByRole('region', { name: 'Bench Press' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Squat' })).toBeInTheDocument();
+
+    await userEvent.clear(search);
+    await userEvent.type(search, 'zzz');
+    expect(screen.queryAllByTestId('record-card')).toHaveLength(0);
+    expect(screen.getByText(/Không có bài tập nào khớp/)).toBeInTheDocument();
+  });
+
   test('the sparkline has one point per session and marks the record days', async () => {
     vi.mocked(fetcher).mockResolvedValue([BENCH]);
     renderPage();

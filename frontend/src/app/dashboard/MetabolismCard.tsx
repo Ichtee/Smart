@@ -1,6 +1,7 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, Dumbbell, Flame, Scale, TrendingUp } from 'lucide-react';
+import { BarChart3, ChevronDown, Dumbbell, Flame, Scale, TrendingUp } from 'lucide-react';
 import { calcEnergyPlan, calcLeanMass, goalTargets, usableBodyFat, type BodyProfile } from '@/utils/nutritionCalc';
 
 const signed = (n: number) => `${n > 0 ? '+' : ''}${n}`;
@@ -13,13 +14,18 @@ export default function MetabolismCard({ profile }: { profile: BodyProfile }) {
   const byGoal = goalTargets(profile);
   const bodyFat = usableBodyFat(profile.bodyFat);
   const lean = calcLeanMass(profile.weight, bodyFat);
+  // folded on a phone (a long card of numbers), open from md up; this card only mounts on the client, so reading the screen here is safe
+  const [open, setOpen] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.('(min-width: 768px)').matches);
 
   return (
-    <section aria-labelledby="metabolism-title" className="bg-card border border-border rounded-3xl p-4 space-y-3">
-      <div className="flex items-center justify-between border-b border-border pb-2">
+    <details open={open} onToggle={e => setOpen(e.currentTarget.open)} aria-labelledby="metabolism-title" className="bg-card border border-border rounded-3xl p-4 space-y-3">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 border-b border-border pb-2 [&::-webkit-details-marker]:hidden">
         <h3 id="metabolism-title" className="text-base md:text-lg font-black text-foreground flex items-center gap-2"><BarChart3 className="size-5 text-primary" aria-hidden="true" /> Chỉ Số Chuyển Hóa</h3>
-        <Link href="/profile" className="inline-block py-2 -my-2 text-xs text-primary hover:underline font-bold">Cập nhật Hồ sơ ↗</Link>
-      </div>
+        <span className="flex items-center gap-2">
+          <Link href="/profile" className="inline-block py-2 -my-2 text-xs text-primary hover:underline font-bold">Cập nhật Hồ sơ ↗</Link>
+          <ChevronDown className={`size-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </span>
+      </summary>
 
       {!plan || !byGoal ? (
         <p className="text-sm text-muted-foreground">Cần đủ tuổi, chiều cao và cân nặng trong hồ sơ để tính BMR, TDEE và mục tiêu calo.</p>
@@ -84,6 +90,6 @@ export default function MetabolismCard({ profile }: { profile: BodyProfile }) {
           )}
         </div>
       )}
-    </section>
+    </details>
   );
 }

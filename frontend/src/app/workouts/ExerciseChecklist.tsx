@@ -231,13 +231,13 @@ export default function ExerciseChecklist({
                       type="button"
                       aria-expanded={!!openSets[ex.id]}
                       onClick={() => setOpenSets(prev => ({ ...prev, [ex.id]: !prev[ex.id] }))}
-                      className="w-full min-h-11 flex items-center justify-between gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider cursor-pointer"
+                      className="w-full min-h-11 flex items-center justify-between gap-2 text-xs sm:text-sm font-bold text-slate-400 normal-case sm:uppercase tracking-wide sm:tracking-wider cursor-pointer"
                     >
                       <span className="text-primary inline-flex items-center gap-1.5">
                         <ChevronDown className={`size-4 transition-transform ${openSets[ex.id] ? 'rotate-180' : ''}`} aria-hidden="true" />
                         Các hiệp tập ({ex.sets} Hiệp)
                       </span>
-                      <span className="text-sm text-primary font-bold bg-primary-soft/60 border border-primary/30 px-2 py-0.5 rounded-md">
+                      <span className="shrink-0 whitespace-nowrap text-xs sm:text-sm text-primary font-bold bg-primary-soft/60 border border-primary/30 px-2 py-0.5 rounded-md">
                         {(completedSetsMap[ex.id] || []).length} / {ex.sets} Hoàn thành
                       </span>
                     </button>

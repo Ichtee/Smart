@@ -129,14 +129,14 @@ export default function NutritionSummaryCards({
           </div>
 
           <div className="flex flex-col items-center w-full mt-4 sm:mt-3 space-y-2 sm:space-y-2">
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:flex-nowrap sm:gap-4 xl:gap-2">
+            <div className="flex w-full items-center justify-center gap-3 sm:w-auto sm:gap-4 xl:gap-2">
               <button
                 onClick={() => updateWater(-1)}
                 aria-label="Giảm một cốc nước"
                 className="size-11 sm:size-10 rounded-xl sm:rounded-2xl bg-inset border border-slate-800 flex items-center justify-center text-lg sm:text-2xl font-black hover:bg-surface-elevated transition-colors text-slate-300 active:scale-95 cursor-pointer"
               >-</button>
 
-              <div className="order-first flex w-full flex-col items-center sm:order-none sm:w-auto">
+              <div className="flex flex-1 flex-col items-center sm:flex-none">
                 <div className="text-lg sm:text-2xl font-black text-white">{waterGlasses} <span className="text-xs sm:text-sm font-semibold text-slate-400">cốc</span></div>
                 <div className="flex items-center gap-1 bg-inset px-2 sm:px-3 py-0.5 sm:py-1 rounded-xl border border-slate-800 mt-1">
                   <input

@@ -167,6 +167,13 @@ describe('Dashboard: activity metrics', () => {
 });
 
 describe('Dashboard: metabolism card (uses the shared calculator)', () => {
+  test('metabolism details are collapsed by default (a phone has no matchMedia match)', async () => {
+    await setup();
+    const card = screen.getByText('Chỉ Số Chuyển Hóa').closest('details')!;
+    expect(card).not.toHaveAttribute('open');
+    expect(card).toContainElement(screen.getByTestId('energy-plan'));
+  });
+
   test("shows the user's measurements, goal, BMR/TDEE and the three calorie suggestions", async () => {
     await setup();
     const t = text();
@@ -241,6 +248,14 @@ describe('Dashboard: calendar', () => {
     await waitFor(() => expect(day(5)).toHaveTextContent('450 kcal'));
     expect(day(5)).toHaveTextContent('📷');
     expect(day(6)).toHaveTextContent('-');
+  });
+
+  test('on a phone a day with food shows a dot and the kcal text waits for wider screens', async () => {
+    const { day } = await setup();
+    await waitFor(() => expect(day(5)).toHaveTextContent('450 kcal'));
+    expect(within(day(5)).getByText('450 kcal')).toHaveClass('hidden', 'sm:block');
+    expect(within(day(5)).getByTestId('day-dot')).toHaveClass('sm:hidden');
+    expect(within(day(6)).queryByTestId('day-dot')).not.toBeInTheDocument();
   });
 
   test('the month starts on the right weekday (1 Oct 2026 is a Thursday: 3 empty cells first)', async () => {

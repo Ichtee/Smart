@@ -10,7 +10,7 @@ import { waterGoalMl } from '@/utils/waterGoal';
 import { calcTargetCalories, macroTargets, sumMacros } from '@/utils/nutritionCalc';
 import MetabolismCard from './MetabolismCard';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, ShieldCheck, Flame, Droplets, Calendar, Dumbbell, ChevronDown, ChevronUp, Trash2, CheckCircle2, Play, ClipboardList, Utensils, Target } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShieldCheck, Flame, Droplets, Calendar, Dumbbell, ChevronDown, ChevronUp, Trash2, CheckCircle2, Play, ClipboardList, Utensils, Target, RotateCw } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import ProgressRing from '@/components/ui/ProgressRing';
 import { PageSkeleton } from '@/components/ui/Skeleton';
@@ -220,7 +220,7 @@ export default function Dashboard() {
         {!!profileError && !isUnauthorizedError(profileError) && (
           <div className="bg-destructive/10 border border-destructive/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-destructive">
             <p className="font-extrabold text-white">Không tải được hồ sơ. Một số chỉ số đang hiển thị giá trị mặc định.</p>
-            <button onClick={() => { mutateProfile(); }} className="px-4 py-2 bg-primary text-primary-foreground font-black rounded-xl text-xs shrink-0 cursor-pointer">🔄 Thử lại</button>
+            <button onClick={() => { mutateProfile(); }} className="px-4 py-2 bg-primary text-primary-foreground font-black rounded-xl text-xs shrink-0 cursor-pointer"><RotateCw className="mr-1.5 inline size-3.5 align-[-2px]" aria-hidden />Thử lại</button>
           </div>
         )}
 
@@ -348,7 +348,10 @@ export default function Dashboard() {
                       </div>
 
                       {dayCal > 0 ? (
-                        <span className="text-xs md:text-xs font-black text-primary mt-1">{dayCal} kcal</span>
+                        <>
+                          <span data-testid="day-dot" aria-hidden className="mt-1 size-1.5 rounded-full bg-primary sm:hidden" />
+                          <span className="mt-1 hidden text-xs font-black text-primary sm:block">{dayCal} kcal</span>
+                        </>
                       ) : (
                         <span className="text-xs text-muted-foreground/40 mt-1">-</span>
                       )}
