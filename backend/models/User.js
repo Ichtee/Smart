@@ -120,6 +120,11 @@ const userSchema = new mongoose.Schema({
   lastActiveDayIndex: {
     type: Number,
     default: 0
+  },
+  // _id (as text) of the user's meal plan in use; '' = none. Cleared when that plan is deleted.
+  activeMealPlanId: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true

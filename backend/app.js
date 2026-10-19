@@ -49,6 +49,7 @@ app.use('/api', generalLimiter);
 // Routes
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/routines', require('./routes/routineRoutes'));
+app.use('/api/meal-plans', require('./routes/mealPlanRoutes'));
 app.use('/api/exercises', require('./routes/exerciseRoutes'));
 app.use('/api/workouts', require('./routes/workoutRoutes'));
 app.use('/api/nutrition', require('./routes/nutritionRoutes'));

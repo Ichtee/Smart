@@ -8,6 +8,7 @@ const NutritionLog = require('../models/NutritionLog');
 const Food = require('../models/Food');
 const BodyMetric = require('../models/BodyMetric');
 const Routine = require('../models/Routine');
+const MealPlan = require('../models/MealPlan');
 const { recordWeight } = require('../utils/bodyMetrics');
 
 // Never expose these fields in API responses (reset/verification tokens would allow account takeover)
@@ -22,6 +23,7 @@ const removeAccountAndData = async (userId) => {
     NutritionLog.deleteMany({ user: userId }),
     BodyMetric.deleteMany({ user: userId }),
     Routine.deleteMany({ owner: userId }),
+    MealPlan.deleteMany({ owner: userId }),
     Food.deleteMany({ user: userId, isCustom: true }),
   ]);
 };
@@ -517,6 +519,12 @@ const updateProfile = async (req, res) => {
       }
       if (req.body.lastActiveRoutineId !== undefined) user.lastActiveRoutineId = req.body.lastActiveRoutineId;
       if (req.body.lastActiveRoutineName !== undefined) user.lastActiveRoutineName = req.body.lastActiveRoutineName;
+      if (req.body.activeMealPlanId !== undefined) {
+        const id = req.body.activeMealPlanId;
+        const valid = id === '' || (typeof id === 'string' && mongoose.isValidObjectId(id) && await MealPlan.exists({ _id: id, owner: user._id }));
+        if (!valid) return res.status(400).json({ message: 'Không tìm thấy thực đơn.' });
+        user.activeMealPlanId = id;
+      }
       if (req.body.lastActiveDayIndex !== undefined) {
         const idx = Number(req.body.lastActiveDayIndex);
         if (!Number.isInteger(idx) || idx < 0 || idx > 6) {
@@ -574,6 +582,7 @@ const updateProfile = async (req, res) => {
         lastActiveRoutineId: updatedUser.lastActiveRoutineId,
         lastActiveRoutineName: updatedUser.lastActiveRoutineName,
         lastActiveDayIndex: updatedUser.lastActiveDayIndex,
+        activeMealPlanId: updatedUser.activeMealPlanId || '',
         token: freshToken,
       });
     } else {
@@ -786,16 +795,17 @@ const resetPassword = async (req, res) => {
 const exportMyData = async (req, res) => {
   try {
     const userId = req.user._id;
-    const [profile, workouts, nutrition, bodyMetrics, routines, customFoods] = await Promise.all([
+    const [profile, workouts, nutrition, bodyMetrics, routines, customFoods, mealPlans] = await Promise.all([
       User.findById(userId).select(SECRET_FIELDS + ' -tokenVersion').lean(),
       WorkoutLog.find({ user: userId }).sort({ date: 1 }).select('-__v -user').lean(),
       NutritionLog.find({ user: userId }).sort({ date: 1 }).select('-__v -user').lean(),
       BodyMetric.find({ user: userId }).sort({ date: 1 }).select('-__v -user').lean(),
       Routine.find({ owner: userId }).select('-__v -owner').lean(),
       Food.find({ user: userId, isCustom: true }).select('-__v -user').lean(),
+      MealPlan.find({ owner: userId }).select('-__v -owner').lean(),
     ]);
     res.setHeader('Content-Disposition', 'attachment; filename="my-fitness-data.json"');
-    res.json({ exportedAt: new Date().toISOString(), profile, workouts, nutrition, bodyMetrics, routines, customFoods });
+    res.json({ exportedAt: new Date().toISOString(), profile, workouts, nutrition, bodyMetrics, routines, customFoods, mealPlans });
   } catch (error) {
     console.error('exportMyData error:', error);
     res.status(500).json({ message: 'Server error' });

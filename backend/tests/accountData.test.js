@@ -8,6 +8,7 @@ const NutritionLog = require('../models/NutritionLog');
 const BodyMetric = require('../models/BodyMetric');
 const Routine = require('../models/Routine');
 const Food = require('../models/Food');
+const MealPlan = require('../models/MealPlan');
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -18,6 +19,7 @@ const seed = async (user) => {
   await BodyMetric.create({ user: user._id, date: today, weight: 70 });
   await Routine.create({ id: `r-${user._id}`, name: 'Mine', owner: user._id, schedule: [] });
   await Food.create({ name: 'Món riêng', calories: 100, isCustom: true, user: user._id });
+  await MealPlan.create({ owner: user._id, name: 'Thực đơn', days: [{ name: 'Ngày 1', meals: { 'Bữa Sáng': [{ id: 'x', name: 'Cơm', calories: 200 }] } }] });
 };
 const counts = (user) => Promise.all([
   WorkoutLog.countDocuments({ user: user._id }),
@@ -25,6 +27,7 @@ const counts = (user) => Promise.all([
   BodyMetric.countDocuments({ user: user._id }),
   Routine.countDocuments({ owner: user._id }),
   Food.countDocuments({ user: user._id }),
+  MealPlan.countDocuments({ owner: user._id }),
 ]);
 
 describe('account data', () => {
@@ -49,6 +52,8 @@ describe('account data', () => {
       expect(res.body.bodyMetrics).toHaveLength(1);
       expect(res.body.routines).toHaveLength(1);
       expect(res.body.customFoods).toHaveLength(1);
+      expect(res.body.mealPlans).toHaveLength(1);
+      expect(res.body.mealPlans[0]).not.toHaveProperty('owner');
       const text = JSON.stringify(res.body);
       for (const secret of ['"password"', 'resetPasswordToken', 'verificationToken', 'tokenVersion']) {
         expect(text).not.toContain(secret);
@@ -73,6 +78,7 @@ describe('account data', () => {
       expect(res.body.bodyMetrics).toEqual([]);
       expect(res.body.routines).toEqual([]);
       expect(res.body.customFoods).toEqual([]);
+      expect(res.body.mealPlans).toEqual([]);
     });
   });
 
@@ -91,7 +97,7 @@ describe('account data', () => {
       const wrong = await del(auth, { password: 'not-my-password' });
       expect(wrong.status).toBe(400); // not 401: the session is still valid, the page must stay signed in
       expect(await User.countDocuments({ _id: user._id })).toBe(1);
-      expect(await counts(user)).toEqual([1, 1, 1, 1, 1]);
+      expect(await counts(user)).toEqual([1, 1, 1, 1, 1, 1]);
     });
 
     test('with the right password removes the account and all of its data, and ends the session', async () => {
@@ -101,7 +107,7 @@ describe('account data', () => {
       expect(res.status).toBe(200);
       expect(res.headers['set-cookie'].join(';')).toMatch(/token=;/);
       expect(await User.countDocuments({ _id: user._id })).toBe(0);
-      expect(await counts(user)).toEqual([0, 0, 0, 0, 0]);
+      expect(await counts(user)).toEqual([0, 0, 0, 0, 0, 0]);
       expect((await request(app).get('/api/users/profile').set(auth)).status).toBe(401);
     });
 
@@ -111,7 +117,7 @@ describe('account data', () => {
       await seed(b.user);
       await Routine.create({ id: 'builtin', name: 'Built-in', owner: null, schedule: [] });
       expect((await del(a.auth, { password: a.password })).status).toBe(200);
-      expect(await counts(b.user)).toEqual([1, 1, 1, 1, 1]);
+      expect(await counts(b.user)).toEqual([1, 1, 1, 1, 1, 1]);
       expect(await Routine.countDocuments({ owner: null })).toBe(1);
     });
 
