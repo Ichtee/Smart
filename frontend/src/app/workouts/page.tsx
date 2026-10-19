@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import AppShell from '@/components/AppShell';
-import { Zap } from 'lucide-react';
+import { AlertTriangle, Lightbulb, Plus, RotateCw, Zap } from 'lucide-react';
 import { apiFetch, isUnauthorized } from '@/utils/api';
 import { useRoutines, useExercises, useProfile, useStreak, isUnauthorizedError } from '@/hooks/useApi';
 import { useServerSave } from '@/hooks/useServerSave';
@@ -49,6 +49,8 @@ export default function Workouts() {
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0);
 
   const [showMobileBodyModel, setShowMobileBodyModel] = useState<boolean>(false);
+  // below xl the exercise library is a bottom sheet opened from "Thêm bài tập"
+  const [showLibrarySheet, setShowLibrarySheet] = useState(false);
 
   const [daySelections, setDaySelections] = useState<Record<string, string[]>>({});
   const [dayCompleted, setDayCompleted] = useState<Record<string, string[]>>({});
@@ -854,6 +856,11 @@ export default function Workouts() {
     };
   }).filter(t => t.isExceeded);
 
+  const libraryProps = {
+    currentSelectedIds, filteredLibraryExercises, handleAddExerciseFromLibrary, isWorkoutSaved,
+    librarySearchTerm, selectedMuscle, setLibrarySearchTerm, setSelectedDetailExercise,
+  };
+
   return (
     <AppShell
       title="Tập luyện"
@@ -872,7 +879,7 @@ export default function Workouts() {
         {fetchError && (
           <div className="bg-destructive/10 border border-destructive/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-destructive shadow-xl">
             <div className="flex items-center gap-3">
-              <span className="text-xl">⚠️</span>
+              <AlertTriangle className="size-6 shrink-0" aria-hidden />
               <div>
                 <p className="font-extrabold text-white">Không thể kết nối tới máy chủ!</p>
                 <p className="text-slate-400 text-xs">Server Render có thể đang khởi động nguội hoặc mạng di động vừa ngắt kết nối.</p>
@@ -883,7 +890,7 @@ export default function Workouts() {
               disabled={isFetching}
               className="w-full sm:w-auto px-4 py-2 bg-primary hover:bg-primary text-slate-950 font-black rounded-xl text-xs transition shadow-md shrink-0 active:scale-95"
             >
-              {isFetching ? 'Đang kết nối lại...' : '🔄 Thử lại ngay'}
+              {isFetching ? 'Đang kết nối lại...' : <><RotateCw className="mr-1.5 inline size-3.5 align-[-2px]" aria-hidden />Thử lại ngay</>}
             </button>
           </div>
         )}
@@ -895,7 +902,7 @@ export default function Workouts() {
               onClick={() => { setDayLoadErrorDate(null); setDayRetryTick(t => t + 1); }}
               className="w-full sm:w-auto px-4 py-2 bg-primary hover:bg-primary text-slate-950 font-black rounded-xl text-xs transition shadow-md shrink-0 active:scale-95"
             >
-              🔄 Thử lại
+              <RotateCw className="mr-1.5 inline size-3.5 align-[-2px]" aria-hidden />Thử lại
             </button>
           </div>
         )}
@@ -954,7 +961,7 @@ export default function Workouts() {
               {/* Inline Notice Message Banner */}
               {noticeMessage && (
                 <div className="bg-warning/10 border border-warning/40 rounded-2xl p-3.5 flex items-center gap-3 text-xs text-warning shadow-md">
-                  <span className="text-lg shrink-0">💡</span>
+                  <Lightbulb className="size-5 shrink-0" aria-hidden />
                   <span className="font-bold">{noticeMessage}</span>
                 </div>
               )}
@@ -972,7 +979,7 @@ export default function Workouts() {
               {/* Dynamic Over-Target Warning Banner */}
               {exceededTargetMuscles.length > 0 && (
                 <div className="bg-destructive/10 border border-destructive/40 rounded-2xl p-3.5 flex items-start gap-3 text-xs text-destructive shadow-lg">
-                  <span className="text-xl shrink-0">⚠️</span>
+                  <AlertTriangle className="size-5 shrink-0" aria-hidden />
                   <div>
                     <p className="font-black text-destructive uppercase tracking-wider">CẢNH BÁO VƯỢT QUÁ LỊCH TẬP ĐỀ XUẤT!</p>
                     <p className="mt-1 leading-relaxed">
@@ -1022,23 +1029,24 @@ export default function Workouts() {
               />
               </div>
 
+              <button
+                type="button"
+                onClick={() => setShowLibrarySheet(true)}
+                className="xl:hidden inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/50 text-sm font-bold text-primary cursor-pointer"
+              >
+                <Plus className="size-4" aria-hidden /> Thêm bài tập
+              </button>
+
             </div>
 
             {/* Exercise Library Selection */}
-            <ExerciseLibrary
-              currentSelectedIds={currentSelectedIds}
-              filteredLibraryExercises={filteredLibraryExercises}
-              handleAddExerciseFromLibrary={handleAddExerciseFromLibrary}
-              isWorkoutSaved={isWorkoutSaved}
-              librarySearchTerm={librarySearchTerm}
-              selectedMuscle={selectedMuscle}
-              setLibrarySearchTerm={setLibrarySearchTerm}
-              setSelectedDetailExercise={setSelectedDetailExercise}
-            />
+            <ExerciseLibrary {...libraryProps} />
 
           </div>
 
         </div>
+
+      {showLibrarySheet && <ExerciseLibrary {...libraryProps} variant="sheet" onClose={() => setShowLibrarySheet(false)} />}
 
       {/* Exercise Detail Modal */}
       <ExerciseDetailModal currentSelectedIds={currentSelectedIds} handleAddExerciseFromLibrary={handleAddExerciseFromLibrary} isWorkoutSaved={isWorkoutSaved} selectedDetailExercise={selectedDetailExercise} setSelectedDetailExercise={setSelectedDetailExercise} />

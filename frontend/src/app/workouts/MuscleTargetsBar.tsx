@@ -1,5 +1,6 @@
 'use client';
 import type { Dispatch, SetStateAction } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { normalizeMuscleId, MUSCLE_NAMES_VI } from './utils';
 import type { RoutineDay } from '@/types/domain';
 import type { ActiveExercise } from './types';
@@ -28,7 +29,7 @@ export default function MuscleTargetsBar({
       <div>
         <p className="text-xs sm:text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2.5">Lọc thư viện bài tập theo nhóm cơ:</p>
         {effectiveTargets.length > 0 && activeRoutineId !== 'none' ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:flex-wrap md:overflow-visible">
             {effectiveTargets.map((target, index) => {
               const normTargetId = normalizeMuscleId(target.id);
               const targetCount = target.count || 2;
@@ -40,7 +41,7 @@ export default function MuscleTargetsBar({
                 <button
                   key={`${target.id}-${index}`}
                   onClick={() => setSelectedMuscle(selectedMuscle === normTargetId ? null : normTargetId)}
-                  className={`px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs sm:text-xs font-bold rounded-xl transition-all border flex items-center gap-1.5 sm:gap-2 ${selectedMuscle === normTargetId
+                  className={`shrink-0 min-h-11 px-3 sm:px-3.5 text-xs font-bold rounded-xl transition-all border flex items-center gap-1.5 sm:gap-2 ${selectedMuscle === normTargetId
                       ? 'bg-primary text-slate-950 border-primary shadow-lg shadow-primary/20'
                       : isExceeded
                         ? 'bg-destructive-soft/40 text-destructive border-destructive/50 hover:bg-destructive-soft/50'
@@ -59,7 +60,7 @@ export default function MuscleTargetsBar({
                           ? 'bg-success/30 text-success border border-success/40'
                           : 'bg-inset text-slate-400'
                     }`}>
-                    {currentCount}/{targetCount} Bài {isExceeded ? '⚠️' : isMatched ? '✓' : ''}
+                    {currentCount}/{targetCount} Bài {isExceeded ? <AlertTriangle className="inline size-3 align-[-1px]" aria-label="Vượt mục tiêu" /> : isMatched ? '✓' : ''}
                   </span>
                 </button>
               );

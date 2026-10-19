@@ -226,6 +226,14 @@ const userEventClick = async (el: HTMLElement) => userEvent.setup({ delay: null,
 
 // =========================================================================================================
 describe('Workouts: loading problems', () => {
+  test('banners use icons, not emoji', async () => {
+    server.failRoutines = true;
+    renderPage();
+    const banner = (await screen.findByText('Không thể kết nối tới máy chủ!')).closest('[class*="border-destructive"]')!;
+    expect(banner.textContent).not.toMatch(/⚠️|🔄|💡/);
+    expect(within(banner as HTMLElement).getByRole('button', { name: /Thử lại ngay/ })).toBeInTheDocument();
+  });
+
   test('if routines/exercises cannot be loaded a retry banner appears, and retrying recovers', async () => {
     server.failRoutines = true;
     const user = userEvent.setup({ delay: null, advanceTimers: vi.advanceTimersByTime });
@@ -726,11 +734,26 @@ describe('Workouts: editing the plan before saving', () => {
     expect(screen.getByText(/Đã khôi phục danh sách bài tập về lịch gốc/)).toBeInTheDocument();
   });
 
+  test('below xl the library opens from "Thêm bài tập" as a dialog; Escape closes it', async () => {
+    const { user } = await setup();
+    expect(screen.queryByRole('dialog', { name: 'Thư viện bài tập' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Thêm bài tập' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Thư viện bài tập' }));
+    expect(dialog.getByPlaceholderText(/Tìm tên bài tập/)).toBeInTheDocument();
+
+    await user.click(dialog.getAllByRole('button', { name: '+ Thêm bài này' })[0]);
+    expect(await screen.findByText(/^3\.\s/)).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Thư viện bài tập' })).not.toBeInTheDocument();
+  });
+
   test('once the plan is locked, the library is locked too', async () => {
     const { saveAndWait } = await setup();
     await saveAndWait();
     expect(screen.queryAllByRole('button', { name: '+ Thêm bài này' })).toHaveLength(0);
-    expect(screen.getAllByRole('button', { name: '🔒 Đã chốt' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Đã chốt' }).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /Khôi phục lịch gốc/ })).not.toBeInTheDocument();
   });
 });
@@ -754,7 +777,7 @@ describe('Workouts: muscle targets and the body model', () => {
 
     expect(await screen.findByText(/CẢNH BÁO VƯỢT QUÁ LỊCH TẬP ĐỀ XUẤT/)).toBeInTheDocument();
     expect(pageText()).toContain('Ngực (Chest) (2/1)');
-    expect(pageText()).toMatch(/Ngực \(Chest\)\s*2\/1 Bài ⚠️/);
+    expect(pageText()).toMatch(/Ngực \(Chest\)\s*2\/1 Bài/);
 
     await user.click(screen.getAllByRole('button', { name: /Xóa/ })[1]); // remove it again
     await waitFor(() => expect(screen.queryByText(/CẢNH BÁO VƯỢT QUÁ/)).not.toBeInTheDocument());
