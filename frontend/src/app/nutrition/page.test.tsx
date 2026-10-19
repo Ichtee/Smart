@@ -63,6 +63,7 @@ describe('Nutrition: today\'s meal plan', () => {
     const user = userEvent.setup({ delay: null });
     render(<Nutrition />);
     await screen.findByText('Trứng luộc');
+    await user.click(screen.getByRole('button', { name: /Thực đơn hôm nay/ })); // the card is folded by default
     await user.click(screen.getByRole('button', { name: 'Thêm Bữa Trưa vào nhật ký' }));
 
     await waitFor(() => expect(saves()).toHaveLength(1));

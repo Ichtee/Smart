@@ -85,6 +85,15 @@ async function seed() {
     lastActiveRoutineId: flag('big-routine') ? 'big' : 'ppl',
   }, token, 'PUT');
 
+  // an active meal plan with long Vietnamese dish names (wrapping inside the cards at 360px is part of the check)
+  const dish = (id, name, calories) => ({ id, name, calories, quantity: '1 phần lớn (350g)', protein: 30, carbs: 50, fat: 10 });
+  const longName = 'Cơm gạo lứt với ức gà áp chảo sốt mật ong và rau củ luộc';
+  const mealPlan = await api('/api/meal-plans', {
+    name: 'Thực đơn tăng cơ tuần đầu tiên với nhiều món', targetCalories: 2000,
+    days: [{ name: 'Ngày 1', meals: { 'Bữa Sáng': [dish('p1', longName, 450)], 'Bữa Trưa': [dish('p2', longName, 650)], 'Bữa Tối': [dish('p3', longName, 600)], 'Ăn Vặt': [] } }],
+  }, token);
+  await api('/api/users/profile', { activeMealPlanId: mealPlan.id }, token, 'PUT');
+
   const foods = (n) => Array.from({ length: n }, (_, i) => ({ id: `${Math.random()}`, name: `Món ăn ${i + 1}`, calories: 150 + i * 10, protein: 10, carbs: 20, fat: 5, quantity: '1 phần' }));
   const six = ex.slice(0, 6);
   for (let d = 0; d >= -6; d--) {

@@ -38,7 +38,7 @@ export default function MealSections({
 
   return (
     <>
-      <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3 xl:flex xl:min-h-[26rem] xl:flex-1 xl:flex-col">
+      <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3 xl:flex xl:min-h-[20rem] xl:flex-1 xl:flex-col">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 sm:pb-4 gap-2">
           <h3 className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
             <Utensils className="size-5 text-primary" aria-hidden /> Ghi chép bữa ăn trong ngày

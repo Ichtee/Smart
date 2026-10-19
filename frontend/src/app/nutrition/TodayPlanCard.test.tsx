@@ -10,10 +10,10 @@ const PLAN: MealPlan = {
   days: [{ name: 'Ngày 2', meals: { 'Bữa Sáng': [item('a', 'Yến mạch', 400)], 'Bữa Trưa': [item('b', 'Cơm gà', 600)] } }],
 };
 
-const setup = (canApply = true) => {
+const setup = (canApply = true, defaultOpen = true) => {
   const onApply = vi.fn();
   const user = userEvent.setup({ delay: null });
-  render(<TodayPlanCard plan={PLAN} day={PLAN.days[0]} canApply={canApply} onApply={onApply} />);
+  render(<TodayPlanCard plan={PLAN} day={PLAN.days[0]} canApply={canApply} onApply={onApply} defaultOpen={defaultOpen} />);
   return { user, onApply };
 };
 
@@ -58,5 +58,13 @@ describe('TodayPlanCard', () => {
     await user.click(header);
     expect(header).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('Yến mạch')).not.toBeInTheDocument();
+  });
+
+  test('folded by default, but "Thêm cả ngày" is still on the header', async () => {
+    const { user, onApply } = setup(true, false);
+    expect(screen.getByRole('button', { name: /Thực đơn hôm nay/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Yến mạch')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Thêm cả ngày vào nhật ký' }));
+    expect(onApply).toHaveBeenCalledWith();
   });
 });
