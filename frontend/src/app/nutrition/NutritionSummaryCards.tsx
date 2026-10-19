@@ -1,5 +1,6 @@
 'use client';
 import type { Dispatch, SetStateAction } from 'react';
+import { Search } from 'lucide-react';
 
 interface NutritionSummaryCardsProps {
   calorieDeficit: number;
@@ -30,9 +31,10 @@ export default function NutritionSummaryCards({
   updateWater,
   waterGlasses,
 }: NutritionSummaryCardsProps) {
+  const waterPercent = targetWaterGlasses > 0 ? Math.min(100, Math.round((waterGlasses / targetWaterGlasses) * 100)) : 0;
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 xl:contents">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:contents">
 
         {/* Calorie Circle Card */}
         <div className="xl:col-span-4 bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col items-center justify-between group hover:border-primary/30 transition-all">
@@ -40,13 +42,15 @@ export default function NutritionSummaryCards({
             <h2 className="text-primary font-extrabold uppercase tracking-wider text-xs sm:text-xs">Mục tiêu Calo</h2>
             <button
               onClick={() => setShowDetailModal(true)}
-              className="px-2 sm:px-3 py-1 sm:py-1.5 bg-inset hover:bg-slate-800 text-primary border border-primary/30 rounded-xl text-xs sm:text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
+              aria-label="Xem chi tiết"
+              className="min-h-11 px-3 bg-inset hover:bg-slate-800 text-primary border border-primary/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm cursor-pointer"
             >
-              <span>🔍</span> <span className="hidden sm:inline">Xem chi tiết</span>
+              <Search className="size-3.5" aria-hidden /> <span className="hidden sm:inline">Xem chi tiết</span>
             </button>
           </div>
 
-          <div className="relative w-36 h-36 sm:w-40 sm:h-40 xl:w-32 xl:h-32 flex items-center justify-center">
+          <div className="flex w-full items-center gap-4 sm:flex-col sm:gap-0">
+          <div className="relative size-28 shrink-0 sm:size-40 xl:size-32 flex items-center justify-center">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" className="text-slate-800/80" strokeWidth="7" />
               <circle
@@ -64,8 +68,9 @@ export default function NutritionSummaryCards({
             </div>
           </div>
 
+          <div className="min-w-0 flex-1 sm:w-full">
           {/* TDEE and Deficit Info */}
-          <div className="w-full mt-4 sm:mt-3 bg-inset rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 border border-slate-800 text-center text-xs sm:text-xs flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+          <div className="w-full sm:mt-3 bg-inset rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 border border-slate-800 text-center text-xs sm:text-xs flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
             <span className="text-slate-400 font-semibold">TDEE: <strong className="text-white font-extrabold">{tdee} kcal</strong></span>
             <span className="text-slate-700 hidden sm:inline">|</span>
             {calorieDeficit < 0 ? (
@@ -87,13 +92,25 @@ export default function NutritionSummaryCards({
               <div className="text-sm sm:text-xl font-black text-success">{caloriesRemaining}</div>
             </div>
           </div>
+          </div>
+          </div>
         </div>
 
         {/* Water Tracker Card */}
         <div className="xl:col-span-3 bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col items-center justify-between group hover:border-primary/30 transition-all">
           <h2 className="text-primary font-extrabold uppercase tracking-wider text-xs sm:text-xs mb-3 sm:mb-3">Lượng nước</h2>
 
-          <div className="relative w-36 h-36 sm:w-40 sm:h-40 xl:w-32 xl:h-32 flex items-center justify-center">
+          <div className="w-full sm:hidden">
+            <div className="mb-1.5 flex items-baseline justify-between">
+              <span className="text-lg font-black text-white">{waterGlasses * mlPerGlass} ml</span>
+              <span className="text-xs font-bold text-slate-400">/ {waterGoalMl} ml</span>
+            </div>
+            <div role="progressbar" aria-label="Tiến độ uống nước" aria-valuemin={0} aria-valuemax={100} aria-valuenow={waterPercent} className="h-2.5 w-full overflow-hidden rounded-full bg-inset">
+              <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${waterPercent}%` }} />
+            </div>
+          </div>
+
+          <div className="relative hidden size-40 xl:size-32 items-center justify-center sm:flex">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" className="text-slate-800/80" strokeWidth="7" />
               <circle
@@ -115,7 +132,8 @@ export default function NutritionSummaryCards({
             <div className="flex flex-wrap items-center justify-center gap-3 sm:flex-nowrap sm:gap-4 xl:gap-2">
               <button
                 onClick={() => updateWater(-1)}
-                className="size-11 sm:size-10 rounded-xl sm:rounded-2xl bg-inset border border-slate-800 flex items-center justify-center text-lg sm:text-2xl font-black hover:bg-surface-elevated transition-colors text-slate-300 active:scale-95"
+                aria-label="Giảm một cốc nước"
+                className="size-11 sm:size-10 rounded-xl sm:rounded-2xl bg-inset border border-slate-800 flex items-center justify-center text-lg sm:text-2xl font-black hover:bg-surface-elevated transition-colors text-slate-300 active:scale-95 cursor-pointer"
               >-</button>
 
               <div className="order-first flex w-full flex-col items-center sm:order-none sm:w-auto">
@@ -126,6 +144,7 @@ export default function NutritionSummaryCards({
                     value={mlPerGlass}
                     min={50}
                     max={1000}
+                    inputMode="numeric"
                     onChange={(e) => {
                       const val = Number(e.target.value);
                       if (val >= 0 && val <= 1000) setMlPerGlass(val || 0);
@@ -143,7 +162,8 @@ export default function NutritionSummaryCards({
 
               <button
                 onClick={() => updateWater(1)}
-                className="size-11 sm:size-10 rounded-xl sm:rounded-2xl bg-primary text-slate-950 font-black flex items-center justify-center text-lg sm:text-2xl hover:bg-primary transition-colors shadow-lg shadow-primary/20 active:scale-95"
+                aria-label="Thêm một cốc nước"
+                className="size-11 sm:size-10 rounded-xl sm:rounded-2xl bg-primary text-slate-950 font-black flex items-center justify-center text-lg sm:text-2xl hover:bg-primary transition-colors shadow-lg shadow-primary/20 active:scale-95 cursor-pointer"
               >+</button>
             </div>
           </div>

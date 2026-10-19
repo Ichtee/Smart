@@ -1,7 +1,7 @@
 'use client';
-import type { Dispatch, SetStateAction } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import type { MealItem } from './types';
-import { Utensils } from 'lucide-react';
+import { Apple, ChevronDown, ClipboardCopy, Moon, Plus, Sun, Sunrise, Utensils, X, type LucideIcon } from 'lucide-react';
 
 interface MealSectionsProps {
   caloriesConsumed: number;
@@ -15,6 +15,13 @@ interface MealSectionsProps {
   setSelectedPreviewImage: Dispatch<SetStateAction<string | null>>;
 }
 
+const MEALS: { name: string; icon: LucideIcon }[] = [
+  { name: 'Bữa Sáng', icon: Sunrise },
+  { name: 'Bữa Trưa', icon: Sun },
+  { name: 'Bữa Tối', icon: Moon },
+  { name: 'Ăn Vặt', icon: Apple },
+];
+
 export default function MealSections({
   caloriesConsumed,
   handleRemoveFood,
@@ -26,6 +33,9 @@ export default function MealSections({
   setActiveMealCategory,
   setSelectedPreviewImage,
 }: MealSectionsProps) {
+  // On a phone a meal can be folded to its header; from md up every list is always shown.
+  const [folded, setFolded] = useState<Record<string, boolean>>({});
+
   return (
     <>
       <div className="bg-card/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3 xl:flex xl:min-h-[26rem] xl:flex-1 xl:flex-col">
@@ -38,9 +48,10 @@ export default function MealSections({
               type="button"
               onClick={onCopyPreviousDay}
               disabled={!canCopy || copyBusy}
-              className="px-3 py-1.5 rounded-xl bg-surface-elevated text-slate-200 text-xs sm:text-xs font-bold hover:bg-edge disabled:opacity-50 transition-all cursor-pointer"
+              className="inline-flex min-h-11 items-center gap-1.5 px-3 rounded-xl bg-surface-elevated text-slate-200 text-xs font-bold hover:bg-edge disabled:opacity-50 transition-all cursor-pointer"
             >
-              {copyBusy ? 'Đang sao chép...' : '📋 Sao chép từ hôm qua'}
+              <ClipboardCopy className="size-4" aria-hidden />
+              {copyBusy ? 'Đang sao chép...' : 'Sao chép từ hôm qua'}
             </button>
             <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tổng: <strong className="text-primary font-black">{caloriesConsumed} kcal</strong></span>
           </div>
@@ -50,46 +61,54 @@ export default function MealSections({
           <p role="status" className="text-xs font-semibold text-primary">{copyNotice}</p>
         )}
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-4">
-          {[
-            { name: 'Bữa Sáng', icon: '🍳' },
-            { name: 'Bữa Trưa', icon: '🍱' },
-            { name: 'Bữa Tối', icon: '🥩' },
-            { name: 'Ăn Vặt', icon: '🍎' }
-          ].map((mealConfig) => {
-            const categoryName = mealConfig.name;
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-4">
+          {MEALS.map(({ name: categoryName, icon: Icon }) => {
             const itemList = meals[categoryName] || [];
             const categoryCalories = itemList.reduce((sum, item) => sum + item.calories, 0);
+            const isFolded = !!folded[categoryName];
 
             return (
-              <div key={categoryName} className="bg-inset border border-slate-800/90 rounded-2xl p-3.5 sm:p-4 space-y-3 hover:border-primary/30 transition-all xl:flex xl:min-h-0 xl:flex-col">
-                <div className="flex flex-col sm:flex-row xl:flex-col sm:items-center xl:items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-surface-elevated rounded-xl flex items-center justify-center text-base sm:text-xl shrink-0">
-                      {mealConfig.icon}
-                    </div>
-                    <div>
-                      <h4 className="whitespace-nowrap font-extrabold text-white text-sm sm:text-base">{categoryName}</h4>
-                      <span className="text-xs sm:text-xs text-primary font-bold">{categoryCalories} kcal</span>
-                    </div>
-                  </div>
+              <div key={categoryName} className="bg-inset border border-slate-800/90 rounded-2xl p-3 sm:p-4 space-y-2 hover:border-primary/30 transition-all xl:flex xl:min-h-0 xl:flex-col">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    aria-expanded={!isFolded}
+                    onClick={() => setFolded(f => ({ ...f, [categoryName]: !f[categoryName] }))}
+                    className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 text-left md:pointer-events-none"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface-elevated text-primary">
+                      <Icon className="size-5" aria-hidden />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block whitespace-nowrap text-sm sm:text-base font-extrabold text-white">{categoryName}</span>
+                      <span className="block text-xs text-primary font-bold">{categoryCalories} kcal</span>
+                    </span>
+                    <ChevronDown className={`ml-auto size-4 shrink-0 text-slate-400 transition-transform md:hidden ${isFolded ? '-rotate-90' : ''}`} aria-hidden />
+                  </button>
 
-                  <div className="flex items-center gap-1.5 self-start sm:self-auto">
-                    <button
-                      onClick={() => setActiveMealCategory(categoryName)}
-                      className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-primary text-slate-950 text-xs sm:text-xs font-black hover:bg-primary transition-all shadow-md shadow-primary/20 cursor-pointer flex items-center gap-1 whitespace-nowrap"
-                    >
-                      <span>+</span> Thêm món
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Thêm món vào ${categoryName}`}
+                    onClick={() => setActiveMealCategory(categoryName)}
+                    className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-slate-950 shadow-md shadow-primary/20 cursor-pointer md:hidden"
+                  >
+                    <Plus className="size-5" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveMealCategory(categoryName)}
+                    className="hidden shrink-0 items-center gap-1 whitespace-nowrap rounded-xl bg-primary px-3.5 py-1.5 text-xs font-black text-slate-950 shadow-md shadow-primary/20 transition-all cursor-pointer md:flex"
+                  >
+                    <span>+</span> Thêm món
+                  </button>
                 </div>
 
                 {/* Food Items List */}
-                <div className="space-y-2 pt-2 border-t border-slate-800/60 xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
+                <div data-meal-list className={`space-y-2 pt-2 border-t border-slate-800/60 xl:min-h-0 xl:flex-1 xl:overflow-y-auto ${isFolded ? 'hidden md:block' : ''}`}>
                   {itemList.length > 0 ? (
                     itemList.map(item => (
-                      <div key={item.id} className="flex items-center justify-between bg-card p-3 rounded-xl border border-slate-800/60 text-xs">
-                        <div className="flex items-center gap-3">
+                      <div key={item.id} className="flex items-start justify-between gap-2 bg-card p-3 rounded-xl border border-slate-800/60 text-xs">
+                        <div className="flex min-w-0 items-center gap-3">
                           {item.image && (
                             <img
                               src={item.image}
@@ -99,21 +118,23 @@ export default function MealSections({
                               title="Bấm để xem ảnh phóng to"
                             />
                           )}
-                          <div>
+                          <div className="min-w-0 break-words">
                             <span className="font-semibold text-slate-200">{item.name}</span>
                             {item.quantity && (
                               <span className="ml-1.5 text-xs text-slate-400 font-medium">({item.quantity})</span>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-primary font-bold">{item.calories} kcal</span>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <span className="whitespace-nowrap text-primary font-bold">{item.calories} kcal</span>
                           <button
+                            type="button"
                             onClick={() => handleRemoveFood(categoryName, item.id)}
-                            className="text-destructive hover:text-destructive font-bold text-sm ml-1"
+                            className="inline-flex size-11 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 cursor-pointer -my-3 -mr-2"
                             title="Xóa món này"
+                            aria-label={`Xóa ${item.name}`}
                           >
-                            &times;
+                            <X className="size-4" aria-hidden />
                           </button>
                         </div>
                       </div>

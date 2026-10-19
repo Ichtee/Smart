@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import AppShell from '@/components/AppShell';
-import { Salad } from 'lucide-react';
+import { Plus, RotateCw, Salad } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, isUnauthorized } from '@/utils/api';
 import { calcEnergyPlan } from '@/utils/nutritionCalc';
@@ -19,6 +19,7 @@ import MacroSummary from './MacroSummary';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import NutritionDateBar from './NutritionDateBar';
 import { mergeCopiedMeals, previousDay } from './copyMeals';
+import { mealForHour } from './mealTime';
 
 
 export default function Nutrition() {
@@ -268,7 +269,7 @@ export default function Nutrition() {
               onClick={() => { mutateProfile(); }}
               className="px-4 py-2 bg-primary hover:bg-primary text-slate-950 font-black rounded-xl text-xs transition shrink-0 cursor-pointer"
             >
-              🔄 Thử lại
+              <RotateCw className="mr-1.5 inline size-3.5 align-[-2px]" aria-hidden />Thử lại
             </button>
           </div>
         )}
@@ -280,7 +281,7 @@ export default function Nutrition() {
               onClick={() => { setDayLoadErrorDate(null); setDayRetryTick(t => t + 1); }}
               className="px-4 py-2 bg-primary hover:bg-primary text-slate-950 font-black rounded-xl text-xs transition shrink-0 cursor-pointer"
             >
-              🔄 Thử lại
+              <RotateCw className="mr-1.5 inline size-3.5 align-[-2px]" aria-hidden />Thử lại
             </button>
           </div>
         )}
@@ -320,6 +321,16 @@ export default function Nutrition() {
           setSelectedPreviewImage={setSelectedPreviewImage}
         />
 
+        {/* phone: one button for the meal that fits the hour; the form has a meal switch */}
+        <div aria-hidden className="h-14 md:hidden" />
+        <button
+          type="button"
+          onClick={() => setActiveMealCategory(mealForHour(new Date().getHours()))}
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-4 right-20 z-40 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-black text-primary-foreground shadow-lg shadow-primary/30 cursor-pointer md:hidden"
+        >
+          <Plus className="size-5" aria-hidden /> Thêm món
+        </button>
+
       {/* Add Food Item Modal */}
       {activeMealCategory && (
         <AddFoodModal
@@ -328,6 +339,7 @@ export default function Nutrition() {
           dayLoaded={dayLoaded}
           mutateFoods={mutateFoods}
           onAddItem={handleAddItem}
+          onChangeCategory={setActiveMealCategory}
           onClose={() => setActiveMealCategory(null)}
         />
       )}

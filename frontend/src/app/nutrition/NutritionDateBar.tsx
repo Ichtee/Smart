@@ -1,5 +1,6 @@
 'use client';
 import type { Dispatch, SetStateAction } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface NutritionDateBarProps {
   changeDateByDays: (days: number) => void;
@@ -18,10 +19,11 @@ export default function NutritionDateBar({
     <div className="flex items-center gap-2 bg-card border border-slate-800 p-1.5 rounded-2xl self-start">
       <button
         onClick={() => changeDateByDays(-1)}
-        className="px-3 py-1.5 bg-inset hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold transition-all"
+        aria-label="Xem ngày trước"
+        className="inline-flex size-11 items-center justify-center bg-inset hover:bg-slate-800 text-slate-300 rounded-xl transition-all cursor-pointer"
         title="Xem ngày trước"
       >
-        ◀
+        <ChevronLeft className="size-5" aria-hidden />
       </button>
       <div className="flex items-center gap-2 px-2">
         <input
@@ -38,10 +40,11 @@ export default function NutritionDateBar({
       </div>
       <button
         onClick={() => changeDateByDays(1)}
-        className="px-3 py-1.5 bg-inset hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold transition-all"
+        aria-label="Xem ngày sau"
+        className="inline-flex size-11 items-center justify-center bg-inset hover:bg-slate-800 text-slate-300 rounded-xl transition-all cursor-pointer"
         title="Xem ngày sau"
       >
-        ▶
+        <ChevronRight className="size-5" aria-hidden />
       </button>
       {selectedDate !== todayStr && (
         <button

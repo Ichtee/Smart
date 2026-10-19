@@ -1,5 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
+import { Plus, Search, Sparkles, Star } from 'lucide-react';
+import { MEAL_CATEGORIES } from './copyMeals';
 import { apiFetch } from '@/utils/api';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import CustomFoodsTab from './CustomFoodsTab';
@@ -19,9 +21,11 @@ interface AddFoodModalProps {
   mutateFoods: () => void;
   onAddItem: (category: string, item: MealItem) => void;
   onClose: () => void;
+  /** When given, the form shows a meal switch (used on a phone, where one button opens the form for the likely meal). */
+  onChangeCategory?: (category: string) => void;
 }
 
-export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods, onAddItem, onClose }: AddFoodModalProps) {
+export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods, onAddItem, onClose, onChangeCategory }: AddFoodModalProps) {
   const toast = useToast();
   // The form owns its own state: it is created fresh every time the modal opens.
   const [foodName, setFoodName] = useState('');
@@ -177,10 +181,27 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
           <div className="relative bg-card border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <span>➕</span> Thêm món vào <span className="text-primary">{category}</span>
+                <Plus className="size-5" aria-hidden /> Thêm món vào <span className="text-primary">{category}</span>
               </h3>
               <button onClick={() => onClose()} className="text-slate-500 hover:text-white text-xl font-bold">&times;</button>
             </div>
+
+            {onChangeCategory && (
+              <div role="radiogroup" aria-label="Bữa ăn" className="mb-4 grid grid-cols-4 gap-1 rounded-xl border border-slate-800 bg-inset p-1">
+                {MEAL_CATEGORIES.map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    role="radio"
+                    aria-checked={c === category}
+                    onClick={() => onChangeCategory(c)}
+                    className={`min-h-11 rounded-lg px-1 text-xs font-bold cursor-pointer ${c === category ? 'bg-primary text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Modal Tabs */}
             <div className="grid grid-cols-3 gap-2 mb-4 p-1 bg-inset border border-slate-800 rounded-xl">
@@ -193,7 +214,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                🔍 Tra cứu / Nhập mới
+                <Search className="mr-1 inline size-3.5 align-[-2px]" aria-hidden />Tra cứu / Nhập mới
               </button>
               <button
                 type="button"
@@ -204,7 +225,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <span>⭐ Món của tôi</span>
+                <span><Star className="mr-1 inline size-3.5 align-[-2px]" aria-hidden />Món của tôi</span>
                 <span className="px-1.5 py-0.2 bg-slate-800 text-slate-200 text-xs rounded-full">
                   {dbFoods.filter(f => f.isCustom).length}
                 </span>
@@ -218,7 +239,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                ✨ AI
+                <Sparkles className="mr-1 inline size-3.5 align-[-2px]" aria-hidden />AI
               </button>
             </div>
 
@@ -253,7 +274,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
               <div className="relative">
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
                   <span>Tên món ăn *</span>
-                  <span className="text-xs text-primary font-semibold">🔍 Tìm từ cơ sở dữ liệu</span>
+                  <span className="text-xs text-primary font-semibold"><Search className="mr-1 inline size-3 align-[-1px]" aria-hidden />Tìm từ cơ sở dữ liệu</span>
                 </label>
                 <input
                   type="text"
@@ -405,7 +426,7 @@ export default function AddFoodModal({ category, dbFoods, dayLoaded, mutateFoods
                   className="w-4 h-4 rounded text-primary bg-slate-900 border-slate-700 focus:ring-0 cursor-pointer"
                 />
                 <span className="text-xs text-slate-300 font-semibold flex items-center gap-1.5">
-                  <span>⭐</span> Lưu vào <b className="text-white font-bold">&quot;Món ăn của tôi&quot;</b> để dùng lại sau
+                  <Star className="size-3.5" aria-hidden /> Lưu vào <b className="text-white font-bold">&quot;Món ăn của tôi&quot;</b> để dùng lại sau
                 </span>
               </label>
 

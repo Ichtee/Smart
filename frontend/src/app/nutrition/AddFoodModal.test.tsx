@@ -64,6 +64,21 @@ beforeEach(() => {
 });
 
 describe('AddFoodModal: opening', () => {
+  test('shows a meal switch when onChangeCategory is given', async () => {
+    const onChangeCategory = vi.fn();
+    const { user } = setup({ category: 'Bữa Trưa', onChangeCategory });
+    const group = within(screen.getByRole('radiogroup', { name: 'Bữa ăn' }));
+    expect(group.getAllByRole('radio')).toHaveLength(4);
+    expect(group.getByRole('radio', { name: 'Bữa Trưa' })).toBeChecked();
+    await user.click(group.getByRole('radio', { name: 'Bữa Tối' }));
+    expect(onChangeCategory).toHaveBeenCalledWith('Bữa Tối');
+  });
+
+  test('no meal switch without onChangeCategory', () => {
+    setup();
+    expect(screen.queryByRole('radiogroup', { name: 'Bữa ăn' })).not.toBeInTheDocument();
+  });
+
   test('shows which meal the food is added to and starts with an empty form', () => {
     const { field, total } = setup({ category: 'Bữa Tối' });
     expect(screen.getByText(/Thêm món vào/)).toHaveTextContent('Bữa Tối');
