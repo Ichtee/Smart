@@ -175,7 +175,7 @@ export default function Profile() {
 
   return (
     <AppShell
-      title="Hồ sơ cá nhân"
+      title="Hồ sơ"
       icon={<User className="size-6 text-primary" />}
       subtitle="Quản lý thông tin và các chỉ số hình thể của bạn để có lộ trình tập luyện tốt nhất."
     >

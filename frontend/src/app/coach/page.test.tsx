@@ -6,6 +6,7 @@ import { postAi } from '@/utils/ai';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => '/coach' }));
 vi.mock('@/components/Sidebar', () => ({ default: () => <aside /> }));
+vi.mock('@/hooks/useApi', () => ({ useProfile: () => ({ profile: undefined }) }));
 vi.mock('@/utils/ai', () => ({ postAi: vi.fn() }));
 
 beforeEach(() => {

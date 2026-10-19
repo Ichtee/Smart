@@ -129,7 +129,7 @@ export default function BodyPage() {
 
   return (
     <AppShell
-      title="Số đo cơ thể"
+      title="Cơ thể"
       icon={<Scale className="size-6 text-primary" />}
       subtitle="Ghi cân nặng theo ngày để theo dõi tiến độ. Cân nặng mới nhất sẽ được dùng để tính lại mục tiêu calo của bạn."
     >

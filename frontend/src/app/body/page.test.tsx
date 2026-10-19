@@ -33,7 +33,7 @@ const setup = async (history: unknown[] = HISTORY) => {
   vi.mocked(fetcher).mockResolvedValue(history);
   const user = userEvent.setup({ delay: null });
   render(<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}><BodyPage /></SWRConfig>);
-  await screen.findByRole('heading', { name: /Số đo cơ thể/ });
+  await screen.findByRole('heading', { level: 1, name: 'Cơ thể' });
   const field = (re: RegExp | string) => screen.getByLabelText(re) as HTMLInputElement;
   const save = () => user.click(screen.getByRole('button', { name: /Lưu số đo|Đang lưu/ }));
   const retype = async (re: RegExp | string, v: string) => { await user.clear(field(re)); if (v) await user.type(field(re), v); };

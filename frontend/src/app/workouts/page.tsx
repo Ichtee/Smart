@@ -856,7 +856,7 @@ export default function Workouts() {
 
   return (
     <AppShell
-      title="Smart Workouts"
+      title="Tập luyện"
       section="training"
       icon={<Zap className="size-6 text-primary" aria-hidden />}
       subtitle="Hệ thống Quản lý & Luyện tập Thông minh"

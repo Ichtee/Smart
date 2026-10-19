@@ -82,6 +82,15 @@ type Ctx = ReturnType<typeof setup>;
 const bodyOf = (call = 0) => JSON.parse(vi.mocked(apiFetch).mock.calls[call][1]!.body as string);
 
 describe('Routines: the list', () => {
+  test('sits in the Tập luyện section: shared title, its tab current, create buttons in the header', () => {
+    setup();
+    expect(screen.getByRole('heading', { level: 1, name: 'Tập luyện' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Lịch tập' })).toHaveAttribute('aria-current', 'page');
+    const header = within(screen.getByRole('banner'));
+    expect(header.getByRole('button', { name: /Tạo bằng AI/ })).toBeInTheDocument();
+    expect(header.getByRole('button', { name: /Tạo lịch mới/ })).toBeInTheDocument();
+  });
+
   test('shows only my routines with a summary; built-in ones are not listed', () => {
     setup();
     const rows = screen.getAllByTestId('my-routine');

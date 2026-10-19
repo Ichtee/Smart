@@ -17,7 +17,7 @@ test.describe('using the app after sign-up (client-side navigation, shared SWR c
     expect((await page.locator('main').innerText()).replace(/\n/g, ' ')).toMatch(/175 cm \/ 70\s*kg/);
 
     await nav(page, 'Dinh dưỡng');
-    await expect(page.getByText('Nhật ký ăn uống & Dinh dưỡng')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Dinh dưỡng' })).toBeVisible();
     expect(page.url()).toContain('/nutrition'); // no bounce to onboarding
     await expect(page.getByText(/Không tải được/)).toHaveCount(0);
 
@@ -134,7 +134,7 @@ test.describe('using the app after sign-up (client-side navigation, shared SWR c
     expect((await page.locator('main').innerText()).replace(/\n/g, ' ')).toMatch(/160 cm \/ 52\s*kg/);
 
     await nav(page, 'Dinh dưỡng');
-    await expect(page.getByText('Nhật ký ăn uống & Dinh dưỡng')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Dinh dưỡng' })).toBeVisible();
     await page.waitForTimeout(1200); // let any (wrongly) cached data render
     expect(await page.locator('main').innerText()).not.toContain('Phở bò (1 tô');
 

@@ -18,7 +18,7 @@ test.describe('body measurements', () => {
 
     await uiLogin(page, user.username, user.password);
     await nav(page, 'Cơ thể');
-    await expect(page.getByRole('heading', { name: /Số đo cơ thể/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Cơ thể' })).toBeVisible();
     await expect(page.getByTestId('history-row')).toHaveCount(2);
     await expect(page.getByTestId('weight-change')).toHaveText('-1.5 kg');
 

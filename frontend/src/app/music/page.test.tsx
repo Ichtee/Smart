@@ -5,7 +5,9 @@ import MusicPage from './page';
 import { apiFetch } from '@/utils/api';
 import type { Playlist, Track } from '@/hooks/useMusicLibrary';
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => '/music' }));
 vi.mock('@/components/Sidebar', () => ({ default: () => <aside /> }));
+vi.mock('@/hooks/useApi', () => ({ useProfile: () => ({ profile: undefined }) }));
 vi.mock('@/utils/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/utils/api')>()), apiFetch: vi.fn() }));
 
 const hold = vi.hoisted(() => ({ music: null as unknown, library: null as unknown }));

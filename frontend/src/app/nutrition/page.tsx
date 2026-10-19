@@ -248,7 +248,8 @@ export default function Nutrition() {
 
   return (
     <AppShell
-      title="Nhật ký ăn uống & Dinh dưỡng"
+      title="Dinh dưỡng"
+      section="nutrition"
       icon={<Salad className="size-6 text-primary" aria-hidden />}
       subtitle="Theo dõi và ghi chép chi tiết lượng Calo và Nước nạp vào cơ thể."
       actions={

@@ -12,6 +12,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => nav.router, usePathname: ()
 vi.mock('@/components/Sidebar', () => ({ default: () => <aside /> }));
 vi.mock('@/hooks/useApi', () => ({
   fetcher: vi.fn(),
+  useProfile: () => ({ profile: undefined }),
   isUnauthorizedError: (e: unknown) => (e as { status?: number } | null)?.status === 401,
 }));
 

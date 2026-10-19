@@ -13,6 +13,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => nav.router, usePathname: ()
 vi.mock('@/components/Sidebar', () => ({ default: () => <aside /> }));
 vi.mock('@/hooks/useApi', () => ({
   fetcher: vi.fn(),
+  useProfile: () => ({ profile: undefined }),
   isUnauthorizedError: (e: unknown) => (e as { status?: number } | null)?.status === 401,
 }));
 
@@ -37,8 +38,9 @@ describe('Volume page', () => {
   test('asks for the volume endpoint', async () => {
     vi.mocked(fetcher).mockResolvedValue(DATA(3, []));
     renderPage();
-    await screen.findByRole('heading', { name: /Khối lượng tập theo tuần/ });
-    expect(vi.mocked(fetcher).mock.calls[0][0]).toBe('/api/workouts/volume');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Tập luyện' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Khối lượng' })).toHaveAttribute('aria-current', 'page');
+    await waitFor(() => expect(vi.mocked(fetcher).mock.calls[0]?.[0]).toBe('/api/workouts/volume'));
   });
 
   test('a card per muscle, busiest first, with Vietnamese names, totals, this week and the average', async () => {
