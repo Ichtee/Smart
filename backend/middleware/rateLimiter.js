@@ -92,4 +92,17 @@ const routineLimiter = rateLimit({
   message: { message: 'Mỗi ngày chỉ được tạo lịch tập bằng AI 2 lần, vui lòng quay lại ngày mai.' },
 });
 
-module.exports = { generalLimiter, loginLimiter, registerLimiter, emailFlowLimiter, aiLimiter, routineLimiter, userOrIpKey };
+// AI meal plans: 3 per day per user. One call asks for up to 7 days of food, so it is the other expensive one.
+// Rejected or failed calls are not counted, only the ones that produced a plan.
+const mealPlanLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 3,
+  skip: skipForPro,
+  skipFailedRequests: true,
+  keyGenerator: userOrIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Mỗi ngày chỉ được tạo thực đơn bằng AI 3 lần, vui lòng quay lại ngày mai.' },
+});
+
+module.exports = { generalLimiter, loginLimiter, registerLimiter, emailFlowLimiter, aiLimiter, routineLimiter, mealPlanLimiter, userOrIpKey };

@@ -3,7 +3,7 @@ const request = require('supertest');
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-const { userOrIpKey, loginLimiter, routineLimiter, aiLimiter } = require('../middleware/rateLimiter');
+const { userOrIpKey, loginLimiter, routineLimiter, mealPlanLimiter, aiLimiter } = require('../middleware/rateLimiter');
 
 const sign = (id, secret = process.env.JWT_SECRET) => jwt.sign({ id }, secret);
 
@@ -81,6 +81,24 @@ describe('limiters', () => {
     expect(blocked.status).toBe(429);
     expect(blocked.body.message).toMatch(/2 lần/);
     expect((await as('u2')).status).toBe(200);
+  });
+
+  test('mealPlanLimiter: 3 generated plans per user per day; failed calls and other users are not counted; pro is skipped', async () => {
+    const app = express();
+    app.post('/plan', mealPlanLimiter, (req, res) => res.status(req.query.fail ? 502 : 200).json({}));
+    const as = (id, q = '') => request(app).post(`/plan${q}`).set('Authorization', `Bearer ${sign(id)}`);
+
+    for (let i = 0; i < 5; i++) expect((await as('u1', '?fail=1')).status).toBe(502);
+    for (let i = 0; i < 3; i++) expect((await as('u1')).status).toBe(200);
+    const blocked = await as('u1');
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.message).toMatch(/3 lần/);
+    expect((await as('u2')).status).toBe(200);
+
+    const pro = express();
+    pro.use((req, res, next) => { req.user = { plan: 'pro' }; next(); });
+    pro.post('/plan', mealPlanLimiter, (req, res) => res.json({}));
+    for (let i = 0; i < 5; i++) expect((await request(pro).post('/plan')).status).toBe(200);
   });
 
   test('the pro plan has no AI limits: aiLimiter and routineLimiter let it through, a free user is still limited', async () => {

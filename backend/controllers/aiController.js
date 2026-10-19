@@ -1,6 +1,7 @@
 const { generate, AiError } = require('../utils/gemini');
 const { buildUserContext } = require('../utils/aiContext');
 const { sanitizeItem } = require('../utils/nutrition');
+const { cleanMealPlan } = require('../utils/mealPlan');
 const { cleanUserRoutine, DAYS } = require('../utils/userRoutine');
 const Exercise = require('../models/Exercise');
 
@@ -71,6 +72,26 @@ const MEAL_SCHEMA = {
 
 const roundTo = (v, decimals) => (typeof v === 'number' && Number.isFinite(v) ? Number(v.toFixed(decimals)) : v);
 
+// AI food list -> clean items without ids (the caller assigns them); invalid items are dropped
+const cleanAiItems = (list) => {
+  const items = [];
+  for (const raw of Array.isArray(list) ? list : []) {
+    if (!raw || typeof raw !== 'object') continue;
+    const { item } = sanitizeItem({
+      ...raw,
+      calories: roundTo(raw.calories, 0),
+      protein: roundTo(raw.protein, 1),
+      carbs: roundTo(raw.carbs, 1),
+      fat: roundTo(raw.fat, 1),
+    }, 'AI');
+    if (!item) continue;
+    delete item.id;
+    items.push(item);
+    if (items.length === MAX_MEAL_ITEMS) break;
+  }
+  return items;
+};
+
 // @desc    Estimate foods + macros from a description and/or a photo (nothing is saved)
 // @route   POST /api/ai/meal
 // @access  Private
@@ -100,21 +121,7 @@ const parseMeal = async (req, res) => {
       maxOutputTokens: 2048, // thinking models spend ~500-800 of these before answering
     });
 
-    const items = [];
-    for (const raw of Array.isArray(result.items) ? result.items : []) {
-      if (!raw || typeof raw !== 'object') continue;
-      const { item } = sanitizeItem({
-        ...raw,
-        calories: roundTo(raw.calories, 0),
-        protein: roundTo(raw.protein, 1),
-        carbs: roundTo(raw.carbs, 1),
-        fat: roundTo(raw.fat, 1),
-      }, 'AI');
-      if (!item) continue;
-      delete item.id; // the client assigns ids
-      items.push(item);
-      if (items.length === MAX_MEAL_ITEMS) break;
-    }
+    const items = cleanAiItems(result.items); // the client assigns ids
     if (items.length === 0) return res.status(422).json({ message: 'Không nhận ra món ăn nào, hãy thử mô tả rõ hơn.' });
     return res.status(200).json({ items });
   } catch (err) {
@@ -212,4 +219,91 @@ ${library}`;
   }
 };
 
-module.exports = { chat, parseMeal, generateRoutine, handleError };
+const BUDGETS = {
+  thrifty: 'tiết kiệm (nguyên liệu rẻ, phổ biến ở chợ Việt Nam)',
+  normal: 'vừa phải',
+  generous: 'thoải mái (có thể dùng hải sản, thịt bò, trái cây nhập)',
+};
+const MAX_PLAN_NOTES = 300;
+const PLAN_MEALS = { breakfast: 'Bữa Sáng', lunch: 'Bữa Trưa', dinner: 'Bữa Tối', snack: 'Ăn Vặt' };
+
+const ITEMS_SCHEMA = { type: 'ARRAY', items: MEAL_SCHEMA.properties.items.items };
+const MEAL_PLAN_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    name: { type: 'STRING' },
+    description: { type: 'STRING' },
+    days: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: Object.fromEntries(Object.keys(PLAN_MEALS).map(key => [key, ITEMS_SCHEMA])),
+        required: Object.keys(PLAN_MEALS),
+      },
+    },
+  },
+  required: ['name', 'description', 'days'],
+};
+
+const intBetween = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
+const BAD_PLAN = 'AI không phản hồi hợp lệ, vui lòng thử lại.';
+
+// @desc    Draft a meal plan (nothing is saved; the client saves it via /api/meal-plans)
+// @route   POST /api/ai/meal-plan
+// @access  Private
+const generateMealPlan = async (req, res) => {
+  try {
+    const { days, targetCalories, proteinG, budget, notes } = req.body;
+    if (!intBetween(days, 1, 7) || !intBetween(targetCalories, 1000, 6000)
+      || (proteinG !== undefined && !intBetween(proteinG, 0, 400))
+      || !Object.prototype.hasOwnProperty.call(BUDGETS, budget)
+      || (notes !== undefined && (typeof notes !== 'string' || notes.length > MAX_PLAN_NOTES))) {
+      return res.status(400).json({ message: `Cần days từ 1 đến 7, targetCalories từ 1000 đến 6000, budget (${Object.keys(BUDGETS).join('/')}), ghi chú tối đa ${MAX_PLAN_NOTES} ký tự.` });
+    }
+
+    const system = `Bạn là chuyên gia dinh dưỡng tạo thực đơn ${days} ngày cho người Việt. Mỗi ngày có bữa sáng, bữa trưa, bữa tối và ăn vặt (mảng có thể rỗng). Dùng món ăn Việt Nam quen thuộc, dễ nấu, khẩu phần thực tế. Tổng calo mỗi ngày sát ${targetCalories} kcal (lệch tối đa 10%)${proteinG ? `, protein khoảng ${proteinG} g mỗi ngày` : ''}. Các ngày phải khác món nhau. Tuyệt đối không dùng nguyên liệu hoặc món mà người dùng dị ứng hay không ăn được (xem ghi chú). Mỗi món có tên tiếng Việt, khẩu phần (quantity) và calories, protein, carbs, fat (gram) cho đúng khẩu phần đó. Tên thực đơn và mô tả ngắn bằng tiếng Việt. Trả về đúng ${days} ngày.
+
+Ngân sách: ${BUDGETS[budget]}
+Mục tiêu người dùng: ${req.user.goal || 'chưa đặt'}
+Ghi chú: ${(notes || '').trim() || 'không'}
+
+Dữ liệu người dùng:
+${await buildUserContext(req.user)}`;
+
+    const result = await generate({
+      system,
+      contents: [{ role: 'user', parts: [{ text: 'Hãy tạo thực đơn.' }] }],
+      schema: MEAL_PLAN_SCHEMA,
+      maxOutputTokens: 16384, // thinking models spend a good part of this before answering; 7 days of food is long
+    });
+
+    const rawDays = Array.isArray(result.days) ? result.days : [];
+    if (rawDays.length !== days) {
+      console.error(`generateMealPlan: asked for ${days} days, got ${rawDays.length}`);
+      throw new AiError(502, BAD_PLAN);
+    }
+
+    const planDays = rawDays.map((d, i) => ({
+      name: `Ngày ${i + 1}`,
+      meals: Object.fromEntries(Object.entries(PLAN_MEALS).map(([key, label]) => [
+        label,
+        cleanAiItems(d && d[key]).map((item, n) => ({ ...item, id: `ai-${i}-${key}-${n}` })), // unique inside the plan
+      ])),
+    }));
+    const { plan, error } = cleanMealPlan({
+      name: String(result.name || '').slice(0, 100) || 'Thực đơn AI',
+      description: String(result.description || '').slice(0, 300),
+      targetCalories,
+      days: planDays,
+    });
+    if (error) {
+      console.error('generateMealPlan: AI plan rejected:', error);
+      throw new AiError(502, BAD_PLAN);
+    }
+    return res.status(200).json({ plan });
+  } catch (err) {
+    return handleError(res, err, 'generateMealPlan');
+  }
+};
+
+module.exports = { chat, parseMeal, generateRoutine, generateMealPlan, handleError };

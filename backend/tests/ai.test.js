@@ -361,3 +361,94 @@ describe('POST /api/ai/routine', () => {
     expect(await Routine.countDocuments()).toBe(0);
   });
 });
+
+describe('POST /api/ai/meal-plan', () => {
+  const MealPlan = require('../models/MealPlan');
+  beforeAll(db.connect);
+  beforeEach(async () => {
+    await db.clear();
+    process.env.GEMINI_API_KEY = 'k';
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterEach(() => { jest.restoreAllMocks(); });
+  afterAll(db.close);
+
+  const mealPlan = (auth, body) => request(app).post('/api/ai/meal-plan').set(auth).send(body);
+  const valid = { days: 2, targetCalories: 2000, proteinG: 120, budget: 'normal', notes: '' };
+  const dish = (name, calories) => ({ name, quantity: '1 phần', calories, protein: 20, carbs: 30, fat: 10 });
+  const aiDay = (over = {}) => ({ breakfast: [dish('Yến mạch', 400)], lunch: [dish('Cơm gà', 700)], dinner: [dish('Cá kho', 600)], snack: [dish('Chuối', 100)], ...over });
+  const reply = (days) => okResponse(geminiReply(JSON.stringify({ name: 'Thực đơn AI', description: 'd', days })));
+
+  test('returns a sanitized draft with the Vietnamese meal keys and unique item ids', async () => {
+    const { auth } = await createUser();
+    mockGemini(reply([aiDay(), aiDay()]));
+    const res = await mealPlan(auth, valid);
+    expect(res.status).toBe(200);
+    const { plan } = res.body;
+    expect(plan).toMatchObject({ name: 'Thực đơn AI', targetCalories: 2000 });
+    expect(plan).not.toHaveProperty('id');
+    expect(plan.days.map(d => d.name)).toEqual(['Ngày 1', 'Ngày 2']);
+    expect(plan.days[0].meals['Bữa Sáng'][0]).toMatchObject({ name: 'Yến mạch', calories: 400 });
+    expect(plan.days[0].meals['Ăn Vặt'][0].name).toBe('Chuối');
+    const ids = plan.days.flatMap(d => Object.values(d.meals).flat().map(i => i.id));
+    expect(ids).toHaveLength(8);
+    expect(new Set(ids).size).toBe(8);
+  });
+
+  test.each([
+    ['days 0', { ...valid, days: 0 }],
+    ['days 8', { ...valid, days: 8 }],
+    ['days 1.5', { ...valid, days: 1.5 }],
+    ['unknown budget', { ...valid, budget: 'x' }],
+    ['target below 1000', { ...valid, targetCalories: 900 }],
+    ['target above 6000', { ...valid, targetCalories: 6001 }],
+    ['protein above 400', { ...valid, proteinG: 401 }],
+    ['notes over 300 chars', { ...valid, notes: 'x'.repeat(301) }],
+  ])('400 for %s and Gemini is not called', async (_name, body) => {
+    const { auth } = await createUser();
+    const spy = jest.spyOn(global, 'fetch');
+    expect((await mealPlan(auth, body)).status).toBe(400);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  test('drops an invalid item and still returns the day', async () => {
+    const { auth } = await createUser();
+    mockGemini(reply([aiDay({ lunch: [dish('Lỗi', -5), dish('Cơm gà', 700)] })]));
+    const res = await mealPlan(auth, { ...valid, days: 1 });
+    expect(res.status).toBe(200);
+    expect(res.body.plan.days[0].meals['Bữa Trưa'].map(i => i.name)).toEqual(['Cơm gà']);
+  });
+
+  test('502 when the model returns fewer days than asked', async () => {
+    const { auth } = await createUser();
+    mockGemini(reply([aiDay()]));
+    const res = await mealPlan(auth, valid);
+    expect(res.status).toBe(502);
+    expect(res.body.message).toBe('AI không phản hồi hợp lệ, vui lòng thử lại.');
+  });
+
+  test('502 when no item survives cleaning', async () => {
+    const { auth } = await createUser();
+    mockGemini(reply([{ breakfast: [dish('Lỗi', -1)], lunch: [], dinner: [], snack: [] }]));
+    expect((await mealPlan(auth, { ...valid, days: 1 })).status).toBe(502);
+  });
+
+  test('the prompt carries the target, protein, budget, notes and the profile goal', async () => {
+    const { auth } = await createUser({ goal: 'Giảm mỡ' });
+    const spy = mockGemini(reply([aiDay(), aiDay()]));
+    await mealPlan(auth, { ...valid, budget: 'thrifty', notes: 'dị ứng tôm' });
+    const system = lastGeminiBody(spy).systemInstruction.parts[0].text;
+    expect(system).toContain('2000');
+    expect(system).toContain('120');
+    expect(system).toContain('dị ứng tôm');
+    expect(system).toMatch(/tiết kiệm/i);
+    expect(system).toContain('Giảm mỡ');
+  });
+
+  test('does not create a MealPlan document', async () => {
+    const { auth } = await createUser();
+    mockGemini(reply([aiDay(), aiDay()]));
+    expect((await mealPlan(auth, valid)).status).toBe(200);
+    expect(await MealPlan.countDocuments()).toBe(0);
+  });
+});
