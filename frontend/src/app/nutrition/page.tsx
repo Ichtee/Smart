@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch, isUnauthorized } from '@/utils/api';
 import { calcEnergyPlan } from '@/utils/nutritionCalc';
 import { waterGoalMl as calcWaterGoalMl, waterGoalGlasses } from '@/utils/waterGoal';
-import { useFoods, useProfile, isUnauthorizedError } from '@/hooks/useApi';
+import { useFoods, useMealPlans, useProfile, isUnauthorizedError } from '@/hooks/useApi';
 import { useServerSave } from '@/hooks/useServerSave';
 import SaveStatusBanner from '@/components/SaveStatusBanner';
 import type { MealItem, DbFood } from './types';
@@ -20,6 +20,8 @@ import { PageSkeleton } from '@/components/ui/Skeleton';
 import NutritionDateBar from './NutritionDateBar';
 import { mergeCopiedMeals, previousDay } from './copyMeals';
 import { mealForHour } from './mealTime';
+import TodayPlanCard from './TodayPlanCard';
+import { planDayFor } from '../meal-plans/mealPlan';
 
 
 export default function Nutrition() {
@@ -136,6 +138,12 @@ export default function Nutrition() {
     if (profile && (!profile.height || !profile.weight)) router.push('/onboarding');
   }, [profile, router]);
 
+  // the active meal plan (if it still exists) and its day for the selected date
+  const { plans: mealPlans } = useMealPlans();
+  const activePlan = mealPlans?.find(p => p.id === profile?.activeMealPlanId);
+  const [selYear, selMonth, selDay] = selectedDate.split('-').map(Number);
+  const activePlanDay = activePlan && activePlan.days.length > 0 ? planDayFor(activePlan, new Date(selYear, selMonth - 1, selDay)) : null;
+
   const profileError = !!profileFetchError && !isUnauthorizedError(profileFetchError);
   const loading = profileLoading && !profile;
   // one plan for the whole page; 0 until the profile is complete (the page sends you to onboarding then)
@@ -219,6 +227,22 @@ export default function Nutrition() {
     latest.current = { ...latest.current, meals: updatedMeals };
     setMeals(updatedMeals);
     pushNutritionToBackend(selectedDate, waterGlasses, mlPerGlass, updatedMeals);
+  };
+
+  // Add the active plan's foods for this day (or one meal) to the log. Appends like "same as yesterday", never replaces,
+  // and is synchronous, so it cannot write into another date.
+  const handleApplyPlan = (meal?: string) => {
+    if (!dayLoaded || !activePlanDay) return;
+    const source = meal ? { [meal]: activePlanDay.meals[meal] ?? [] } : activePlanDay.meals;
+    const { meals: merged, added } = mergeCopiedMeals(latest.current.meals, source);
+    if (added === 0) {
+      setCopyNotice('Thực đơn không có món nào để thêm.');
+      return;
+    }
+    latest.current = { ...latest.current, meals: merged };
+    setMeals(merged);
+    pushNutritionToBackend(selectedDate, latest.current.waterGlasses, latest.current.mlPerGlass, merged);
+    setCopyNotice(`Đã thêm ${added} món từ thực đơn.`);
   };
 
   // Remove Food Item for selectedDate
@@ -307,6 +331,10 @@ export default function Nutrition() {
 
         <MacroSummary meals={meals} targetCalories={targetCalories} profile={profile} />
         </div>
+
+        {activePlan && activePlanDay && (
+          <TodayPlanCard plan={activePlan} day={activePlanDay} canApply={dayLoaded} onApply={handleApplyPlan} />
+        )}
 
         {/* Meal Logging Section */}
         <MealSections
