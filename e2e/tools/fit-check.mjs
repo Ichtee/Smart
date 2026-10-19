@@ -16,7 +16,7 @@ const flag = (name) => process.argv.includes(`--${name}`);
 
 const ROUTES = arg('route')
   ? [arg('route')]
-  : ['/dashboard', '/workouts', '/nutrition', '/body', '/profile', '/routines', '/records', '/volume', '/music', '/coach'];
+  : ['/dashboard', '/workouts', '/nutrition', '/body', '/profile', '/routines', '/records', '/volume', '/music', '/coach', '/meal-plans'];
 const VIEWPORTS = (arg('viewport') ? [arg('viewport')] : ['1920x950', '1366x768', '390x844']).map((v) => v.split('x').map(Number));
 const STRICT = '1920x950';
 

@@ -1,5 +1,6 @@
 // Shapes of the records the backend returns, shared by the pages that list and edit them.
 // Fields the backend may omit are optional.
+import type { MealItem } from '@/app/nutrition/types';
 
 /** An exercise in the library (`/api/exercises`). */
 export interface Exercise {
@@ -59,6 +60,21 @@ export interface Routine {
   frequencyDaysPerWeek?: number;
   generalNotes?: string[];
   schedule: RoutineDay[];
+}
+
+/** One day of a meal plan: foods per meal ('Bữa Sáng', 'Bữa Trưa', 'Bữa Tối', 'Ăn Vặt'). */
+export interface MealPlanDay {
+  name: string;
+  meals: Record<string, MealItem[]>;
+}
+
+/** A saved meal plan (`/api/meal-plans`): 1-7 days, repeated by weekday when shorter than a week. */
+export interface MealPlan {
+  id: string;
+  name: string;
+  description?: string;
+  targetCalories?: number | null;
+  days: MealPlanDay[];
 }
 
 /** An account as the admin user list shows it (`/api/users`). */

@@ -26,7 +26,10 @@ export const SECTIONS: Record<SectionId, Section> = {
     label: 'Dinh dưỡng',
     href: '/nutrition',
     icon: Utensils,
-    tabs: [{ label: 'Nhật ký', href: '/nutrition' }],
+    tabs: [
+      { label: 'Nhật ký', href: '/nutrition' },
+      { label: 'Thực đơn', href: '/meal-plans' },
+    ],
   },
 };
 

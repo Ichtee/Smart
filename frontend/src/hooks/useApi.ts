@@ -2,7 +2,7 @@
 import useSWR, { SWRConfiguration, mutate as globalMutate, unload } from 'swr';
 import { apiFetch, resetAuthVerified } from '@/utils/api';
 import { toDateStr } from '@/utils/dateUtils';
-import type { AdminUser, Exercise, Routine } from '@/types/domain';
+import type { AdminUser, Exercise, MealPlan, Routine } from '@/types/domain';
 import type { DbFood } from '@/app/nutrition/types';
 
 export class ApiError extends Error {
@@ -83,6 +83,11 @@ export const refreshProfile = async () => {
 export function useRoutines(enabled = true) {
   const { data, error, isLoading, mutate } = useSWR(enabled ? '/api/routines' : null, fetcher, STATIC);
   return { routines: data as Routine[] | undefined, error, isLoading, mutate };
+}
+
+export function useMealPlans(enabled = true) {
+  const { data, error, isLoading, mutate } = useSWR(enabled ? '/api/meal-plans' : null, fetcher, STATIC);
+  return { plans: data as MealPlan[] | undefined, error, isLoading, mutate };
 }
 
 export function useExercises(enabled = true) {
