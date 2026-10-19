@@ -219,11 +219,6 @@ ${library}`;
   }
 };
 
-const BUDGETS = {
-  thrifty: 'tiết kiệm (nguyên liệu rẻ, phổ biến ở chợ Việt Nam)',
-  normal: 'vừa phải',
-  generous: 'thoải mái (có thể dùng hải sản, thịt bò, trái cây nhập)',
-};
 const MAX_PLAN_NOTES = 300;
 const PLAN_MEALS = { breakfast: 'Bữa Sáng', lunch: 'Bữa Trưa', dinner: 'Bữa Tối', snack: 'Ăn Vặt' };
 
@@ -253,17 +248,17 @@ const BAD_PLAN = 'AI không phản hồi hợp lệ, vui lòng thử lại.';
 // @access  Private
 const generateMealPlan = async (req, res) => {
   try {
-    const { days, targetCalories, proteinG, budget, notes } = req.body;
+    const { days, targetCalories, proteinG, budgetPerDay, notes } = req.body;
     if (!intBetween(days, 1, 7) || !intBetween(targetCalories, 1000, 6000)
       || (proteinG !== undefined && !intBetween(proteinG, 0, 400))
-      || !Object.prototype.hasOwnProperty.call(BUDGETS, budget)
+      || (budgetPerDay !== undefined && !intBetween(budgetPerDay, 10000, 2000000))
       || (notes !== undefined && (typeof notes !== 'string' || notes.length > MAX_PLAN_NOTES))) {
-      return res.status(400).json({ message: `Cần days từ 1 đến 7, targetCalories từ 1000 đến 6000, budget (${Object.keys(BUDGETS).join('/')}), ghi chú tối đa ${MAX_PLAN_NOTES} ký tự.` });
+      return res.status(400).json({ message: `Cần days từ 1 đến 7, targetCalories từ 1000 đến 6000, budgetPerDay (tùy chọn, 10000 đến 2000000 đồng), ghi chú tối đa ${MAX_PLAN_NOTES} ký tự.` });
     }
 
     const system = `Bạn là chuyên gia dinh dưỡng tạo thực đơn ${days} ngày cho người Việt. Mỗi ngày có bữa sáng, bữa trưa, bữa tối và ăn vặt (mảng có thể rỗng). Dùng món ăn Việt Nam quen thuộc, dễ nấu, khẩu phần thực tế. Tổng calo mỗi ngày sát ${targetCalories} kcal (lệch tối đa 10%)${proteinG ? `, protein khoảng ${proteinG} g mỗi ngày` : ''}. Các ngày phải khác món nhau. Tuyệt đối không dùng nguyên liệu hoặc món mà người dùng dị ứng hay không ăn được (xem ghi chú). Mỗi món có tên tiếng Việt, khẩu phần (quantity) và calories, protein, carbs, fat (gram) cho đúng khẩu phần đó. Tên thực đơn và mô tả ngắn bằng tiếng Việt. Trả về đúng ${days} ngày.
 
-Ngân sách: ${BUDGETS[budget]}
+Ngân sách: ${budgetPerDay ? `tối đa khoảng ${budgetPerDay.toLocaleString('vi-VN')} đồng mỗi ngày cho toàn bộ món ăn, chọn món và nguyên liệu hợp giá thị trường Việt Nam` : 'không giới hạn'}
 Mục tiêu người dùng: ${req.user.goal || 'chưa đặt'}
 Ghi chú: ${(notes || '').trim() || 'không'}
 

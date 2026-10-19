@@ -16,26 +16,33 @@ interface Props {
   onCancel: () => void;
 }
 
-const DAY_OPTIONS = [1, 3, 5, 7];
-const BUDGETS = [
-  { value: 'thrifty', label: 'Tiết kiệm' },
-  { value: 'normal', label: 'Vừa phải' },
-  { value: 'generous', label: 'Thoải mái' },
-];
+const MIN_BUDGET = 10000;
+const MAX_BUDGET = 2000000;
+const label = 'text-xs font-semibold text-muted-foreground uppercase tracking-wider';
+const input = 'min-h-11 w-full rounded-xl border border-border bg-background px-3 text-sm';
 
 export default function AiMealPlanForm({ targetCalories, proteinG, onGenerated, onCancel }: Props) {
-  const [days, setDays] = useState(3);
-  const [budget, setBudget] = useState('normal');
+  const [days, setDays] = useState('3');
+  const [budget, setBudget] = useState(''); // VND per day; empty = no limit
   const [notes, setNotes] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
 
   const generate = async () => {
     if (pending) return;
+    const dayCount = Number(days);
+    if (!Number.isInteger(dayCount) || dayCount < 1 || dayCount > 7) { setError('Số ngày phải từ 1 đến 7.'); return; }
+    const budgetPerDay = budget === '' ? undefined : Number(budget);
+    if (budgetPerDay !== undefined && (budgetPerDay < MIN_BUDGET || budgetPerDay > MAX_BUDGET)) {
+      setError('Ngân sách mỗi ngày từ 10.000 đến 2.000.000 đồng, hoặc bỏ trống.');
+      return;
+    }
     setPending(true);
     setError('');
     try {
-      const { plan } = await postAi<{ plan: PlanDraft }>('/api/ai/meal-plan', { days, targetCalories, proteinG, budget, notes: notes.trim() });
+      const { plan } = await postAi<{ plan: PlanDraft }>('/api/ai/meal-plan', {
+        days: dayCount, targetCalories, proteinG, ...(budgetPerDay !== undefined && { budgetPerDay }), notes: notes.trim(),
+      });
       onGenerated(plan);
     } catch (err) {
       setError(describeError(err));
@@ -51,38 +58,27 @@ export default function AiMealPlanForm({ targetCalories, proteinG, onGenerated, 
       </h2>
       <p className="text-xs font-semibold text-muted-foreground">Mục tiêu: {targetCalories} kcal · {proteinG} g protein (theo hồ sơ)</p>
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Số ngày</p>
-        <div className="flex flex-wrap gap-2">
-          {DAY_OPTIONS.map(n => (
-            <button
-              key={n}
-              type="button"
-              aria-label={`${n} ngày`}
-              aria-pressed={days === n}
-              onClick={() => setDays(n)}
-              className={`size-11 rounded-xl border text-sm font-bold cursor-pointer ${days === n ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:border-primary'}`}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block space-y-2">
+          <span className={label}>Số ngày (1-7)</span>
+          <input aria-label="Số ngày" inputMode="numeric" maxLength={1} value={days} onChange={e => setDays(e.target.value.replace(/\D/g, ''))} className={input} />
+        </label>
+        <label className="block space-y-2">
+          <span className={label}>Ngân sách mỗi ngày (VNĐ)</span>
+          <input
+            aria-label="Ngân sách mỗi ngày (VNĐ)"
+            inputMode="numeric"
+            maxLength={7}
+            value={budget}
+            placeholder="Bỏ trống nếu không giới hạn"
+            onChange={e => setBudget(e.target.value.replace(/\D/g, ''))}
+            className={input}
+          />
+        </label>
       </div>
 
       <label className="block space-y-2">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ngân sách</span>
-        <select
-          aria-label="Ngân sách"
-          value={budget}
-          onChange={e => setBudget(e.target.value)}
-          className="min-h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
-        >
-          {BUDGETS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      </label>
-
-      <label className="block space-y-2">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ghi chú (tùy chọn)</span>
+        <span className={label}>Ghi chú (tùy chọn)</span>
         <textarea
           aria-label="Ghi chú"
           value={notes}

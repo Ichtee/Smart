@@ -28,19 +28,34 @@ describe('AiMealPlanForm', () => {
   test('posts the chosen options', async () => {
     vi.mocked(postAi).mockResolvedValue({ plan: PLAN });
     const { user, onGenerated, submit } = setup();
-    await user.click(screen.getByRole('button', { name: '5 ngày' }));
-    await user.selectOptions(screen.getByLabelText('Ngân sách'), 'thrifty');
+    await user.clear(screen.getByLabelText('Số ngày'));
+    await user.type(screen.getByLabelText('Số ngày'), '5');
+    await user.type(screen.getByLabelText('Ngân sách mỗi ngày (VNĐ)'), '150000');
     await user.type(screen.getByLabelText('Ghi chú'), ' dị ứng tôm ');
     await user.click(submit());
-    expect(postAi).toHaveBeenCalledWith('/api/ai/meal-plan', { days: 5, targetCalories: 2000, proteinG: 120, budget: 'thrifty', notes: 'dị ứng tôm' });
+    expect(postAi).toHaveBeenCalledWith('/api/ai/meal-plan', { days: 5, targetCalories: 2000, proteinG: 120, budgetPerDay: 150000, notes: 'dị ứng tôm' });
     expect(onGenerated).toHaveBeenCalledWith(PLAN);
   });
 
-  test('defaults: 3 days, normal budget, no notes', async () => {
+  test('defaults: 3 days, no budget, no notes', async () => {
     vi.mocked(postAi).mockResolvedValue({ plan: PLAN });
     const { user, submit } = setup();
     await user.click(submit());
-    expect(postAi).toHaveBeenCalledWith('/api/ai/meal-plan', { days: 3, targetCalories: 2000, proteinG: 120, budget: 'normal', notes: '' });
+    expect(postAi).toHaveBeenCalledWith('/api/ai/meal-plan', { days: 3, targetCalories: 2000, proteinG: 120, notes: '' });
+  });
+
+  test.each([
+    ['0 days', 'Số ngày', '0', 'Số ngày phải từ 1 đến 7'],
+    ['8 days', 'Số ngày', '8', 'Số ngày phải từ 1 đến 7'],
+    ['a budget below 10.000', 'Ngân sách mỗi ngày (VNĐ)', '500', 'Ngân sách mỗi ngày'],
+  ])('%s is refused before calling the AI', async (_label, field, value, message) => {
+    const { user, submit } = setup();
+    const input = screen.getByLabelText(field);
+    await user.clear(input);
+    await user.type(input, value);
+    await user.click(submit());
+    expect(screen.getByRole('alert')).toHaveTextContent(message);
+    expect(postAi).not.toHaveBeenCalled();
   });
 
   test('shows the server error and lets the user retry', async () => {

@@ -374,7 +374,7 @@ describe('POST /api/ai/meal-plan', () => {
   afterAll(db.close);
 
   const mealPlan = (auth, body) => request(app).post('/api/ai/meal-plan').set(auth).send(body);
-  const valid = { days: 2, targetCalories: 2000, proteinG: 120, budget: 'normal', notes: '' };
+  const valid = { days: 2, targetCalories: 2000, proteinG: 120, notes: '' };
   const dish = (name, calories) => ({ name, quantity: '1 phần', calories, protein: 20, carbs: 30, fat: 10 });
   const aiDay = (over = {}) => ({ breakfast: [dish('Yến mạch', 400)], lunch: [dish('Cơm gà', 700)], dinner: [dish('Cá kho', 600)], snack: [dish('Chuối', 100)], ...over });
   const reply = (days) => okResponse(geminiReply(JSON.stringify({ name: 'Thực đơn AI', description: 'd', days })));
@@ -399,7 +399,10 @@ describe('POST /api/ai/meal-plan', () => {
     ['days 0', { ...valid, days: 0 }],
     ['days 8', { ...valid, days: 8 }],
     ['days 1.5', { ...valid, days: 1.5 }],
-    ['unknown budget', { ...valid, budget: 'x' }],
+    ['budget below 10000', { ...valid, budgetPerDay: 9999 }],
+    ['budget above 2000000', { ...valid, budgetPerDay: 2000001 }],
+    ['fractional budget', { ...valid, budgetPerDay: 150000.5 }],
+    ['text budget', { ...valid, budgetPerDay: '150000' }],
     ['target below 1000', { ...valid, targetCalories: 900 }],
     ['target above 6000', { ...valid, targetCalories: 6001 }],
     ['protein above 400', { ...valid, proteinG: 401 }],
@@ -436,13 +439,20 @@ describe('POST /api/ai/meal-plan', () => {
   test('the prompt carries the target, protein, budget, notes and the profile goal', async () => {
     const { auth } = await createUser({ goal: 'Giảm mỡ' });
     const spy = mockGemini(reply([aiDay(), aiDay()]));
-    await mealPlan(auth, { ...valid, budget: 'thrifty', notes: 'dị ứng tôm' });
+    await mealPlan(auth, { ...valid, budgetPerDay: 150000, notes: 'dị ứng tôm' });
     const system = lastGeminiBody(spy).systemInstruction.parts[0].text;
     expect(system).toContain('2000');
     expect(system).toContain('120');
     expect(system).toContain('dị ứng tôm');
-    expect(system).toMatch(/tiết kiệm/i);
+    expect(system).toContain('150.000');
     expect(system).toContain('Giảm mỡ');
+  });
+
+  test('without a budget the prompt says there is no limit', async () => {
+    const { auth } = await createUser();
+    const spy = mockGemini(reply([aiDay(), aiDay()]));
+    expect((await mealPlan(auth, valid)).status).toBe(200);
+    expect(lastGeminiBody(spy).systemInstruction.parts[0].text).toContain('Ngân sách: không giới hạn');
   });
 
   test('does not create a MealPlan document', async () => {

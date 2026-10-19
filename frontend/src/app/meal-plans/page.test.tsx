@@ -163,7 +163,7 @@ describe('Meal plans: AI draft', () => {
     await user.click(screen.getByRole('button', { name: 'Tạo thực đơn' }));
 
     const target = calcEnergyPlan(PROFILE)!.target;
-    expect(postAi).toHaveBeenCalledWith('/api/ai/meal-plan', { days: 3, targetCalories: target, proteinG: macroTargets(target, PROFILE).protein, budget: 'normal', notes: '' });
+    expect(postAi).toHaveBeenCalledWith('/api/ai/meal-plan', { days: 3, targetCalories: target, proteinG: macroTargets(target, PROFILE).protein, notes: '' });
     expect(await screen.findByLabelText('Tên thực đơn')).toHaveValue('AI Plan');
     expect(screen.getByRole('status')).toHaveTextContent('Đã tạo bản nháp bằng AI');
     expect(apiFetch).not.toHaveBeenCalled();
