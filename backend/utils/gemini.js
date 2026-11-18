@@ -34,20 +34,22 @@ const generate = async ({ system, contents, schema, maxOutputTokens = 1024 }) =>
         signal: AbortSignal.timeout(30000),
       });
     } catch (err) {
-      console.error('Gemini request failed:', err.message);
-      throw new AiError(502, BAD_REPLY);
+      console.error(`Gemini ${name} request failed:`, err.message);
+      return null;
     }
   };
-  const busy = (r) => r.status === 429 || r.status === 503;
+  // null = timed out or network error: thinking models can take over a minute when loaded.
+  const busy = (r) => !r || r.status === 429 || r.status === 503;
 
   let res = await post(model);
   // Newer models have small free daily quotas and are often overloaded: try the fallback model once.
   const fallback = process.env.GEMINI_FALLBACK_MODEL;
   if (busy(res) && fallback && fallback !== model) {
-    console.error(`Gemini ${model} busy (${res.status}), retrying on ${fallback}`);
+    console.error(`Gemini ${model} busy (${res ? res.status : 'timeout'}), retrying on ${fallback}`);
     res = await post(fallback);
   }
 
+  if (!res) throw new AiError(502, BAD_REPLY);
   if (!res.ok) {
     console.error('Gemini error status:', res.status);
     throw new AiError(busy(res) ? 503 : 502, busy(res) ? OVERLOADED : BAD_REPLY);

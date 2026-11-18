@@ -97,6 +97,12 @@ describe('gemini.generate', () => {
       expect(fetchSpy).toHaveBeenCalledTimes(2);
     });
 
+    test('retries on the fallback model when the main model times out', async () => {
+      fetchSpy.mockRejectedValueOnce(new Error('timeout')).mockResolvedValueOnce(okResponse(geminiReply('a')));
+      await expect(call()).resolves.toBe('a');
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
     test('does not retry on other failures', async () => {
       fetchSpy.mockResolvedValue(errResponse(500));
       await expect(call()).rejects.toMatchObject({ status: 502 });
